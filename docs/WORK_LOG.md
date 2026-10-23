@@ -119,3 +119,56 @@ Windows reports a pending reboot.
   `npipe:////./pipe/docker_engine`), as expected before the reboot and Docker Desktop's first
   launch. The Docker Subscription Service Agreement was **not** accepted on the owner's behalf;
   Docker Desktop asks for it on first launch.
+
+**Commit:** `ddf0226` docs(project): record local PostgreSQL 18 and Docker setup. This is the
+first commit without a co-author trailer.
+
+---
+
+## 2026-10-23 — T003 Frontend foundation
+
+**Environment check first.** After the owner restarted Windows (boot 14:24), Docker Desktop's
+engine was verified:
+- `docker info`: server 29.9.2.
+- `docker run --rm hello-world`: success.
+- `docker compose version`: v5.6.1.
+- The test image was removed afterwards.
+
+**Done**
+- `frontend/`: React 19.3, Vite 8.3, Tailwind CSS 4.3 and TypeScript 6.0 (strict,
+  `noUncheckedIndexedAccess`), with dependencies locked in `package-lock.json`.
+- `src/api/client.ts`: typed `getJson()` that validates responses with type guards. It raises
+  `ApiError` of kind `network`, `http` or `invalid-response`, and re-throws aborts unchanged.
+- `src/api/health.ts`: `HealthResponse` (mirrors the backend schema), `isHealthResponse` and `fetchHealth`.
+- `src/features/health/`: the `useApiHealth` hook (abort on unmount, manual retry) and
+  `ApiHealthPanel` (a polite live region for loading and success, `role="alert"` for errors,
+  and a Retry button).
+- `App.tsx` shell with an honest note that no energy data is shown yet.
+- The dev server proxies `/api` to the backend (D009). Both READMEs and the frontend
+  `.env.example` were added.
+- **Version constraints found during setup:**
+  - TypeScript 7.0 is out, but typescript-eslint supports only TypeScript up to 6.0.
+  - `eslint-plugin-jsx-a11y` supports only ESLint up to 9.
+  - Both are recorded with upgrade triggers in D008.
+- **Fixes found by the checks:**
+  - ESLint flagged `||` in `vite.config.ts`. The empty-string fallback is now explicit.
+  - Prettier re-wrapped three files (layout only).
+  - The integration run showed that the dev proxy returns HTTP 502 when the backend is down.
+    The error message now says "the API request failed with HTTP 502" instead of claiming the
+    API itself responded.
+
+**Validation** (Node 24.18, npm 11.16, Windows)
+- `npm ci`: clean install from the lockfile, 0 vulnerabilities.
+- `npm run typecheck`: pass.
+- `npm run lint` (zero warnings allowed): pass.
+- `npm run format:check`: pass.
+- `npm test`: 4 files and 21 tests passed (client errors, guards, panel loading, online,
+  error-with-retry and HTTP failure, app shell).
+- `npm run build`: pass. JS 224 kB (70 kB gzip), CSS 11.7 kB.
+- **Integration**, with uvicorn on :8000 and Vite on :5173:
+  - `GET /` returned 200 (title "WattWise AI", `#root` present).
+  - `GET /src/main.tsx` returned 200 (the module was transformed).
+  - `GET /api/v1/health` through the proxy returned 200 with the real backend payload.
+  - With the backend stopped, the proxy returned 502, which the UI reports as an error.
+- **Not done:** no visual check in a real browser. No browser automation is installed; the
+  component tests cover the rendered states.

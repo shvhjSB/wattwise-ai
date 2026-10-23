@@ -22,7 +22,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 |---|---|---|---|---|
 | T001 | Repository audit, project records and hygiene | M1 | — | Done |
 | T002 | Backend foundation (FastAPI, settings, liveness, tooling) | M1 | T001 | Done |
-| T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | M1 | T002 | Not started |
+| T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | M1 | T002 | Done |
 | T004 | CI baseline (GitHub Actions) | M1 | T002, T003 | Not started |
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Not started |
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Not started |

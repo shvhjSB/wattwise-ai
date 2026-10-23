@@ -1,0 +1,6 @@
+@import 'tailwindcss';
+
+/* Design tokens and theming are established in T028 (design system). */
+:root {
+  color-scheme: light dark;
+}

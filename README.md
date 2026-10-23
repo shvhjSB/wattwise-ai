@@ -2,8 +2,8 @@
 
 **Explainable energy-waste intelligence for commercial buildings.**
 
-> **Status: early development.** The repository foundation and the backend API skeleton are in
-> place, but no model has been trained and no metrics exist yet. Nothing in this repository should be read as a measured
+> **Status: early development.** The repository foundation, the backend API skeleton and the
+> frontend shell are in place, but no model has been trained and no metrics exist yet. Nothing in this repository should be read as a measured
 > result until it appears in the evaluation documentation with the command that produced it.
 > See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
 
@@ -48,7 +48,7 @@ designed to say so wherever it shows a result.
 
 ```
 backend/     Python project "wattwise": API now; data pipeline and ML code to follow (src layout)
-frontend/    React application (planned, T003)
+frontend/    React + TypeScript + Vite application
 scripts/     dataset acquisition, preprocessing, training and evaluation entry points (planned)
 data/        sample/ = tiny synthetic fixtures (committed); raw/ and processed/ are git-ignored
 docs/        roadmap, decisions, status, work log, specifications
@@ -64,9 +64,16 @@ See [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
 
 ## Quickstart
 
-The backend API skeleton runs today. It exposes a liveness endpoint and OpenAPI docs; see
-[backend/README.md](backend/README.md) for setup. The full-stack quickstart arrives with the
-Docker Compose task (T036).
+The application foundation runs locally today:
+
+1. **Backend:** start the API, which serves a liveness endpoint and OpenAPI docs. See
+   [backend/README.md](backend/README.md).
+2. **Frontend:** run `npm ci` and `npm run dev` in `frontend/`, then open
+   <http://127.0.0.1:5173>. It shows the live API connection status. See
+   [frontend/README.md](frontend/README.md).
+
+No energy data, models or analytics exist yet. The one-command Docker Compose quickstart
+arrives with task T036.
 
 ## Project records
 

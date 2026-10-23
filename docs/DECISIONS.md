@@ -136,14 +136,58 @@ links to the entry that replaces it.
   starts with `-`, because PowerShell parses it as a parameter. Use alphanumeric passwords with
   this installer.
 
+## D008 — Frontend toolchain and version constraints
+- **Date:** 2026-10-23 · **Task:** T003 · **Status:** Accepted
+- **Decision:**
+  - Build and runtime: React 19, Vite 8 (`@vitejs/plugin-react`) and Tailwind CSS 4 (`@tailwindcss/vite`).
+  - Tests: Vitest 5 with jsdom, React Testing Library and jest-dom matchers.
+  - Linting: ESLint flat config with typescript-eslint `strictTypeChecked` and
+    `stylisticTypeChecked`, `react-hooks` (including the React Compiler rules) and
+    `react-refresh`, plus **`jsx-a11y`** for accessibility. Lint runs with `--max-warnings=0`.
+  - Formatting: Prettier.
+  - Installs are locked by `package-lock.json` and installed with `npm ci`.
+- **Version constraints:**
+  - **TypeScript 6.0, not 7.0.** typescript-eslint 8.72 supports TypeScript `<6.1`. TypeScript 7
+    (the native compiler) is the upgrade target once typescript-eslint supports it.
+  - **ESLint 9.39, not 10.** `eslint-plugin-jsx-a11y` 6.10 supports ESLint only up to 9.
+    Accessibility linting is a product requirement, so it outweighs being on the newest ESLint.
+    Considered: ESLint 10 with the `eslint-plugin-jsx-a11y-x` fork (v0.2, far less adoption).
+    Revisit when jsx-a11y supports ESLint 10, or when the fork matures.
+- **Alternatives considered:**
+  - Jest, rejected because Vitest shares Vite's transform pipeline and config.
+  - CSS Modules, rejected because Tailwind is required by the stack and keeps styling co-located.
+
+## D009 — Same-origin API access and typed client
+- **Date:** 2026-10-23 · **Task:** T003 · **Status:** Accepted
+- **Decision:**
+  - **Same origin:** the browser calls the API on the same origin, using relative `/api/...` paths.
+    - In development, the Vite dev server proxies `/api` to the backend
+      (`WATTWISE_DEV_API_TARGET`, default `http://127.0.0.1:8000`).
+    - In production, the reverse proxy (T036) does the same.
+    - `VITE_API_BASE_URL` is optional, for split-origin deployments. Backend CORS is only
+      needed then, and is added with an explicit allow-list in T037.
+  - **Typed client:** `src/api/client.ts` validates every response at runtime with a type guard
+    and reports three error kinds: `network`, `http` and `invalid-response`. A contract mismatch
+    is shown as an error and is never rendered as data. Aborted requests are not errors.
+  - **Response types:** written by hand for now, mirroring the Pydantic schemas, with the source
+    file named in a comment.
+- **Alternatives considered:**
+  - Enabling CORS now, rejected because the browser does not need it and it widens the attack surface.
+  - Generating types from OpenAPI (`openapi-typescript`), deferred to T024, when the API surface
+    grows beyond one endpoint.
+  - A data-fetching library (e.g. TanStack Query), deferred to T029, when caching and refetch
+    needs are real.
+
 ---
 
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
 |---|---|---|
-| Dependency lock strategy | T004 | Compiled lock vs uv; must make CI and Docker reproducible |
-| Test database strategy | T023 | PostgreSQL service container in CI; the local option depends on Docker availability |
+| Dependency lock strategy | T004 | Frontend is locked (`package-lock.json`). Backend: compiled lock vs uv; must make CI and Docker reproducible |
+| Test database strategy | T023 | PostgreSQL 18 locally (D007), plus a service container in CI |
+| API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
+| Server-state library | T029 | Plain hooks (D009) vs TanStack Query |
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |

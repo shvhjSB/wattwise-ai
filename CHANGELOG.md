@@ -16,6 +16,13 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   factory, and a `GET /api/v1/health` liveness endpoint with OpenAPI docs. (T002)
 - Backend tooling: pytest (10 tests), ruff lint and format, strict mypy. (T002)
 - `.env.example` documenting `WATTWISE_ENVIRONMENT`. (T002)
+- Frontend foundation: React 19 + TypeScript + Vite 8 + Tailwind CSS 4 app shell, with a
+  page showing the live API connection status (loading, online and error-with-retry
+  states). (T003)
+- Typed API client that validates every response at runtime and reports network, HTTP and
+  invalid-response errors. The dev server proxies `/api` to the backend. (T003)
+- Frontend tooling: Vitest + React Testing Library (21 tests), ESLint (typescript-eslint strict,
+  React hooks, jsx-a11y), Prettier and a locked `package-lock.json`. (T003)
 
 ### Fixed
 - The audit records wrongly stated which credential git pushes with. They now describe the real

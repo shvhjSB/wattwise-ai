@@ -1,0 +1,121 @@
+{
+  "quality_version": "1",
+  "contract_version": "1.0",
+  "valid": true,
+  "contract_issues": [],
+  "thresholds": {
+    "min_coverage_pct": 95.0,
+    "flatline_min_intervals": 6,
+    "flatline_tolerance": 0.0,
+    "zero_run_min_intervals": 24,
+    "extreme_ratio_to_p99": 5.0,
+    "min_intensity_kwh_m2_year": 2.0,
+    "max_intensity_kwh_m2_year": 2000.0
+  },
+  "summary": {
+    "meters": 4,
+    "rows": 5376,
+    "first": "2016-01-04T00:00:00Z",
+    "last": "2016-02-28T23:00:00Z",
+    "expected_intervals": 5376,
+    "available_values": 5370,
+    "coverage_pct": 99.89,
+    "meters_with_warnings": 1,
+    "meters_by_check": {
+      "missing_values": 1,
+      "flatlines": 1
+    }
+  },
+  "meters": [
+    {
+      "meter_id": "syn-lab-c:electricity",
+      "building_id": "syn-lab-c",
+      "meter_type": "electricity",
+      "unit": "kWh",
+      "interval_minutes": 60,
+      "first": "2016-01-04T00:00:00Z",
+      "last": "2016-02-28T23:00:00Z",
+      "expected_intervals": 1344,
+      "present_rows": 1344,
+      "absent_intervals": 0,
+      "missing_values": 6,
+      "available_values": 1338,
+      "coverage_pct": 99.55,
+      "negative_values": 0,
+      "zero_values": 0,
+      "findings": [
+        {
+          "check": "missing_values",
+          "severity": "info",
+          "message": "6 reading(s) are missing (empty value) in 1 run(s); the longest is 6 interval(s) (2016-01-12T03:00:00Z to 2016-01-12T08:00:00Z).",
+          "count": 6,
+          "start": "2016-01-12T03:00:00Z",
+          "end": "2016-01-12T08:00:00Z"
+        }
+      ]
+    },
+    {
+      "meter_id": "syn-office-a:electricity",
+      "building_id": "syn-office-a",
+      "meter_type": "electricity",
+      "unit": "kWh",
+      "interval_minutes": 60,
+      "first": "2016-01-04T00:00:00Z",
+      "last": "2016-02-28T23:00:00Z",
+      "expected_intervals": 1344,
+      "present_rows": 1344,
+      "absent_intervals": 0,
+      "missing_values": 0,
+      "available_values": 1344,
+      "coverage_pct": 100.0,
+      "negative_values": 0,
+      "zero_values": 0,
+      "findings": [
+        {
+          "check": "flatlines",
+          "severity": "warning",
+          "message": "1 run(s) of at least 6 consecutive identical non-zero readings; the longest is 12 interval(s) at 98.662 (2016-02-15T08:00:00Z to 2016-02-15T19:00:00Z). A stuck meter or logger fault is likely; treat these readings as unreliable until checked.",
+          "count": 12,
+          "start": "2016-02-15T08:00:00Z",
+          "end": "2016-02-15T19:00:00Z"
+        }
+      ]
+    },
+    {
+      "meter_id": "syn-office-d:electricity",
+      "building_id": "syn-office-d",
+      "meter_type": "electricity",
+      "unit": "kWh",
+      "interval_minutes": 60,
+      "first": "2016-01-04T00:00:00Z",
+      "last": "2016-02-28T23:00:00Z",
+      "expected_intervals": 1344,
+      "present_rows": 1344,
+      "absent_intervals": 0,
+      "missing_values": 0,
+      "available_values": 1344,
+      "coverage_pct": 100.0,
+      "negative_values": 0,
+      "zero_values": 0,
+      "findings": []
+    },
+    {
+      "meter_id": "syn-retail-b:electricity",
+      "building_id": "syn-retail-b",
+      "meter_type": "electricity",
+      "unit": "kWh",
+      "interval_minutes": 60,
+      "first": "2016-01-04T00:00:00Z",
+      "last": "2016-02-28T23:00:00Z",
+      "expected_intervals": 1344,
+      "present_rows": 1344,
+      "absent_intervals": 0,
+      "missing_values": 0,
+      "available_values": 1344,
+      "coverage_pct": 100.0,
+      "negative_values": 0,
+      "zero_values": 0,
+      "findings": []
+    }
+  ]
+}

@@ -511,3 +511,57 @@ reproduced the Windows-made fixture byte for byte.
   - bdg2: exact pin, LFS endpoint, unique keys, docs in sync with the source definition,
     `data/raw` ignored, manifest provenance, a re-fetch keeps the download date, subsets, CLI
     `list`, `verify` and failure exit codes
+
+**Commit:** `85d3530` feat(data): add verified BDG2 acquisition and dataset documentation. CI
+run [39959311819](https://github.com/shvhjSB/wattwise-ai/actions/runs/39959311819) was green
+(135 backend tests, 21 frontend tests).
+
+---
+
+## 2026-10-23 — T008 Data-quality engine and report
+
+**Done**
+- **`wattwise.data.quality`:** `assess(readings, buildings=None, thresholds=None)` produces a
+  `QualityReport`.
+  - The contract runs first; structural errors, including duplicate timestamps
+    (`duplicate_key`), stop the assessment.
+  - Each meter is then assessed on its own inferred interval, with nine checks: gaps, irregular
+    intervals, missing values, low coverage, negative values, zero runs, flatlines, extreme
+    values and implausible intensity.
+  - Findings are `info` or `warning`, with a count and an example window, and phrase causes as
+    hypotheses.
+  - `QualityThresholds` are validated Pydantic settings.
+  - JSON and Markdown rendering are deterministic. CLI: `python -m wattwise.data.quality`.
+- **Docs and example:** `docs/DATA_QUALITY.md`, and a committed example report
+  `docs/reports/synthetic-data-quality.{json,md}`.
+- **Decision:** D015.
+
+**Found and fixed during the task**
+- **Extreme values:** the first version used a robust z-score (threshold 10). Run on the
+  synthetic sample, it flagged the injected 2.2× **behaviour** spike in `syn-office-a` (260.6 kWh,
+  11.3 robust SDs), because bimodal office load makes the MAD small. That breaks the rule that
+  quality checks must not flag behaviour. The check was replaced by a ratio to the meter's 99th
+  percentile (default 5×): the spike is about 2.1× the 99th percentile (128.8), while a ×1000 slip
+  is flagged. Recorded in D015 and DATA_QUALITY.md.
+
+**Validation** (Windows)
+- `uv lock --check`: pass. ruff: clean. Format: 35 files. `mypy` (strict): no issues in 34 files.
+- `pytest`: **164 passed**, of which 29 are new:
+  - A clean meter has no findings.
+  - Duplicates and naive timestamps are reported as contract issues.
+  - Gaps report their longest window.
+  - Low coverage is flagged below the threshold but not exactly at it.
+  - Irregular steps are flagged, and missing values report their longest run.
+  - Negatives are flagged, but not on solar meters.
+  - Zero runs are flagged at 24 intervals but not 23; flatlines at 6 but not 5. Zeros are not
+    flatlines, a gap breaks a run, and the tolerance is configurable.
+  - A ×1000 slip is extreme; a 2.5× spike and short series are not.
+  - Intensity is flagged with a tiny floor area, not with a plausible one or an unknown area,
+    and only for electricity.
+  - Threshold validation, the summary counts and determinism hold.
+  - **On the synthetic fixture, exactly the injected data faults are found**, with windows equal
+    to the labels.
+  - The committed report is up to date, the CLI fails on invalid input, and the doc lists every
+    check and threshold.
+- **Performance:** 1.75 M readings (100 meters × 2 years hourly) take 5.3 s, of which the
+  contract check is 4.9 s; about 84 s extrapolated for BDG2 electricity.

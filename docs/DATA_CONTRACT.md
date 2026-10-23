@@ -17,7 +17,8 @@ This contract is the one internal shape of energy data in WattWise AI. Everythin
 1. **Structure, not quality.** The contract rejects data that is malformed or physically
    impossible, such as an unknown unit, a latitude of 91° or two readings for one meter at one
    time. It does **not** judge plausibility. Gaps, negative electricity use, flatlined meters and
-   outliers are data-quality findings (T008), reported without rejecting the data.
+   outliers are data-quality findings, reported without rejecting the data
+   ([DATA_QUALITY.md](DATA_QUALITY.md)).
 2. **Time is UTC and explicit.** Every timestamp states its offset and is stored in UTC. A
    reading's `timestamp` is the **start** of its measurement interval. The interval length is
    inferred per meter from consecutive timestamps (T008); it is not a contract field.

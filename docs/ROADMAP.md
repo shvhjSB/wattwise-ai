@@ -27,7 +27,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Done |
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Done |
 | T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Done |
-| T008 | Data-quality engine and report | M3 | T005, T006 | Not started |
+| T008 | Data-quality engine and report | M3 | T005, T006 | Done |
 | T009 | BDG2 preprocessing pipeline | M3 | T007, T008 | Not started |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Not started |
 | T011 | Evaluation harness and metrics | M4 | T010 | Not started |

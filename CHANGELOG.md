@@ -51,6 +51,13 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - BDG2 source definition and CLI (`python -m wattwise.data.bdg2 list|fetch|verify`), pinned to
   commit `753598e0` with checksums from the Git LFS pointers. It writes a provenance manifest,
   `data/manifests/bdg2.json`. (T007)
+- Data-quality engine (`wattwise.data.quality`, `python -m wattwise.data.quality`). It runs after
+  the contract and reports nine checks without rejecting data: gaps, irregular intervals,
+  missing values, low coverage, negatives, zero runs, flatlines, extreme values (5× the 99th
+  percentile) and implausible intensity. Thresholds are configurable, and the JSON and Markdown
+  reports are deterministic. (T008)
+- `docs/DATA_QUALITY.md` and an example report for the synthetic sample
+  (`docs/reports/synthetic-data-quality.md`), kept up to date by a test. (T008)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

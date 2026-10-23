@@ -62,7 +62,9 @@ Raw data is never committed. Downloading it is an explicit, checksum-verified co
 (`uv run python -m wattwise.data.bdg2 fetch`, about 369 MB). Provenance, licence evidence and the
 data conventions are in [docs/DATASETS.md](docs/DATASETS.md). All data,
 whether from a dataset or an upload, is converted to one canonical shape, described in
-[docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Tests and the
+[docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Data quality (gaps, flatlines,
+unit slips and more) is assessed and reported, never silently fixed:
+[docs/DATA_QUALITY.md](docs/DATA_QUALITY.md). Tests and the
 demo mode use a small, deterministic and clearly **synthetic** dataset with labelled injected
 anomalies: [data/sample/synthetic/](data/sample/synthetic/README.md).
 

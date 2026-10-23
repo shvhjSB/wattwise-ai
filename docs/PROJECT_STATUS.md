@@ -31,6 +31,12 @@ The application foundation runs end to end locally, and CI checks it automatical
   [data/manifests/bdg2.json](../data/manifests/bdg2.json). Licence evidence and data conventions
   are in [docs/DATASETS.md](DATASETS.md). The files were downloaded and verified on 2026-10-23.
 
+- **Data quality:** an engine that runs after the contract and describes the data with nine checks
+  (gaps, missing values, coverage, negatives, zero runs, flatlines, extreme values, intensity and
+  more) in deterministic JSON and Markdown reports ([docs/DATA_QUALITY.md](DATA_QUALITY.md)). On
+  the synthetic sample it finds exactly the two injected data faults
+  ([example report](reports/synthetic-data-quality.md)).
+
 The BDG2 data has been downloaded but not yet processed (T009). No model has been trained, so no
 ML metrics exist yet.
 
@@ -45,6 +51,7 @@ ML metrics exist yet.
 | T005 | Canonical data contracts and CSV upload format | 2026-10-23 |
 | T006 | Deterministic synthetic fixture generator | 2026-10-23 |
 | T007 | BDG2 acquisition tooling and dataset documentation | 2026-10-23 |
+| T008 | Data-quality engine and report | 2026-10-23 |
 
 ## Current task
 
@@ -52,11 +59,12 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T008 — Data-quality engine and report**: checks for duplicate timestamps, gaps, missing values,
-negative or implausible values, flatlined meters and unit issues, with per-meter and overall
-summaries in a JSON and Markdown report. Thresholds are configurable and documented. Each check
-is tested on crafted inputs, and a report is generated for the synthetic fixture. See
-[ROADMAP.md](ROADMAP.md#t008--data-quality-engine-and-report).
+**T009 — BDG2 preprocessing pipeline**: deterministically convert the downloaded BDG2 files into
+the canonical format for a laptop-sized subset. That means electricity only, a seeded meter
+sample, wide-to-long reshaping, a weather join and an exclusion log, plus a T008 quality report.
+It must first resolve the timestamp convention found in T007: local time that is not
+daylight-saving wall-clock time, and an undocumented interval start/end. See
+[ROADMAP.md](ROADMAP.md#t009--bdg2-preprocessing-pipeline).
 
 ## Milestone progress
 
@@ -64,7 +72,7 @@ is tested on crafted inputs, and a report is generated for the synthetic fixture
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
-| M3 Validation and preprocessing | T008–T010 | 0 / 3 |
+| M3 Validation and preprocessing | T008–T010 | 1 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |
 | M6 Anomaly detection | T016–T018 | 0 / 3 |

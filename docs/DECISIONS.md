@@ -395,6 +395,44 @@ links to the entry that replaces it.
     - The interval convention (start or end) is not documented.
     - Electricity is wide-format kWh.
 
+## D015 — Data-quality engine design
+- **Date:** 2026-10-23 · **Task:** T008 · **Status:** Accepted
+- **Decision:** `wattwise.data.quality` assesses canonical readings *after* the contract, and
+  reports without rejecting anything ([DATA_QUALITY.md](DATA_QUALITY.md)).
+  - **Contract first.** Structural problems, including duplicate timestamps, stop the
+    assessment and appear as contract issues. The quality checks never re-implement contract
+    rules.
+  - **Nine checks:** gaps, irregular intervals, missing values, low coverage, negative values,
+    zero runs, flatlines, extreme values and implausible intensity (the unit and scaling check).
+    Each meter is assessed on its own inferred interval.
+  - **Two severities:** `info` for facts, `warning` where data is likely unreliable. Messages
+    phrase causes as hypotheses.
+  - **Quality is not anomaly detection.** On the synthetic sample, the checks must find exactly
+    the injected data faults (missing data, flatline) and none of the behaviour anomalies; a test
+    enforces this.
+  - **Extreme values use a ratio to the meter's 99th percentile (default 5×), not a robust
+    z-score.** This is evidence-based. The z-score version flagged the injected 2.2× behaviour
+    spike at 11.3 robust SDs, because bimodal office load (occupied around 110 kWh, unoccupied
+    around 45 kWh) makes the MAD small. The ratio targets order-of-magnitude errors (Wh/kWh slips,
+    counter resets).
+  - **Defaults with rationale:** coverage 95%, flatline 6 intervals, zero runs 24 intervals
+    (BDG2's own cleaning rule), extremes 5× the 99th percentile, intensity 2–2000 kWh/m²/year.
+    All are configurable and validated (`QualityThresholds`).
+  - **Deterministic JSON and Markdown reports**, with no generation time. A committed example
+    for the synthetic sample (`docs/reports/`) is kept up to date by a test.
+- **Alternatives considered:**
+  - Robust z-score for extremes: rejected (above).
+  - IQR fences: these flag the same bimodal peaks.
+  - Failing the pipeline on quality warnings: rejected, because quality findings inform
+    modelling and evaluation choices and do not invalidate data. Rejection belongs to the
+    contract.
+  - Assessing weather in the same engine: deferred to T009, where weather is joined to readings.
+- **Consequences:**
+  - Measured speed: 1.75 M readings for 100 meters take 5.3 s, of which the contract check is
+    4.9 s. That extrapolates to about 84 s for all BDG2 electricity.
+  - Partial-period scaling errors can slip through; this is documented as a limitation, and
+    level shifts belong to anomaly detection (T016/T017).
+
 ---
 
 ## Open decisions (tracked in tasks)

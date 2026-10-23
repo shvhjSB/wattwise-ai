@@ -49,5 +49,7 @@ GitHub checkpoint, Project status, Next task, Decisions needed. Use plain langua
 - Windows development machine. Docker and PostgreSQL are **not** installed locally, so
   container and DB checks may need GitHub Actions.
 - Python work uses the isolated venv at `backend/.venv`, never the global interpreter.
-- Several GitHub accounts exist on this machine. Pushes go through Git Credential Manager as
-  `shvhjSB`, who owns the repo. Do not change remotes or credentials. Report push blockers instead.
+- Several GitHub accounts are logged in to `gh` on this machine. Git authenticates to github.com
+  via `gh auth git-credential`, which uses the **active** `gh` account. Only `shvhjSB` (the owner)
+  has write access to this repo. Never switch accounts, change remotes or alter credentials
+  yourself. If a push fails, report the exact error and the command the owner can run.

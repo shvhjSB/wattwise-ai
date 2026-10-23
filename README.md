@@ -58,13 +58,18 @@ docs/        roadmap, decisions, status, work log, specifications
 
 The primary dataset is the [Building Data Genome Project 2](https://github.com/buds-lab/building-data-genome-project-2)
 (Miller et al., 2020, *Scientific Data* 7, 368, <https://doi.org/10.1038/s41597-020-00712-x>).
-Raw data is never committed. Downloading it will be an explicit, documented command. All data,
+Raw data is never committed. Downloading it is an explicit, checksum-verified command
+(`uv run python -m wattwise.data.bdg2 fetch`, about 369 MB). Provenance, licence evidence and the
+data conventions are in [docs/DATASETS.md](docs/DATASETS.md). All data,
 whether from a dataset or an upload, is converted to one canonical shape, described in
 [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Tests and the
 demo mode use a small, deterministic and clearly **synthetic** dataset with labelled injected
-anomalies: [data/sample/synthetic/](data/sample/synthetic/README.md). Its licence
-terms are being verified before use; the sources disagree on CC BY 4.0 vs CC BY-SA 4.0.
-See [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
+anomalies: [data/sample/synthetic/](data/sample/synthetic/README.md).
+
+BDG2's licence is stated differently by its sources (MIT, CC BY 4.0, CC BY-SA). WattWise follows
+the most restrictive reading: it attributes the source and never redistributes raw or derived
+BDG2 data (see [docs/DATASETS.md](docs/DATASETS.md#licence)). Other candidate datasets are listed
+in [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
 
 ## Quickstart
 

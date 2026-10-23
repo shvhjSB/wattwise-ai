@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-23 · **Current milestone:** M2 — Data contracts, schemas and dataset acquisition (M1 complete)
+**Last updated:** 2026-10-23 · **Current milestone:** M3 — Data validation and preprocessing (M1 and M2 complete)
 
 ## Summary
 
@@ -26,8 +26,13 @@ The application foundation runs end to end locally, and CI checks it automatical
   [data/sample/synthetic/](../data/sample/synthetic/README.md). It has 4 buildings, 8 weeks of
   hourly electricity and weather, and 6 injected anomalies with labels. It is for tests, the
   demo mode and synthetic benchmarks.
+- **BDG2 acquisition:** a pinned, checksum-verified download of the BDG2 files (about 369 MB)
+  into git-ignored `data/raw/bdg2/`, with provenance recorded in
+  [data/manifests/bdg2.json](../data/manifests/bdg2.json). Licence evidence and data conventions
+  are in [docs/DATASETS.md](DATASETS.md). The files were downloaded and verified on 2026-10-23.
 
-No dataset has been downloaded and no model has been trained, so no ML metrics exist yet.
+The BDG2 data has been downloaded but not yet processed (T009). No model has been trained, so no
+ML metrics exist yet.
 
 ## Completed tasks
 
@@ -39,6 +44,7 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 | T004 | CI baseline (GitHub Actions, uv lock, SHA-pinned workflow) | 2026-10-23 |
 | T005 | Canonical data contracts and CSV upload format | 2026-10-23 |
 | T006 | Deterministic synthetic fixture generator | 2026-10-23 |
+| T007 | BDG2 acquisition tooling and dataset documentation | 2026-10-23 |
 
 ## Current task
 
@@ -46,19 +52,18 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T007 — BDG2 acquisition tooling and dataset documentation**: an explicit, verifiable download
-script for the BDG2 files needed (electricity, metadata, weather). The data files are stored in
-Git LFS. The task also covers recording checksums and provenance in
-`data/manifests/datasets.yaml`, `docs/DATASETS.md` with attribution, and resolving the licence
-discrepancy (CC BY 4.0 vs CC BY-SA 4.0). See
-[ROADMAP.md](ROADMAP.md#t007--bdg2-acquisition-tooling-and-dataset-documentation).
+**T008 — Data-quality engine and report**: checks for duplicate timestamps, gaps, missing values,
+negative or implausible values, flatlined meters and unit issues, with per-meter and overall
+summaries in a JSON and Markdown report. Thresholds are configurable and documented. Each check
+is tested on crafted inputs, and a report is generated for the synthetic fixture. See
+[ROADMAP.md](ROADMAP.md#t008--data-quality-engine-and-report).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007 | 2 / 3 |
+| M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |
@@ -96,7 +101,8 @@ pushes only as `shvhjSB` (D006).
 |---|---|---|
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
-| BDG2 licence discrepancy (CC BY 4.0 vs CC BY-SA 4.0) | T007, T009 | Resolve and document in T007 before using the data |
-| BDG2 data files are stored in Git LFS (the repository holds 130-byte pointer files) | T007 | Download through GitHub's LFS media endpoint. GitHub LFS bandwidth limits may apply |
+| BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
+| BDG2 timestamps are local but **not** daylight-saving wall-clock time, and the interval start/end convention is undocumented | T009 | Test the local-standard-time hypothesis before converting to UTC (DATASETS.md) |
+| GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

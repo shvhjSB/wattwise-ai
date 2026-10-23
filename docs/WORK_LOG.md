@@ -433,3 +433,81 @@ on Linux (87 backend tests, 21 frontend tests).
   - Each anomaly has its documented effect, and the CLI writes every file.
 - Cross-platform byte identity: checked in a Linux container and in GitHub CI (see the
   end-of-task report).
+
+**Commit:** `6349c7a` feat(data): add deterministic synthetic fixture generator and sample. CI
+run [39957140784](https://github.com/shvhjSB/wattwise-ai/actions/runs/39957140784) was green on
+Linux (104 backend tests, 21 frontend tests). The Linux container replay before the push also
+reproduced the Windows-made fixture byte for byte.
+
+---
+
+## 2026-10-23 — T007 BDG2 acquisition tooling and dataset documentation
+
+**Research.** Everything below was verified, not assumed.
+- **Repository** (`gh api`): `master` = `9b97ccb` (2023-10-14). All data files are Git LFS
+  pointers; their `oid sha256` and `size` give the expected checksums.
+- **Pin:** tag `v1.0` (`3d0cbaf`, 2020-06-04) differs from `master` for `weather.csv` and
+  `electricity_cleaned.csv`. Three later data commits exist: cleaned electricity updated on
+  06-15, `weather_UTC.csv` added on 06-23 and removed on 06-24, and `weather.csv` corrected on
+  06-24. The pin is therefore `753598e0` (2020-06-24), the last data commit. Its four needed
+  files match `master` exactly (pointer comparison).
+- **Licence:**
+  - `LICENSE` was MIT from 2020-05-03 (and at the pin), then changed to "Attribution-ShareAlike
+    4.0 Unported" on 2023-10-14. That file's text follows the CC BY-SA 3.0 Unported legal-code
+    wording.
+  - Zenodo v1.0 deposit (API): CC BY 4.0.
+  - ORNL portal record (Opendatasoft API, publisher NUS): CC BY 4.0.
+  - Article (Europe PMC, Crossref): CC BY 4.0, with CC0 for the article's metadata files.
+  - Recorded with conservative handling (D014).
+- **The web-reading agent could not retrieve the facts:** the ORNL pages render client-side, and
+  Nature is behind a cookie wall. It reported nothing rather than guessing. The facts came from
+  the APIs and the open-access full text instead.
+- **The paper (PMC7591488):**
+  - Timestamps are in local time for meters and weather.
+  - Readings are hourly sums in "kWh … for the energy-related meters and liters for the
+    non-energy meters".
+  - The cleaned data removed anomaly-detected outliers, zero runs over 24 h and electricity zero
+    readings.
+  - Whether a timestamp marks the start or end of its hour is not stated.
+- **Download URLs** (HEAD requests only, before any download):
+  `media.githubusercontent.com/media/<repo>/<commit>/<path>` returned 200, with Content-Length
+  exactly equal to the pointer sizes. `raw.githubusercontent.com` returned the 131-byte pointer.
+
+**Done**
+- **`wattwise.data.acquisition`:** `RemoteFile` (validated: relative path, SHA-256 hex, positive
+  size), `ensure`, `verify`, `open_url` (HTTPS only, identifying User-Agent).
+  - Streams to `.part` with SHA-256 and a size limit, then renames atomically.
+  - Valid files are not re-downloaded; mismatching files are never overwritten without `force`.
+  - Specific messages for offline, HTTP 403/429 (LFS quota), 404, LFS pointers, truncation,
+    oversize and checksum mismatch.
+- **`wattwise.data.bdg2`:** the pinned source with four files, a JSON manifest writer (keeps
+  `downloaded_at` and updates `last_verified_at`), and a `list | fetch | verify` CLI.
+- **`docs/DATASETS.md`; decision D014;** the T009 roadmap scope now includes the findings.
+
+**Real download** (approved by the owner: all 4 files)
+- `fetch`: all four downloaded and verified in **25 s** (368.9 MB).
+- Second `fetch`: all four "verified", nothing downloaded, **1.4 s**.
+- `verify` (offline): all verified.
+- Independent `sha256sum`: identical to the pinned hashes. No `.part` leftovers.
+- `git status` shows only code and `data/manifests/bdg2.json`; `data/raw/bdg2/` is ignored.
+
+**Facts checked on the downloaded files** (for T009, not processing)
+- **Electricity:** wide format, 1,578 building columns × 17,544 hourly rows,
+  `2016-01-01 00:00:00` → `2017-12-31 23:00:00`.
+- **Weather:** long format, 19 sites, 331,166 rows (16,860–17,544 per site).
+- **Metadata:** 1,636 buildings × 32 columns.
+- **Daylight saving:** all 19 sites are in daylight-saving zones, yet the electricity timestamps
+  are a regular grid (0 duplicates, every step 1 h). `2016-03-13 02:00` (non-existent on US
+  clocks) appears once, and `2016-11-06 01:00` (repeated on US clocks) appears once. So the
+  timestamps are **not** daylight-saving wall-clock time; T009 must test the
+  local-standard-time hypothesis.
+
+**Validation** (Windows)
+- `pytest`: **135 passed**, of which 31 are new. ruff, format and strict mypy (32 files) are
+  clean; `uv lock --check` passes. The new tests are:
+  - acquisition: download, verified skip, no silent overwrite, force, checksum, truncation,
+    oversize, interrupted stream leaves no `.part`, offline, 403 quota hint, LFS pointer,
+    progress, offline verify, unsafe paths, HTTPS only
+  - bdg2: exact pin, LFS endpoint, unique keys, docs in sync with the source definition,
+    `data/raw` ignored, manifest provenance, a re-fetch keeps the download date, subsets, CLI
+    `list`, `verify` and failure exit codes

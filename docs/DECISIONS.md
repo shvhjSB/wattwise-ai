@@ -359,6 +359,42 @@ links to the entry that replaces it.
   - Byte-identity across operating systems depends on the locked NumPy and pandas versions. CI
     on Linux checks it against files generated on Windows.
 
+## D014 — BDG2 acquisition: pin, integrity and licence handling
+- **Date:** 2026-10-23 · **Task:** T007 · **Status:** Accepted
+- **Decision:**
+  - **Pin** BDG2 at commit `753598e0` (2020-06-24): the last commit that changed data. Its data
+    is byte-identical to today's `master`. The `v1.0` tag (the Zenodo release) is **not** used,
+    because it predates corrections to `weather.csv` and `electricity_cleaned.csv`. A
+    CC-BY-labelled but known-erroneous file is worse than a corrected one.
+  - **Fetch** from GitHub's LFS media endpoint. The repository's files are LFS pointers, and
+    `raw.githubusercontent.com` serves the 131-byte pointer, not the data.
+  - **Verify** every file against the size and SHA-256 recorded in its LFS pointer at the pin,
+    so the expected values come from the source itself. Downloads stream to `.part` and are
+    renamed atomically only after verification. Valid files are not downloaded again, and
+    mismatching files are never overwritten without `--force`.
+  - **Download** metadata, weather and **both** raw and cleaned electricity, about 369 MB in
+    total. Cleaned data had anomaly-detected outliers and zero readings removed by BDG2. Raw keeps
+    real (unlabelled) anomalies. Which to use for what is decided in T009/T012.
+  - **Implementation:** the Python standard library (`urllib`, `hashlib`) with an injectable
+    opener, so tests never use the network. The provenance manifest is **JSON**
+    (`data/manifests/bdg2.json`) rather than the YAML the roadmap mentioned, to avoid adding a
+    YAML dependency for one file.
+  - **Licence:** four sources say three things (MIT, CC BY 4.0, CC BY-SA). WattWise follows the
+    most restrictive reading: it attributes the source, never redistributes raw or derived BDG2
+    data, and documents its transformations. Public display of BDG2-derived results is an owner
+    decision at T038. The evidence is in [DATASETS.md](DATASETS.md#licence).
+- **Alternatives considered:**
+  - Download the Zenodo v1.0 zip (595 MB, CC BY 4.0): rejected, because it is larger, uncorrected
+    and verified by MD5 only.
+  - `requests` or `httpx` for downloads: unnecessary for streaming one file at a time.
+  - Pin `master`: rejected, because a branch can move; a commit cannot.
+- **Consequences:**
+  - The real download took 25 s and was verified independently with `sha256sum`.
+  - T009 inherits three verified facts, recorded in DATASETS.md:
+    - BDG2 timestamps are local but **not** daylight-saving wall-clock time.
+    - The interval convention (start or end) is not documented.
+    - Electricity is wide-format kWh.
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -44,6 +44,16 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   data). (T006)
 - Committed synthetic sample in `data/sample/synthetic/` (about 564 KB) with a generated README
   and a hash manifest; every table passes the data contract. (T006)
+- Verified dataset acquisition (`wattwise.data.acquisition`). It streams to `.part`, enforces
+  the expected size, checks SHA-256 and renames atomically. It never re-downloads verified files,
+  never overwrites mismatching files without `--force`, and gives clear messages for offline,
+  quota and LFS-pointer cases. (T007)
+- BDG2 source definition and CLI (`python -m wattwise.data.bdg2 list|fetch|verify`), pinned to
+  commit `753598e0` with checksums from the Git LFS pointers. It writes a provenance manifest,
+  `data/manifests/bdg2.json`. (T007)
+- `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
+  conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
+  cleaned), and the licence evidence with WattWise's conservative handling. (T007)
 
 ### Changed
 - This repository now commits and pushes as the owner's personal account, `shvhjSB`, through

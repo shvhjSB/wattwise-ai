@@ -26,7 +26,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T004 | CI baseline (GitHub Actions) | M1 | T002, T003 | Done |
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Done |
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Done |
-| T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Not started |
+| T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Done |
 | T008 | Data-quality engine and report | M3 | T005, T006 | Not started |
 | T009 | BDG2 preprocessing pipeline | M3 | T007, T008 | Not started |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Not started |
@@ -196,7 +196,11 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
   - electricity meters only
   - `--sample-meters N` with a fixed seed
   - reshaping from wide to long
-  - timezone handling, after verifying the BDG2 timestamp convention
+  - timezone handling, after verifying the BDG2 timestamp convention. T007 found the convention
+    is **not** daylight-saving wall-clock time: there is a regular 17,544-hour grid in
+    daylight-saving zones. Test the local-standard-time hypothesis, decide the interval
+    start/end convention, and confirm weather is local (see DATASETS.md, "Data conventions").
+  - choosing raw vs cleaned electricity per purpose, with the reason recorded
   - joining weather by site
   - an exclusion log with reasons
   - a T008 data-quality report

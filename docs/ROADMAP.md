@@ -373,8 +373,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 - **Acceptance:**
   - Migrations upgrade and downgrade cleanly.
   - `/ready` returns 503 without a database and 200 with one.
-- **Known risk:** Docker and PostgreSQL are not installed locally. Tests may need a CI service
-  container.
+- **Environment:** PostgreSQL 18 is installed locally (D007) and Docker Desktop is available.
+  CI also uses a PostgreSQL 18 service container.
 
 ### T024 — Buildings, meters, series and summary APIs
 - **Scope:** `GET /buildings`, `/meters`, `/meters/{id}/series` (time range) and
@@ -470,7 +470,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
   - API and frontend images, with the frontend served by Nginx.
   - Compose with PostgreSQL (health check, named volume) and migrations on start.
   - `docker compose up --build` runs the synthetic demo.
-- **Known risk:** Docker is not installed locally, so image builds are verified in CI.
+- **Environment:** Docker Desktop is installed locally. Image builds are verified both locally and in CI.
 
 ### T037 — Security hardening
 - **Scope:**

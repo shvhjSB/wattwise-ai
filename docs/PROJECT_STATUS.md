@@ -58,7 +58,7 @@ repository-local git configuration (D006).
 
 | Risk | Affects | Mitigation |
 |---|---|---|
-| Docker and PostgreSQL are not installed locally | T023, T034, T036 | Verify in GitHub Actions, or install Docker Desktop |
+| Docker Desktop is installed but its engine is not verified yet. Windows needs a restart to finish enabling WSL2, then Docker Desktop's first launch (licence acceptance by the owner) | T023, T034, T036 | After the restart, verify with `docker run --rm hello-world`. PostgreSQL 18 is installed and verified (D007) |
 | `shvhjSB`'s `gh` token lacks the `workflow` scope | T004 | If the workflow push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` while `shvhjSB` is selected |
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |

@@ -18,7 +18,8 @@ Product and dataset requirements live in `docs/specs/`; the task plan lives in `
 4. Update `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, `docs/WORK_LOG.md` and `CHANGELOG.md`.
    Add entries to `docs/DECISIONS.md` for significant choices.
 5. Stage the task's files explicitly. Never `git add .` or `git add -A`.
-6. Write a Conventional Commit, e.g. `feat(ml): add baseline energy forecasting`.
+6. Write a Conventional Commit, e.g. `feat(ml): add baseline energy forecasting`. Add **no**
+   `Co-Authored-By` or other attribution trailers to commits or PR descriptions (owner's rule).
 7. Push to `origin` on the current branch. Verify with `git ls-remote origin <branch>`.
 8. Deliver the end-of-task report, then **stop** and wait for the owner.
 
@@ -46,8 +47,11 @@ GitHub checkpoint, Project status, Next task, Decisions needed. Use plain langua
 
 ## Environment notes
 
-- Windows development machine. Docker and PostgreSQL are **not** installed locally, so
-  container and DB checks may need GitHub Actions.
+- Windows development machine with Docker Desktop and PostgreSQL 18 installed (2026-10-23).
+  PostgreSQL runs as the `postgresql-x64-18` service on `localhost:5432`, accepting local
+  connections only. The superuser credentials live in the owner's libpq password file
+  (`%APPDATA%\postgresql\pgpass.conf`). Never read, print or copy that file. Project roles and
+  databases are created in T023 with their own credentials.
 - Python work uses the isolated venv at `backend/.venv`, never the global interpreter.
 - **All commits and pushes for this project must be made as the owner's personal account,
   `shvhjSB`, and no other account** (see D006). This repo's local `.git/config` pins

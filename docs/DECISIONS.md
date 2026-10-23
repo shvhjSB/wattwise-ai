@@ -112,6 +112,29 @@ links to the entry that replaces it.
   - Commits verified on GitHub are attributed to `shvhjSB`.
   - A fresh clone must repeat the local setup: `git config --local ...`, as recorded in
     `docs/WORK_LOG.md` (T002).
+- **Addendum (2026-10-23, owner's instruction):** commit messages and PR descriptions carry
+  **no** `Co-Authored-By` or other attribution trailers. Commits `034c2f9`, `9cc423a` and
+  `bdbdebc` predate this rule and keep a Claude co-author trailer. Published history is not
+  rewritten.
+
+## D007 — PostgreSQL major version 18
+- **Date:** 2026-10-23 · **Task:** environment setup (before T003) · **Status:** Accepted
+- **Decision:** target PostgreSQL **18**, the newest stable major version available (18.6 at
+  install time), everywhere:
+  - the local Windows service (`postgresql-x64-18`, port 5432)
+  - the CI service container and the Docker Compose image (`postgres:18`), which come later
+- **Why:** one major version across local, CI and containers avoids "works on my machine"
+  differences in SQL behaviour and migrations.
+- **Local security posture:**
+  - `pg_hba.conf` allows only `127.0.0.1` and `::1`, with SCRAM-SHA-256.
+  - The superuser password is a random 32-character alphanumeric string, stored only in the
+    owner's libpq password file.
+  - `listen_addresses` is the installer default (`*`). Remote clients are still refused by
+    `pg_hba.conf`. Setting it to `localhost` is an optional extra hardening step that needs a
+    service restart.
+- **Install note:** the EDB installer's cluster initialisation fails when the superuser password
+  starts with `-`, because PowerShell parses it as a parameter. Use alphanumeric passwords with
+  this installer.
 
 ---
 

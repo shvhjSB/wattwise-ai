@@ -79,3 +79,43 @@ Verified: `git credential fill` returns `username=shvhjSB`, and GitHub attribute
 - uvicorn smoke test: `/api/v1/health` returned 200
   `{"status":"ok","service":"wattwise-api","version":"0.1.0","environment":"development"}`.
   `/openapi.json` returned 200 and `/docs` returned 200.
+
+**Commit:** `bdbdebc` feat(api): add FastAPI foundation with health check and tooling. Pushed and
+attributed to `shvhjSB` on GitHub.
+
+---
+
+## 2026-10-23 — Environment setup: PostgreSQL 18 and Docker Desktop (owner's request)
+
+This setup is not a roadmap task. It unblocks T023, T034 and T036.
+
+**Commit policy:** from now on, commits carry no `Co-Authored-By` trailer (D006 addendum).
+
+**PostgreSQL 18.6** (winget `PostgreSQL.PostgreSQL.18`, EDB installer, hash verified by winget)
+- **First attempt failed** at database cluster initialisation. The random password contained a
+  leading `-`, which PowerShell parsed as a parameter of `initcluster.ps1`. The partial install
+  was uninstalled (the owner confirmed the uninstaller dialog), then reinstalled with a
+  32-character alphanumeric password.
+- **Components:** the server (service `postgresql-x64-18`, automatic start, port 5432), the
+  command-line tools and pgAdmin 4. StackBuilder was skipped.
+- **Credentials:** the superuser password is stored only in `%APPDATA%\postgresql\pgpass.conf`
+  and was never printed. The temporary installer option file was deleted.
+- **Command-line access:** `C:\Program Files\PostgreSQL\18\bin` was added to the user PATH.
+- **Verified:**
+  - Service: Running, Automatic.
+  - `psql --version`: 18.6.
+  - An authenticated `select version()` over `localhost` returned
+    `PostgreSQL 18.6 on x86_64-windows`.
+  - `pg_hba_file_rules` allows only `127.0.0.1` and `::1`, with scram-sha-256.
+
+**WSL2:** `wsl --install --no-distribution` (elevated) installed WSL 3.0.3 with default version 2.
+Windows reports a pending reboot.
+
+**Docker Desktop 4.96.3** (winget `Docker.DockerDesktop`, hash verified)
+- **Verified:**
+  - Docker CLI 29.9.2 and Docker Compose v5.6.1 are on the machine PATH.
+  - User `Admin` is in `docker-users`.
+- **Not yet verified:** the engine does not respond yet (`docker info` cannot reach
+  `npipe:////./pipe/docker_engine`), as expected before the reboot and Docker Desktop's first
+  launch. The Docker Subscription Service Agreement was **not** accepted on the owner's behalf;
+  Docker Desktop asks for it on first launch.

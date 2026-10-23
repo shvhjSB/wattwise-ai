@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Secrets and local configuration
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# ---------------------------------------------------------------------------
+# Data — raw and processed datasets never go into Git (see docs/specs/DATASET_CATALOG.md).
+# Only tiny, explicitly synthetic fixtures under data/sample/ are committed.
+# ---------------------------------------------------------------------------
+data/raw/
+data/processed/
+data/interim/
+
+# ---------------------------------------------------------------------------
+# Generated ML artifacts: trained models, evaluation outputs, reports
+# ---------------------------------------------------------------------------
+artifacts/
+*.joblib
+*.pkl
+*.pickle
+*.onnx
+*.lgb
+mlruns/
+
+# ---------------------------------------------------------------------------
+# Local databases and logs
+# ---------------------------------------------------------------------------
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------------------------------------------------------------------------
+# Node / frontend
+# ---------------------------------------------------------------------------
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.vite/
+
+# ---------------------------------------------------------------------------
+# OS and editors
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+
+# ---------------------------------------------------------------------------
+# Claude Code local (per-user) settings
+# ---------------------------------------------------------------------------
+.claude/settings.local.json

@@ -1,0 +1,53 @@
+# WattWise AI — Working agreement for Claude Code
+
+This file is loaded automatically in every session. It condenses the owner's build instructions.
+Product and dataset requirements live in `docs/specs/`; the task plan lives in `docs/ROADMAP.md`.
+
+## Start of every session
+
+1. Read `docs/PROJECT_STATUS.md` (current task, blockers, next task).
+2. Confirm the branch, remote and `git status`. Preserve any uncommitted user changes.
+3. Work on **one** incomplete roadmap task only. When the owner says "Continue with the next
+   task", pick the next incomplete task from `docs/PROJECT_STATUS.md`.
+
+## Task loop (mandatory, one task per run)
+
+1. Stay within the task's agreed scope. Split a task in the roadmap first if it is too large.
+2. Run every available check: tests, lint, format, type check, build.
+3. Review the diff for secrets, large files and unrelated changes.
+4. Update `docs/ROADMAP.md`, `docs/PROJECT_STATUS.md`, `docs/WORK_LOG.md` and `CHANGELOG.md`.
+   Add entries to `docs/DECISIONS.md` for significant choices.
+5. Stage the task's files explicitly. Never `git add .` or `git add -A`.
+6. Write a Conventional Commit, e.g. `feat(ml): add baseline energy forecasting`.
+7. Push to `origin` on the current branch. Verify with `git ls-remote origin <branch>`.
+8. Deliver the end-of-task report, then **stop** and wait for the owner.
+
+The end-of-task report has these sections: Task completed, Files changed, Validation,
+GitHub checkpoint, Project status, Next task, Decisions needed. Use plain language.
+
+## Never
+
+- `git push --force`, amending or rewriting published commits, or destructive reset/clean.
+- Commit secrets, `.env` files, raw or processed datasets, local databases or large model artifacts.
+- Commit unrelated pre-existing user changes.
+- Claim a test, build or push succeeded without running it and seeing the result.
+- Mark a task complete just because files exist.
+
+## Scientific honesty rules
+
+- Never fabricate metrics, costs, savings, carbon factors, weather or building metadata.
+- Clearly label synthetic, inferred and observed data. Synthetic benchmark results are not
+  real-world performance.
+- An anomaly is not confirmed waste. Potential savings are not verified savings.
+- Feature attributions (e.g. SHAP) are not causes. Phrase causes as hypotheses to investigate.
+- Show cost only with an explicitly configured tariff, and carbon only with a sourced factor.
+- Time-series splits are chronological; test windows are strictly later than training windows.
+- Do not retrain production models on unreviewed feedback.
+
+## Environment notes
+
+- Windows development machine. Docker and PostgreSQL are **not** installed locally, so
+  container and DB checks may need GitHub Actions.
+- Python work uses the isolated venv at `backend/.venv`, never the global interpreter.
+- Several GitHub accounts exist on this machine. Pushes go through Git Credential Manager as
+  `shvhjSB`, who owns the repo. Do not change remotes or credentials. Report push blockers instead.

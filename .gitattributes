@@ -1,0 +1,21 @@
+# Normalise text files to LF in the repository so shell scripts, Dockerfiles,
+# YAML and Python behave the same on Windows, macOS, Linux and in CI.
+* text=auto eol=lf
+
+# Windows-only scripts keep CRLF.
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files: never diff or normalise.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.webp binary
+*.woff binary
+*.woff2 binary
+*.pdf binary
+*.parquet binary
+*.zip binary
+*.gz binary

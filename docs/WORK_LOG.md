@@ -177,7 +177,7 @@ engine was verified:
 
 ---
 
-## 2026-10-23 — T004 CI baseline (in progress)
+## 2026-10-23 — T004 CI baseline (done; see "Verified on GitHub" at the end of this entry)
 
 > **Correction (17:10).** While Claude was paused, another session committed this entry locally
 > in `f102edd` (16:45, not pushed). It marked T004 Done before CI had ever run. A follow-up
@@ -276,3 +276,39 @@ at least two weeks old.
   - The idea that locked Python packages need a two-week cooldown. That is a policy choice, now
     stated as out of scope in D010.
 
+**Push and the `workflow` scope**
+- The first push of `f102edd`, `c90d1c2` and `6948af4` was rejected by GitHub: "refusing to allow
+  an OAuth App to create or update workflow `.github/workflows/ci.yml` without `workflow`
+  scope". Nothing was lost.
+- Two owner-run refresh attempts added the scope to `aman-agntworksai`, not `shvhjSB`. At the
+  owner's explicit request, Claude then refreshed it for `shvhjSB` directly:
+  1. `gh auth switch -u shvhjSB`
+  2. `gh auth refresh -s workflow` (the owner approved the device code while signed in as `shvhjSB`)
+  3. Verified that `gh api user` returns `shvhjSB` and that the scopes now include `workflow`
+  4. `gh auth switch -u aman-agntworksai`, restoring the owner's previous active account
+- The push then succeeded: `8212986..6948af4`, and `git ls-remote` matched the local hash.
+- GitHub attributes all three commits to `shvhjSB` as author and committer, with no co-author trailer.
+
+**Verified on GitHub:**
+[run 39951620258](https://github.com/shvhjSB/wattwise-ai/actions/runs/39951620258) for `6948af4`
+(push event). **Conclusion: success.** It took 28 s, and both jobs ran in parallel.
+- **Backend (Python): success.** Every step passed.
+  - setup-uv downloaded uv 0.12.24 with the pinned `checksum`. In setup-uv's code at the pinned
+    SHA, a provided checksum takes priority and a mismatch throws, failing the step.
+  - "**Found 1 files to hash.**" The cache key is derived from `uv.lock`. No "No file matched"
+    warning appeared, which confirms the review fix.
+  - First run: no cache yet. The cache was saved afterwards.
+  - CPython 3.13.16, 36 packages including `uvloop`, ruff check and format (14 files), strict
+    mypy (13 files), pytest **10 passed**.
+- **Frontend (Node): success.** Every step passed.
+  - Node from `.nvmrc`; `npm ci` added 367 packages.
+  - Prettier, ESLint, tsc, Vitest (4 files, **21 passed**) and the build all passed.
+  - The npm cache was saved under a key from `package-lock.json`.
+- 0 annotations on either job.
+- Acceptance: (1) green on GitHub for the pushed commit: **met**. (2) A failing check fails the
+  job: **met**, by the Linux replay. A failing test and a lint violation each exited 1, and
+  GitHub fails a step on a non-zero exit. No deliberately broken commit was pushed to the public
+  repository to demonstrate it.
+
+**Commits:** `f102edd`, `c90d1c2`, `6948af4` (this entry's final records update follows in the
+next commit).

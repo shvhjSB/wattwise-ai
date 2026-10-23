@@ -18,6 +18,10 @@ The application foundation runs end to end locally, and CI checks it automatical
   a checksum-verified uv download and lockfile-keyed caches. The first run on GitHub was green:
   [run 39951620258](https://github.com/shvhjSB/wattwise-ai/actions/runs/39951620258) for
   `6948af4`. CI reports results but does not block merges; `main` has no branch protection (D011).
+- **Data contract (v1.0):** one canonical shape for readings, buildings and weather, with a
+  validator that turns CSV uploads or in-memory tables into canonical form. It reports every
+  structural problem with a stable code, the affected rows and a fix hint.
+  [docs/DATA_CONTRACT.md](DATA_CONTRACT.md) documents it, and a test keeps the document truthful.
 
 No dataset has been downloaded and no model has been trained, so no ML metrics exist yet.
 
@@ -29,6 +33,7 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 | T002 | Backend foundation (FastAPI, settings, liveness, tooling) | 2026-10-23 |
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | 2026-10-23 |
 | T004 | CI baseline (GitHub Actions, uv lock, SHA-pinned workflow) | 2026-10-23 |
+| T005 | Canonical data contracts and CSV upload format | 2026-10-23 |
 
 ## Current task
 
@@ -36,16 +41,18 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T005 — Canonical data contracts and CSV upload format**: one internal representation of
-meter readings, meters/buildings and weather, shared by every pipeline stage and the API. See
-[ROADMAP.md](ROADMAP.md#t005--canonical-data-contracts-and-csv-upload-format).
+**T006 — Deterministic synthetic fixture generator**: a seeded generator for a few buildings
+and meters, with daily and weekly patterns, temperature dependence and documented injected
+anomalies (labels marked synthetic). It produces a tiny committed fixture under `data/sample/`
+that conforms to the T005 contract. See
+[ROADMAP.md](ROADMAP.md#t006--deterministic-synthetic-fixture-generator).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007 | 0 / 3 |
+| M2 Data contracts and acquisition | T005–T007 | 1 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |

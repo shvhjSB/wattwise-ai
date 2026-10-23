@@ -270,6 +270,53 @@ links to the entry that replaces it.
     two-week rule. A uv upgrade changes three places together: `version` and `checksum` in
     `ci.yml`, and `required-version` in `backend/pyproject.toml`.
 
+## D012 — Canonical data contract and validation design
+- **Date:** 2026-10-23 · **Task:** T005 · **Status:** Accepted
+- **Decision:** one canonical shape for readings, buildings and weather, version `1.0`. It is
+  specified in [DATA_CONTRACT.md](DATA_CONTRACT.md) and implemented in `wattwise.data`.
+  - **Structure vs quality:** the contract rejects only malformed or physically impossible data.
+    Plausibility (gaps, negative use, flatlines, outliers) is T008's job and does not reject data.
+  - **Time:** timestamps must carry an explicit offset and are stored as `datetime64[us, UTC]`.
+    A reading's timestamp is the *start* of its interval. Timestamps without an offset are
+    rejected. With `utc=True`, pandas silently treats them as UTC, so the validator checks for an
+    offset before parsing (verified with pandas 3.0.6).
+  - **Units:** each meter type has exactly one canonical unit: `kWh` for electricity and the
+    other energy types, `m3` for water and irrigation. Adapters convert before loading; a
+    non-canonical unit is an error, never a silent conversion. Only `electricity` is analysed in
+    this version; other types pass with an `unsupported_meter_type` warning.
+  - **Missing is not zero:** a missing `value` means not measured. In CSV only an empty cell
+    means missing; text like `NaN` is rejected rather than guessed at.
+  - **Reporting:** every problem is reported once, with a stable code (21 codes), severity,
+    affected-row count, up to 5 row numbers, example values and a fix hint. The issue models are
+    Pydantic, so the upload API (T026) can return them unchanged.
+  - **One code path:** text frames (uploads) and typed frames (adapters) go through the same
+    validator, which coerces, checks and produces the canonical frame in one pass. A test proves
+    that a CSV round trip equals the in-memory canonical table.
+  - **CSV parsing** uses the standard library `csv` module. pandas pads rows that have too few
+    fields with `''`, which makes them indistinguishable from empty cells (verified).
+  - **Performance:** identifiers and timestamps are checked once per *distinct* value and then
+    mapped back to rows. Before this change, regex matching was 52% of the runtime. Measured on
+    Windows: about 0.4 M rows/s for typed frames (1.05 M rows in 2.65 s) and 175,680 CSV rows in
+    1.42 s.
+  - **Dependencies:**
+    - pandas is constrained to the 3.0 series (3.0.6), because `pandas-stubs` 3.0.5, needed for
+      strict mypy, targets 3.0. pandas 3.1.0 was one day old.
+    - `tzdata` is a direct dependency, so IANA time zone validation works on every platform,
+      including slim containers without a system tz database.
+- **Alternatives considered:**
+  - **pandera:** a capable dataframe-schema library, but it adds a dependency and its error
+    reports are not shaped for end users. The structured, actionable report needed by the upload
+    API would have to be rebuilt on top of it anyway.
+  - **Per-row Pydantic models:** clear, but far too slow for millions of rows.
+  - **Accepting naive timestamps as UTC, or as building-local time:** rejected. It silently
+    shifts data by hours and creates false anomalies.
+- **Consequences:**
+  - Adapters (T009) must map source columns and units to the contract and record what they
+    excluded.
+  - Contract changes follow `MAJOR.MINOR` versioning (see DATA_CONTRACT.md).
+  - `tests/data/test_contract_docs.py` fails if the document and the code drift apart, including
+    if its CSV examples stop behaving as described.
+
 ---
 
 ## Open decisions (tracked in tasks)

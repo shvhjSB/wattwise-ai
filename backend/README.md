@@ -1,12 +1,14 @@
 # WattWise AI — backend
 
-Python project `wattwise`: the FastAPI service now, and later the data pipeline and ML code.
-It uses a src layout. See [docs/DECISIONS.md](../docs/DECISIONS.md) entries D002 and D003.
+Python project `wattwise`: the FastAPI service, the data contracts and, later, the data
+pipeline and ML code. It uses a src layout. See [docs/DECISIONS.md](../docs/DECISIONS.md)
+entries D002 and D010.
 
 ```
 src/wattwise/
   api/            HTTP layer: app factory, routes, schemas, dependencies
   core/           settings and shared utilities
+  data/           canonical data contracts, validation, CSV reading (docs/DATA_CONTRACT.md)
 tests/            pytest suite, mirroring the package layout
 ```
 

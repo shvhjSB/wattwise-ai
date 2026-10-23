@@ -312,3 +312,69 @@ at least two weeks old.
 
 **Commits:** `f102edd`, `c90d1c2`, `6948af4` (this entry's final records update follows in the
 next commit).
+
+**Commit:** `d75b1cb` docs(project): mark T004 done after first green CI run. The second CI run
+([39951971170](https://github.com/shvhjSB/wattwise-ai/actions/runs/39951971170)) was green and
+reused both caches: uv got a cache hit on the `uv.lock`-derived key and "Prepared 1 package";
+npm got a cache hit.
+
+---
+
+## 2026-10-23 — T005 Canonical data contracts and CSV upload format
+
+**Done**
+- **`wattwise.data.contracts`:** contract v1.0 with three tables.
+  - `readings`: key (`meter_id`, `timestamp`).
+  - `buildings`: key `building_id`; `timezone` required; optional area and location.
+  - `weather`: key (`site_id`, `timestamp`).
+  - The `MeterType` vocabulary (8 BDG2 meter types) and units `kWh` / `m3`, with exactly one
+    canonical unit per meter type. Only electricity is analysed for now.
+- **`wattwise.data.validation`:** a single path for text frames and typed frames.
+  - It coerces each column to its canonical dtype (`datetime64[us, UTC]`, `float64`, `str`)
+    while recording missing and invalid cells.
+  - Table checks: primary key, canonical unit per meter type, one building, type and unit per
+    meter, and an unsupported-meter-type warning.
+  - 21 stable issue codes in a Pydantic report.
+  - `validate`, `to_canonical` (raises `ContractViolationError`) and `check_table`.
+- **`wattwise.data.csv_io.read_csv`:** reads paths and text or binary streams. It handles
+  UTF-8 (with or without a BOM), exact field counts with line numbers, empty or duplicate header
+  names and encoding errors. A caller's stream is left open.
+- **`docs/DATA_CONTRACT.md`:** principles, tables, vocabularies, identifier rules, the CSV upload
+  format, issue-code reference, code usage and versioning.
+- **Decision:** D012.
+- **Dependencies:** pandas 3.0.6 (3.0 series, matching `pandas-stubs` 3.0.5), numpy 2.5.4, tzdata
+  2026.5, and `pandas-stubs` as a dev dependency. `tests/` folders became packages, because mypy
+  needs unique module names for the two `conftest.py` files.
+
+**Found and fixed during the task**
+- **pandas behaviour, verified by probes:**
+  - With `utc=True`, pandas silently treats timestamps without an offset as UTC. The validator
+    therefore requires an explicit offset before parsing.
+  - pandas pads short CSV rows with `''`. Uploads are therefore parsed with the stdlib `csv`
+    module (the first approach missed short rows; a test caught it).
+- **Suggestion text:** it showed enum reprs (`<Unit.KWH: 'kWh'>`). Vocabularies are now plain
+  strings (a test caught it).
+- **Grammar:** generating the documentation examples from a real run exposed broken singular
+  messages, e.g. "1 value is no time zone". All row-level messages now agree in number.
+- **Documentation example:** my first "valid" CSV example was actually invalid: `02:00+01:00` is
+  01:00 UTC, which duplicated a key. The example was fixed, and the docs test now runs both CSV
+  examples through the real reader.
+- **Typing:** strict mypy found that a non-standard *text* stream would have been wrapped as
+  binary. Streams are now told apart with `read(0)`.
+- **Performance:** profiling showed the identifier regex took 52% of the time, matched per row
+  instead of per distinct value. After the fix, 1.05 M typed rows take 2.65 s (was 3.62 s) and
+  175,680 CSV rows take 1.42 s (was 2.16 s).
+
+**Validation** (Windows, uv-managed venv)
+- `uv lock --check`: pass. `ruff check .`: clean. `ruff format --check .`: 27 files formatted.
+  `mypy` (strict): no issues in 26 files.
+- `pytest`: **87 passed**, of which 77 are new in T005:
+  - The five acceptance cases: missing columns, naive timestamps (typed and text), unknown units
+    (with a suggestion), non-numeric values, duplicate keys.
+  - Identifiers, meter types, non-canonical units, meter consistency, the unsupported-type
+    warning, infinite values, missing required values, empty tables, dtype errors, unparseable
+    timestamps, truncation of long issue lists, and building and weather rules.
+  - CSV structure: BOM, encoding, extra and short rows, unnamed and duplicate headers, a CSV
+    round trip equal to the in-memory table, and the caller's stream left open.
+  - Documentation sync, including both CSV examples.
+- The GitHub CI run for this commit is checked after the push (see the end-of-task report).

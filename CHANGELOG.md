@@ -31,6 +31,13 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   `[dependency-groups]`, a pinned uv version range and a pinned build backend
   (`build-constraint-dependencies`) in `backend/pyproject.toml` (D010). (T004)
 - Version environment files: `backend/.python-version` (3.13) and `frontend/.nvmrc` (24). (T004)
+- Data contract v1.0 (`wattwise.data`): canonical `readings`, `buildings` and `weather`
+  tables, a meter-type and unit vocabulary with one canonical unit per meter type, a
+  validator with 21 stable issue codes and actionable messages, conversion to canonical form,
+  and a CSV reader for the documented upload format. (T005)
+- `docs/DATA_CONTRACT.md`: the specification, CSV upload format and issue-code reference. A
+  test keeps it in sync with the code and checks that its examples behave as documented. (T005)
+- Backend dependencies: pandas 3.0, numpy, tzdata; `pandas-stubs` for strict typing. (T005)
 
 ### Changed
 - This repository now commits and pushes as the owner's personal account, `shvhjSB`, through

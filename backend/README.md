@@ -14,30 +14,27 @@ Domain, data and ML code must never import from `wattwise.api`.
 
 ## Setup
 
-Requires Python 3.12 or newer (developed on 3.13). Always use the project virtualenv.
+Dependencies are managed with [uv](https://docs.astral.sh/uv/) and locked for every platform in
+`uv.lock` (D010). You need **uv 0.12.x**, as enforced by `[tool.uv] required-version`:
 
-PowerShell (Windows):
+- Windows: `winget install --id astral-sh.uv --exact --version 0.12.24`
+- macOS/Linux: see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/)
 
-```powershell
-cd backend
-python -m venv .venv
-.venv\Scripts\python -m pip install --upgrade pip
-.venv\Scripts\python -m pip install -e ".[dev]"
-```
-
-bash/zsh (macOS, Linux):
+Then, from `backend/`:
 
 ```bash
-cd backend
-python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip
-.venv/bin/python -m pip install -e ".[dev]"
+uv sync --locked
 ```
+
+This creates `backend/.venv` with the exact locked versions of the app and the `dev` tools. If
+Python 3.13 (from `.python-version`) is missing, uv installs it. Windows tip: if uv warns that
+it cannot hardlink, because its cache and the repo are on different drives, set
+`UV_LINK_MODE=copy`.
 
 ## Run the API
 
-```powershell
-.venv\Scripts\python -m uvicorn wattwise.api.main:create_app --factory --reload --port 8000
+```bash
+uv run uvicorn wattwise.api.main:create_app --factory --reload --port 8000
 ```
 
 - Liveness: <http://127.0.0.1:8000/api/v1/health>
@@ -45,14 +42,25 @@ python3 -m venv .venv
 
 ## Checks
 
-Run these from `backend/` before every commit:
+Run these from `backend/` before every commit. CI runs the same commands
+([`.github/workflows/ci.yml`](../.github/workflows/ci.yml)).
 
-```powershell
-.venv\Scripts\python -m pytest
-.venv\Scripts\python -m ruff check .
-.venv\Scripts\python -m ruff format --check .
-.venv\Scripts\python -m mypy
+```bash
+uv run --locked pytest
+uv run --locked ruff check .
+uv run --locked ruff format --check .
+uv run --locked mypy
 ```
+
+## Changing dependencies
+
+```bash
+uv add "some-package>=1.2"         # runtime dependency
+uv add --group dev "some-tool>=3"  # development-only tool
+```
+
+Commit `pyproject.toml` and `uv.lock` together. In CI, `uv sync --locked` fails if the lock is out
+of date.
 
 ## Configuration
 

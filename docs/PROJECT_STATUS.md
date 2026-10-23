@@ -1,10 +1,11 @@
 # Project status
 
-**Last updated:** 2026-10-23 · **Current milestone:** M2 — Data contracts, schemas and dataset acquisition
+**Last updated:** 2026-10-23 · **Current milestone:** M1 — Repository audit and application foundation
 
 ## Summary
 
-The application foundation runs end to end locally and is validated automatically by CI:
+The application foundation runs end to end locally. A CI workflow is written and validated
+locally, but it has **not yet run on GitHub**:
 
 - **Backend:** a FastAPI service with a liveness endpoint (`GET /api/v1/health`) and OpenAPI
   docs. It passes pytest, ruff and strict mypy. Dependencies are locked across platforms in
@@ -13,9 +14,9 @@ The application foundation runs end to end locally and is validated automaticall
   runtime-validated client and shows loading, online and error-with-retry states. It passes
   type checking, ESLint (including accessibility rules), Prettier and Vitest, and builds for
   production.
-- **CI:** GitHub Actions workflow (`.github/workflows/ci.yml`) runs all backend and frontend
-  checks on Ubuntu 24.04 runners for pushes and pull requests, using SHA-pinned actions and
-  dependency caching.
+- **CI (in progress, T004):** a GitHub Actions workflow (`.github/workflows/ci.yml`) that runs
+  all backend and frontend checks on Ubuntu 24.04 for pushes and pull requests. It uses
+  SHA-pinned actions and dependency caching. T004 is complete only once a run on GitHub is green.
 
 No dataset has been downloaded and no model has been trained, so no ML metrics exist yet.
 
@@ -26,11 +27,12 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 | T001 | Repository audit, project records and hygiene | 2026-10-23 |
 | T002 | Backend foundation (FastAPI, settings, liveness, tooling) | 2026-10-23 |
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | 2026-10-23 |
-| T004 | CI baseline (GitHub Actions, uv lock, SHA-pinned workflow) | 2026-10-23 |
 
 ## Current task
 
-None. Waiting for the owner to continue.
+**T004 — CI baseline** (in progress):
+- The workflow and the backend lock (`uv.lock`) are written.
+- Remaining: Linux container replay, review, push, and the first green run on GitHub.
 
 ## Next task
 
@@ -42,7 +44,7 @@ meter readings, meters/buildings and weather, shared by every pipeline stage and
 
 | Milestone | Tasks | Done |
 |---|---|---|
-| M1 Foundation | T001–T004 | 4 / 4 |
+| M1 Foundation | T001–T004 | 3 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 0 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
@@ -63,7 +65,8 @@ None.
 
 | Component | Status |
 |---|---|
-| Python 3.13 + `backend/.venv` | Verified (T002) |
+| Python 3.13 + `backend/.venv` | Verified (T002). Managed by uv since T004 |
+| uv 0.12.24 (winget `astral-sh.uv`) | Verified 2026-10-23: `uv sync --locked` and all backend checks pass |
 | Node 24 / npm 11 | Verified (T003) |
 | PostgreSQL 18.6 (service `postgresql-x64-18`, local connections only) | Verified 2026-10-23 (D007) |
 | Docker Desktop 4.96.3 (engine 29.9.2, Compose v5.6.1, WSL2) | Verified 2026-10-23 after the restart: `docker run --rm hello-world` succeeded |
@@ -72,9 +75,8 @@ None.
 
 | Risk | Affects | Mitigation |
 |---|---|---|
-| `shvhjSB`'s `gh` token lacks the `workflow` scope; GitHub rejects pushes that add or change `.github/workflows/*` without it | **T004 (next)** | If the push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` while `shvhjSB` is selected, then the push is retried |
+| `shvhjSB`'s `gh` token lacks the `workflow` scope; GitHub rejects pushes that add or change `.github/workflows/*` without it | **T004 (current)** | If the push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` while `shvhjSB` is selected, then the push is retried |
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence discrepancy (CC BY 4.0 vs CC BY-SA 4.0) | T007, T009 | Resolve and document in T007 before using the data |
-| Backend dependencies are bounded but not locked (the frontend is locked) | Reproducible CI and Docker builds | Backend lock strategy decided in T004 (D003) |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |

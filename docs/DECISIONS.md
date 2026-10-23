@@ -51,7 +51,9 @@ links to the entry that replaces it.
   dependency rule may be enforced by a test later if violations appear.
 
 ## D003 — Python tooling
-- **Date:** 2026-10-23 · **Task:** T002 · **Status:** Accepted
+- **Date:** 2026-10-23 · **Task:** T002 · **Status:** Accepted. Environment and locking
+  (`venv` + `pip`) are superseded by [D010](#d010--backend-dependency-locking-with-uv); ruff,
+  mypy and pytest stand.
 - **Decision:**
   - Python `>=3.12`, developed on 3.13.
   - Standard `venv` + `pip`, with `pyproject.toml` built by hatchling. Dependencies use
@@ -188,15 +190,28 @@ links to the entry that replaces it.
     (`[tool.uv] required-version = ">=0.12.24,<0.13"`), keeping local `uv` and CI on the same
     lockfile format.
   - Record the target Python version in `backend/.python-version` (`3.13`).
-  - Local development continues to support standard `backend/.venv` (pip/hatchling), while CI and
-    Docker use `uv sync --locked` for fast, reproducible environments.
+  - Local development and CI both create `backend/.venv` with `uv sync --locked` and run tools
+    with `uv run --locked`. Docker will do the same (T036). The former `pip install -e ".[dev]"`
+    path no longer exists, because the `dev` extra became a dependency group.
+  - uv is pinned to **0.12.24**, the newest release at least two weeks old when this decision was
+    made. All 0.13.x releases were under two weeks old, and new releases are avoided briefly as a
+    supply-chain precaution.
+- **Why a universal lock matters here:** development happens on Windows and CI runs on Linux.
+  `uvicorn[standard]` pulls in platform-specific packages, e.g. `uvloop` on Linux only. A
+  `pip freeze` or `pip-compile` lock made on Windows would silently omit them. `uv.lock` resolves
+  for all platforms at once; it contains `uvloop` with the marker `sys_platform != 'win32'`
+  (verified).
 - **Alternatives considered:**
-  - `pip-tools` (`requirements.txt` compile): widely supported but slower, and managing
-    cross-platform wheels across Windows and Linux requires multiple lock targets.
-  - Unlocked installations: rejected because unexpected upstream dependency updates break CI
-    and Docker builds.
-- **Consequences:** `backend/uv.lock` is committed to version control. CI verifies that the lockfile
-  matches `pyproject.toml` using `uv sync --locked`.
+  - `pip-tools` (`pip-compile`): locks are specific to the platform that made them, so this setup
+    would need one lock per platform.
+  - Poetry: heavier, and its lock is also universal, but it adds more than this project needs.
+  - Unlocked installs: rejected, because upstream releases could change CI and Docker builds
+    without any change in this repository.
+- **Consequences:**
+  - `backend/uv.lock` is committed. Change dependencies with `uv add` / `uv lock`, and commit
+    `pyproject.toml` and `uv.lock` together.
+  - In CI, `uv sync --locked` fails if the lock is stale.
+  - Contributors need uv 0.12.x installed (`[tool.uv] required-version`).
 
 ## D011 — CI workflow design and action pinning
 - **Date:** 2026-10-23 · **Task:** T004 · **Status:** Accepted
@@ -214,11 +229,21 @@ links to the entry that replaces it.
     `actions/setup-node` caches on `frontend/package-lock.json`.
   - Exact mirror of local checks: backend runs ruff (check and format), strict mypy and pytest;
     frontend runs Prettier, ESLint, tsc, Vitest and Vite production build.
+  - Checkout uses `persist-credentials: false`, so later steps cannot reuse the job's Git token.
+    Jobs have 15-minute timeouts.
+  - Action releases are pinned only once they are at least two weeks old, which is why
+    `setup-uv` is v10.2.0 rather than the newest v10.3.x. The workflow is linted with
+    `actionlint` before pushing.
 - **Alternatives considered:**
   - A single sequential job: rejected because parallel jobs finish faster and pinpoint failures immediately.
   - Floating action tags (`@v4`): rejected because tags are mutable and vulnerable to supply-chain tampering.
-- **Consequences:** CI guarantees that all quality gates pass before code merges to `main`. Pushing
-  workflow files requires GitHub token authorization with the `workflow` scope.
+- **Consequences:**
+  - CI **reports** the result of every push and pull request. It does **not block** anything:
+    `main` has no branch protection, and work is pushed directly to it. Making CI a required
+    status check is a separate decision for the owner.
+  - Pushing workflow files requires a GitHub token with the `workflow` scope.
+  - Pinned SHAs do not update themselves. Upgrades are deliberate edits, applying the same
+    two-week rule.
 
 ---
 

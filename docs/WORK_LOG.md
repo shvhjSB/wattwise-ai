@@ -177,9 +177,20 @@ engine was verified:
 
 ---
 
-## 2026-10-23 — T004 CI baseline
+## 2026-10-23 — T004 CI baseline (in progress)
 
-**Done**
+> **Correction (17:10).** While Claude was paused, another session committed this entry locally
+> in `f102edd` (16:45, not pushed). It marked T004 Done before CI had ever run. A follow-up
+> commit corrected four things:
+> - the T004 status, in this file, the roadmap and the project status
+> - D010's statement that pip/`.[dev]` installs still work, and the broken `backend/README.md`
+>   instructions
+> - D011's claim that CI "guarantees" gates before merge (there is no branch protection)
+> - D003, marked as partly superseded
+>
+> `f102edd` itself was kept, not rewritten.
+
+**Work so far**
 - `.github/workflows/ci.yml`:
   - Triggers on `push` to `main`, `pull_request`, and manual `workflow_dispatch`.
   - Least-privilege top-level `permissions: contents: read`.
@@ -198,7 +209,11 @@ engine was verified:
   - Added `frontend/.nvmrc` (`24`).
 - Documented decisions D010 (backend dependency locking with uv) and D011 (CI workflow design and action pinning) in `docs/DECISIONS.md`.
 
-**Validation**
+**Local validation** (Windows; the checks above, run through `uv run --locked`)
+- Tool installed: uv 0.12.24 (winget), pinned as the newest release at least two weeks old (D010).
+- `uv lock`: 38 packages resolved for all platforms, including `uvloop` with the marker
+  `sys_platform != 'win32'`. `uv sync --locked`: pass.
+- `actionlint` 1.7.12 (Docker image `rhysd/actionlint:1.7.12`): 0 errors in `.github/workflows/ci.yml`.
 - Backend (Python 3.13, Windows):
   - `pytest`: 10 passed in 0.17s.
   - `ruff check .`: clean.

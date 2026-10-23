@@ -23,7 +23,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T001 | Repository audit, project records and hygiene | M1 | — | Done |
 | T002 | Backend foundation (FastAPI, settings, liveness, tooling) | M1 | T001 | Done |
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | M1 | T002 | Done |
-| T004 | CI baseline (GitHub Actions) | M1 | T002, T003 | Done |
+| T004 | CI baseline (GitHub Actions) | M1 | T002, T003 | In progress |
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Not started |
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Not started |
 | T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Not started |
@@ -116,7 +116,10 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 - **Acceptance:**
   - The workflow runs green on GitHub for the pushed commit.
   - A failing check fails the job.
-- **Validation:** `gh run list` / `gh run view` for the pushed commit.
+- **Validation:**
+  - `actionlint` on the workflow.
+  - Both jobs replayed in Linux containers from the committed tree before pushing.
+  - `gh run list` / `gh run view` for the pushed commit.
 - **Known risk:** pushing workflow files needs a credential with the `workflow` scope. The
   `shvhjSB` `gh` token, which this repo pushes with (D006), currently lacks it. If the push is
   rejected, report it and give the owner the fix: `gh auth refresh -h github.com -s workflow`,

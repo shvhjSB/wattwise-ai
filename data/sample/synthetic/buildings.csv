@@ -1,0 +1,5 @@
+building_id,site_id,timezone,primary_use,floor_area_m2,latitude,longitude
+syn-lab-c,syn-site-us,America/New_York,Laboratory,4800,,
+syn-office-a,syn-site-uk,Europe/London,Office,6500,,
+syn-office-d,syn-site-us,America/New_York,Office,2800,,
+syn-retail-b,syn-site-uk,Europe/London,Retail,3200,,

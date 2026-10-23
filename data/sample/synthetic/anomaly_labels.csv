@@ -1,0 +1,7 @@
+event_id,anomaly_type,meter_id,building_id,start,end,effect,effect_value,description,label_source
+syn-e1,spike,syn-office-a:electricity,syn-office-a,2016-01-20T14:00:00Z,2016-01-20T16:00:00Z,multiply,2.20,Two-hour spike to 2.2x the normal load during working hours.,synthetic_injection
+syn-e2,sustained_excess,syn-retail-b:electricity,syn-retail-b,2016-02-08T00:00:00Z,2016-02-11T00:00:00Z,multiply,1.30,Three days at 1.3x the normal load around the clock.,synthetic_injection
+syn-e3,overnight_baseload,syn-office-d:electricity,syn-office-d,2016-01-25T00:00:00Z,2016-02-01T00:00:00Z,add_at_night,18.00,One week with +18 kWh per hour between 20:00 and 06:00 local time.,synthetic_injection
+syn-e4,gradual_drift,syn-lab-c:electricity,syn-lab-c,2016-02-01T00:00:00Z,2016-02-29T00:00:00Z,ramp_to,1.25,Four weeks of load rising linearly to 1.25x by the end of the data.,synthetic_injection
+syn-e5,flatline,syn-office-a:electricity,syn-office-a,2016-02-15T08:00:00Z,2016-02-15T20:00:00Z,hold,,Meter stuck: twelve hours repeating the first hour's value.,synthetic_injection
+syn-e6,missing_data,syn-lab-c:electricity,syn-lab-c,2016-01-12T03:00:00Z,2016-01-12T09:00:00Z,remove,,Six hours of readings missing.,synthetic_injection

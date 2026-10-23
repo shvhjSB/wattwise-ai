@@ -378,3 +378,58 @@ npm got a cache hit.
     round trip equal to the in-memory table, and the caller's stream left open.
   - Documentation sync, including both CSV examples.
 - The GitHub CI run for this commit is checked after the push (see the end-of-task report).
+
+**Commit:** `587a304` feat(data): add canonical data contracts, validation and CSV upload format.
+CI run [39955368773](https://github.com/shvhjSB/wattwise-ai/actions/runs/39955368773) was green
+on Linux (87 backend tests, 21 frontend tests).
+
+---
+
+## 2026-10-23 — T006 Deterministic synthetic fixture generator
+
+**Done**
+- **`wattwise.data.synthetic`:**
+  - `generate(seed)` returns canonical `readings`, `clean_readings` (the counterfactual before
+    injection, kept in memory only), `buildings`, `weather` and the anomaly `labels`.
+  - `write(dataset, dir)` writes the CSVs, a generated README and `manifest.json` (SHA-256,
+    bytes, rows).
+  - CLI: `python -m wattwise.data.synthetic --output DIR [--seed N]`.
+- **Scenario:**
+  - 2 synthetic sites: `syn-site-uk` (Europe/London) and `syn-site-us` (America/New_York).
+  - 4 buildings: two offices, a retail store and a laboratory.
+  - 56 days of hourly data from 2016-01-04 (Monday).
+  - 6 injected anomalies, one per type.
+- **Committed fixture:** `data/sample/synthetic/`, seed 2016. 5,376 readings, 2,688 weather
+  rows, 4 buildings and 6 labels; 564,166 bytes in total.
+- **Decision:** D013.
+
+**Verified before writing tests**
+- **Local-time schedules:** both offices peak at 10:00 *local* time (London and New York), with
+  weekend load clearly lower.
+- **Heating, and a confound:** hourly load correlates *positively* with temperature for two
+  buildings, because both peak in the afternoon. On daily averages, every building shows the
+  heating effect: correlation −0.46 to −0.95, and the fitted slope recovers the model's heating
+  coefficient (−2.22 vs 2.0, −1.16 vs 1.2, −2.40 vs 2.5, −1.41 vs 1.5). This is noted in the
+  generated README for later modelling (T013).
+- **Injected changes:** 833 of 5,376 rows changed, all inside labelled windows.
+  - The overnight event changed exactly 70 of 168 window hours (10 night hours × 7).
+  - The flatline changed 11 of 12 hours; the first hour is the held value.
+- **In-process reproducibility:** two separate runs with seed 2016 produced identical file
+  hashes.
+
+**Validation** (Windows)
+- `uv lock --check`: pass. ruff: clean. Format: 29 files. `mypy` (strict): no issues in 28 files.
+- `pytest`: **104 passed**, 17 of them new:
+  - The committed fixture equals a fresh generation byte for byte.
+  - The same seed gives identical files; another seed changes the noise but not the scenario.
+  - The manifest hashes match the files.
+  - All three tables pass the contract with no warnings, and reading the files back gives the
+    generated tables.
+  - The fixture is under 1 MB.
+  - Changes occur only inside labelled windows, and every label changes something.
+  - The labels are marked synthetic and cover each type once; identifiers are `syn-` and there
+    are no coordinates.
+  - The offices follow local hours, and daily load falls as temperature rises.
+  - Each anomaly has its documented effect, and the CLI writes every file.
+- Cross-platform byte identity: checked in a Linux container and in GitHub CI (see the
+  end-of-task report).

@@ -22,6 +22,10 @@ The application foundation runs end to end locally, and CI checks it automatical
   validator that turns CSV uploads or in-memory tables into canonical form. It reports every
   structural problem with a stable code, the affected rows and a fix hint.
   [docs/DATA_CONTRACT.md](DATA_CONTRACT.md) documents it, and a test keeps the document truthful.
+- **Synthetic sample data:** a deterministic, clearly labelled synthetic dataset in
+  [data/sample/synthetic/](../data/sample/synthetic/README.md). It has 4 buildings, 8 weeks of
+  hourly electricity and weather, and 6 injected anomalies with labels. It is for tests, the
+  demo mode and synthetic benchmarks.
 
 No dataset has been downloaded and no model has been trained, so no ML metrics exist yet.
 
@@ -34,6 +38,7 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | 2026-10-23 |
 | T004 | CI baseline (GitHub Actions, uv lock, SHA-pinned workflow) | 2026-10-23 |
 | T005 | Canonical data contracts and CSV upload format | 2026-10-23 |
+| T006 | Deterministic synthetic fixture generator | 2026-10-23 |
 
 ## Current task
 
@@ -41,18 +46,19 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T006 — Deterministic synthetic fixture generator**: a seeded generator for a few buildings
-and meters, with daily and weekly patterns, temperature dependence and documented injected
-anomalies (labels marked synthetic). It produces a tiny committed fixture under `data/sample/`
-that conforms to the T005 contract. See
-[ROADMAP.md](ROADMAP.md#t006--deterministic-synthetic-fixture-generator).
+**T007 — BDG2 acquisition tooling and dataset documentation**: an explicit, verifiable download
+script for the BDG2 files needed (electricity, metadata, weather). The data files are stored in
+Git LFS. The task also covers recording checksums and provenance in
+`data/manifests/datasets.yaml`, `docs/DATASETS.md` with attribution, and resolving the licence
+discrepancy (CC BY 4.0 vs CC BY-SA 4.0). See
+[ROADMAP.md](ROADMAP.md#t007--bdg2-acquisition-tooling-and-dataset-documentation).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007 | 1 / 3 |
+| M2 Data contracts and acquisition | T005–T007 | 2 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |

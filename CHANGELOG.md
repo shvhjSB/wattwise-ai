@@ -38,6 +38,12 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - `docs/DATA_CONTRACT.md`: the specification, CSV upload format and issue-code reference. A
   test keeps it in sync with the code and checks that its examples behave as documented. (T005)
 - Backend dependencies: pandas 3.0, numpy, tzdata; `pandas-stubs` for strict typing. (T005)
+- Synthetic data generator (`python -m wattwise.data.synthetic`). It is deterministic per seed,
+  generates load in local time with heating and weekend effects, and injects six labelled
+  anomalies (spike, sustained excess, overnight base load, gradual drift, flatline, missing
+  data). (T006)
+- Committed synthetic sample in `data/sample/synthetic/` (about 564 KB) with a generated README
+  and a hash manifest; every table passes the data contract. (T006)
 
 ### Changed
 - This repository now commits and pushes as the owner's personal account, `shvhjSB`, through

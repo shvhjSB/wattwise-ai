@@ -317,6 +317,48 @@ links to the entry that replaces it.
   - `tests/data/test_contract_docs.py` fails if the document and the code drift apart, including
     if its CSV examples stop behaving as described.
 
+## D013 — Synthetic fixture design
+- **Date:** 2026-10-23 · **Task:** T006 · **Status:** Accepted
+- **Decision:** `wattwise.data.synthetic` generates a small, clearly synthetic dataset. It is
+  committed under `data/sample/synthetic/` (about 564 KB).
+  - **Fixed scenario, seeded noise.** The sites, buildings and injected anomalies are fixed and
+    versioned (`GENERATOR_VERSION`). The seed changes only the random noise, so the labels are
+    identical for every seed.
+  - **Realistic enough to be useful:**
+    - Hourly load comes from base load, occupancy and electric heating, plus AR(1) noise.
+    - Occupancy schedules run in each building's **local** time, and the data is stored in UTC.
+      Two time zones (London, New York) exercise the contract's time handling.
+    - Weather has a trend, day-to-day variation and a daily cycle.
+    - Verified: both offices peak at 10:00 local time. On daily averages, a fitted slope recovers
+      each building's heating coefficient (e.g. −2.22 vs the model's 2.0 kWh/h per °C).
+  - **Six injected anomalies, one per signature that T017 will detect:** spike, sustained
+    excess, overnight base load, gradual drift, flatline and missing data. The labels give UTC
+    windows (end exclusive), the effect and `label_source = synthetic_injection`.
+  - **The data differs from its clean counterfactual only inside labelled windows.** The
+    generator keeps the clean readings in memory as ground truth, and a test checks this
+    property exactly.
+  - **Synthetic by construction:**
+    - All identifiers start with `syn-`.
+    - Coordinates are left empty rather than invented.
+    - The README and manifest carry a SYNTHETIC notice.
+    - Results on this data are to be reported as synthetic benchmarks only.
+  - **Generated, not hand-written.** The README (including its anomaly table) and a manifest of
+    SHA-256 hashes and row counts are produced by the generator. Output formatting is fixed
+    (decimals per column, ISO `Z` timestamps, LF line endings) and nothing time-dependent is
+    written, so the files are byte-identical for a given seed.
+- **Alternatives considered:**
+  - Random anomaly placement per seed: rejected, because fixed, documented windows make labels
+    and the README stable.
+  - Storing the clean counterfactual readings in the repository: unnecessary, because they are
+    regenerated deterministically.
+  - Committing a real-data sample instead: licence questions (D005) and no ground truth for
+    anomalies.
+- **Consequences:**
+  - Changing the model or scenario means bumping `GENERATOR_VERSION` and regenerating the
+    folder. A test fails if the committed files differ from a fresh generation.
+  - Byte-identity across operating systems depends on the locked NumPy and pandas versions. CI
+    on Linux checks it against files generated on Windows.
+
 ---
 
 ## Open decisions (tracked in tasks)

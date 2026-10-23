@@ -60,7 +60,9 @@ The primary dataset is the [Building Data Genome Project 2](https://github.com/b
 (Miller et al., 2020, *Scientific Data* 7, 368, <https://doi.org/10.1038/s41597-020-00712-x>).
 Raw data is never committed. Downloading it will be an explicit, documented command. All data,
 whether from a dataset or an upload, is converted to one canonical shape, described in
-[docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Its licence
+[docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Tests and the
+demo mode use a small, deterministic and clearly **synthetic** dataset with labelled injected
+anomalies: [data/sample/synthetic/](data/sample/synthetic/README.md). Its licence
 terms are being verified before use; the sources disagree on CC BY 4.0 vs CC BY-SA 4.0.
 See [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
 

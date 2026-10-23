@@ -1,0 +1,95 @@
+# Continuous integration: every check a developer runs locally, on every push to main and
+# every pull request. Design and pinning policy: docs/DECISIONS.md D010 and D011.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Least privilege: the jobs only read the repository.
+permissions:
+  contents: read
+
+# Supersede in-progress runs for the same pull request; never cancel runs on main.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  backend:
+    name: Backend (Python)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          # Keep in step with [tool.uv] required-version in backend/pyproject.toml.
+          version: '0.12.24'
+          working-directory: backend
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+
+      - name: Install Python and locked dependencies
+        # --locked fails if uv.lock is out of date with pyproject.toml.
+        run: uv sync --locked
+
+      - name: Lint (ruff)
+        run: uv run --locked ruff check --output-format=github .
+
+      - name: Format check (ruff)
+        run: uv run --locked ruff format --check .
+
+      - name: Type check (mypy, strict)
+        run: uv run --locked mypy
+
+      - name: Test (pytest)
+        run: uv run --locked pytest
+
+  frontend:
+    name: Frontend (Node)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+
+      - name: Format check (Prettier)
+        run: npm run format:check
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Type check (tsc)
+        run: npm run typecheck
+
+      - name: Test (Vitest)
+        run: npm test
+
+      - name: Build
+        run: npm run build

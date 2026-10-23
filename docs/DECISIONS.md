@@ -178,16 +178,58 @@ links to the entry that replaces it.
   - A data-fetching library (e.g. TanStack Query), deferred to T029, when caching and refetch
     needs are real.
 
+## D010 — Backend dependency locking with uv
+- **Date:** 2026-10-23 · **Task:** T004 · **Status:** Accepted
+- **Decision:**
+  - Lock backend dependencies across platforms in `backend/uv.lock` using `uv`.
+  - Declare development-only dependencies via PEP 735 `[dependency-groups]` (`dev = [...]`) in
+    `backend/pyproject.toml` instead of `[project.optional-dependencies]`.
+  - Pin the compatible `uv` version range in `backend/pyproject.toml`
+    (`[tool.uv] required-version = ">=0.12.24,<0.13"`), keeping local `uv` and CI on the same
+    lockfile format.
+  - Record the target Python version in `backend/.python-version` (`3.13`).
+  - Local development continues to support standard `backend/.venv` (pip/hatchling), while CI and
+    Docker use `uv sync --locked` for fast, reproducible environments.
+- **Alternatives considered:**
+  - `pip-tools` (`requirements.txt` compile): widely supported but slower, and managing
+    cross-platform wheels across Windows and Linux requires multiple lock targets.
+  - Unlocked installations: rejected because unexpected upstream dependency updates break CI
+    and Docker builds.
+- **Consequences:** `backend/uv.lock` is committed to version control. CI verifies that the lockfile
+  matches `pyproject.toml` using `uv sync --locked`.
+
+## D011 — CI workflow design and action pinning
+- **Date:** 2026-10-23 · **Task:** T004 · **Status:** Accepted
+- **Decision:**
+  - Single CI workflow in `.github/workflows/ci.yml` running on pushes to `main`, all pull
+    requests, and `workflow_dispatch`.
+  - Supply-chain security: all third-party GitHub Actions are pinned to full 40-character commit
+    SHAs with comment annotations naming the release tag (e.g. `actions/checkout@3d3c42e5... # v7.0.1`).
+  - Least privilege: top-level `permissions: contents: read`.
+  - Concurrency control: `cancel-in-progress` enabled for pull requests, disabled on `main` to
+    preserve main-branch audit history.
+  - Parallel jobs for backend (`ubuntu-24.04`, Python 3.13 via `astral-sh/setup-uv`) and
+    frontend (`ubuntu-24.04`, Node 24 via `actions/setup-node` reading `frontend/.nvmrc`).
+  - Both jobs cache dependencies: `astral-sh/setup-uv` caches on `backend/uv.lock`, and
+    `actions/setup-node` caches on `frontend/package-lock.json`.
+  - Exact mirror of local checks: backend runs ruff (check and format), strict mypy and pytest;
+    frontend runs Prettier, ESLint, tsc, Vitest and Vite production build.
+- **Alternatives considered:**
+  - A single sequential job: rejected because parallel jobs finish faster and pinpoint failures immediately.
+  - Floating action tags (`@v4`): rejected because tags are mutable and vulnerable to supply-chain tampering.
+- **Consequences:** CI guarantees that all quality gates pass before code merges to `main`. Pushing
+  workflow files requires GitHub token authorization with the `workflow` scope.
+
 ---
 
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
 |---|---|---|
-| Dependency lock strategy | T004 | Frontend is locked (`package-lock.json`). Backend: compiled lock vs uv; must make CI and Docker reproducible |
 | Test database strategy | T023 | PostgreSQL 18 locally (D007), plus a service container in CI |
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Server-state library | T029 | Plain hooks (D009) vs TanStack Query |
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
+

@@ -1,17 +1,21 @@
 # Project status
 
-**Last updated:** 2026-10-23 · **Current milestone:** M1 — Repository audit and application foundation
+**Last updated:** 2026-10-23 · **Current milestone:** M2 — Data contracts, schemas and dataset acquisition
 
 ## Summary
 
-The application foundation runs end to end on the development machine:
+The application foundation runs end to end locally and is validated automatically by CI:
 
 - **Backend:** a FastAPI service with a liveness endpoint (`GET /api/v1/health`) and OpenAPI
-  docs. It passes pytest, ruff and strict mypy.
+  docs. It passes pytest, ruff and strict mypy. Dependencies are locked across platforms in
+  `backend/uv.lock` with PEP 735 `[dependency-groups]`.
 - **Frontend:** a React + TypeScript + Vite + Tailwind shell. It calls the API through a typed,
   runtime-validated client and shows loading, online and error-with-retry states. It passes
   type checking, ESLint (including accessibility rules), Prettier and Vitest, and builds for
   production.
+- **CI:** GitHub Actions workflow (`.github/workflows/ci.yml`) runs all backend and frontend
+  checks on Ubuntu 24.04 runners for pushes and pull requests, using SHA-pinned actions and
+  dependency caching.
 
 No dataset has been downloaded and no model has been trained, so no ML metrics exist yet.
 
@@ -22,6 +26,7 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 | T001 | Repository audit, project records and hygiene | 2026-10-23 |
 | T002 | Backend foundation (FastAPI, settings, liveness, tooling) | 2026-10-23 |
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | 2026-10-23 |
+| T004 | CI baseline (GitHub Actions, uv lock, SHA-pinned workflow) | 2026-10-23 |
 
 ## Current task
 
@@ -29,16 +34,15 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T004 — CI baseline**: a GitHub Actions workflow that runs the backend checks (ruff, mypy,
-pytest) and the frontend checks (`npm ci`, lint, typecheck, format, test, build) on every push
-and pull request. It also settles the backend dependency-lock strategy. See
-[ROADMAP.md](ROADMAP.md#t004--ci-baseline).
+**T005 — Canonical data contracts and CSV upload format**: one internal representation of
+meter readings, meters/buildings and weather, shared by every pipeline stage and the API. See
+[ROADMAP.md](ROADMAP.md#t005--canonical-data-contracts-and-csv-upload-format).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
-| M1 Foundation | T001–T004 | 3 / 4 |
+| M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 0 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |

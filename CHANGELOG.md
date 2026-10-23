@@ -23,6 +23,13 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   invalid-response errors. The dev server proxies `/api` to the backend. (T003)
 - Frontend tooling: Vitest + React Testing Library (21 tests), ESLint (typescript-eslint strict,
   React hooks, jsx-a11y), Prettier and a locked `package-lock.json`. (T003)
+- Continuous integration baseline: GitHub Actions workflow (`.github/workflows/ci.yml`) running
+  all backend checks (ruff, mypy, pytest) and frontend checks (Prettier, ESLint, tsc, Vitest,
+  Vite build) on Ubuntu 24.04 runners with SHA-pinned actions and dependency caching. (T004)
+- Backend dependency locking: multi-platform lockfile `backend/uv.lock` and PEP 735 `[dependency-groups]`
+  in `backend/pyproject.toml` with pinned uv version requirements (D010). (T004)
+- Version environment files: `backend/.python-version` (3.13) and `frontend/.nvmrc` (24). (T004)
+
 
 ### Fixed
 - The audit records wrongly stated which credential git pushes with. They now describe the real

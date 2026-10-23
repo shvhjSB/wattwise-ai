@@ -172,3 +172,42 @@ engine was verified:
   - With the backend stopped, the proxy returned 502, which the UI reports as an error.
 - **Not done:** no visual check in a real browser. No browser automation is installed; the
   component tests cover the rendered states.
+
+**Commit:** `8212986` feat(web): add React frontend foundation with typed API client.
+
+---
+
+## 2026-10-23 — T004 CI baseline
+
+**Done**
+- `.github/workflows/ci.yml`:
+  - Triggers on `push` to `main`, `pull_request`, and manual `workflow_dispatch`.
+  - Least-privilege top-level `permissions: contents: read`.
+  - Concurrency group `ci-${{ github.ref }}` with `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`.
+  - Two parallel jobs on `ubuntu-24.04`:
+    - `backend`: installs `uv` 0.12.24 via `astral-sh/setup-uv`, syncs locked dependencies (`uv sync --locked`), runs ruff lint with GitHub annotations, ruff format check, strict mypy, and pytest.
+    - `frontend`: sets up Node 24 via `actions/setup-node` reading `frontend/.nvmrc`, runs `npm ci`, Prettier check, ESLint, TypeScript check, Vitest suite, and production Vite build.
+  - All third-party actions pinned to full 40-character commit SHAs with version comment annotations (D011).
+  - Dependency caching configured for both uv (`backend/uv.lock`) and npm (`frontend/package-lock.json`).
+- Backend dependency locking (D010):
+  - Migrated dev dependencies to PEP 735 `[dependency-groups]` (`dev`) in `backend/pyproject.toml`.
+  - Pinned `[tool.uv] required-version = ">=0.12.24,<0.13"`.
+  - Added `backend/.python-version` (`3.13`).
+  - Added multi-platform `backend/uv.lock`.
+- Frontend environment alignment:
+  - Added `frontend/.nvmrc` (`24`).
+- Documented decisions D010 (backend dependency locking with uv) and D011 (CI workflow design and action pinning) in `docs/DECISIONS.md`.
+
+**Validation**
+- Backend (Python 3.13, Windows):
+  - `pytest`: 10 passed in 0.17s.
+  - `ruff check .`: clean.
+  - `ruff format --check .`: 14 files already formatted.
+  - `mypy` (strict, 13 files): success, no issues found.
+- Frontend (Node 24, npm 11, Windows):
+  - `npm run lint`: pass (0 warnings).
+  - `npm run typecheck`: pass.
+  - `npm run format:check`: pass.
+  - `npm test`: 4 files, 21 tests passed.
+  - `npm run build`: pass (JS 224 kB / 70 kB gzip, CSS 11.7 kB).
+

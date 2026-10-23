@@ -16,7 +16,8 @@ dependencies = [
     "pydantic-settings>=2.6,<3",
 ]
 
-[project.optional-dependencies]
+# Development-only tools (PEP 735). Not part of the published package. `uv sync` installs them.
+[dependency-groups]
 dev = [
     "pytest>=8.3",
     "httpx2>=2.0",  # required by starlette.testclient (Starlette 1.x)
@@ -26,6 +27,11 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/wattwise"]
+
+# Exact versions for every platform are locked in uv.lock (DECISIONS D010). The range keeps
+# local uv and CI (pinned in .github/workflows/ci.yml) on the same lockfile format.
+[tool.uv]
+required-version = ">=0.12.24,<0.13"
 
 # ---------------------------------------------------------------------------
 # Tooling

@@ -194,12 +194,15 @@ engine was verified:
 - `.github/workflows/ci.yml`:
   - Triggers on `push` to `main`, `pull_request`, and manual `workflow_dispatch`.
   - Least-privilege top-level `permissions: contents: read`.
-  - Concurrency group `ci-${{ github.ref }}` with `cancel-in-progress: ${{ github.event_name == 'pull_request' }}`.
+  - Concurrency: one group per PR (new pushes cancel older runs); a unique group per run on `main`
+    and for manual runs (see the review fixes below).
   - Two parallel jobs on `ubuntu-24.04`:
     - `backend`: installs `uv` 0.12.24 via `astral-sh/setup-uv`, syncs locked dependencies (`uv sync --locked`), runs ruff lint with GitHub annotations, ruff format check, strict mypy, and pytest.
     - `frontend`: sets up Node 24 via `actions/setup-node` reading `frontend/.nvmrc`, runs `npm ci`, Prettier check, ESLint, TypeScript check, Vitest suite, and production Vite build.
   - All third-party actions pinned to full 40-character commit SHAs with version comment annotations (D011).
-  - Dependency caching configured for both uv (`backend/uv.lock`) and npm (`frontend/package-lock.json`).
+  - Dependency caching for uv (keyed on `backend/uv.lock`, after the review fix below) and npm
+    (keyed on `frontend/package-lock.json`). Whether the uv cache really hashes the lockfile is
+    checked in the first GitHub run's log.
 - Backend dependency locking (D010):
   - Migrated dev dependencies to PEP 735 `[dependency-groups]` (`dev`) in `backend/pyproject.toml`.
   - Pinned `[tool.uv] required-version = ">=0.12.24,<0.13"`.
@@ -225,4 +228,51 @@ engine was verified:
   - `npm run format:check`: pass.
   - `npm test`: 4 files, 21 tests passed.
   - `npm run build`: pass (JS 224 kB / 70 kB gzip, CSS 11.7 kB).
+
+**Linux replay of both CI jobs** (Docker, from `git archive HEAD` of `c90d1c2`: 61 files, no
+venv, `node_modules` or `dist`)
+- **First attempt invalid, discarded.** The image tag `uv:0.12.24-bookworm` did not exist.
+  Windows PowerShell 5.1 also stripped the double quotes from the inline `sh -c` script, so the
+  frontend container exited 0 *without running any step*. Both jobs were re-run from `.sh` script
+  files instead.
+- **Backend** (`ubuntu:24.04`, the official uv 0.12.24 Linux binary from `ghcr.io/astral-sh/uv:0.12.24`):
+  - No system Python. uv downloaded CPython 3.13.16, as it will on the GitHub runner.
+  - `uv sync --locked`: 36 packages installed, including `uvloop`.
+  - ruff check, ruff format (14 files), strict mypy (13 files) and pytest (10 passed): all pass.
+- **Frontend** (`node:24-bookworm`, Node 24.22.1, npm 11.19.1):
+  - `npm ci`: 367 packages.
+  - Prettier, ESLint, tsc, Vitest (21 passed) and the build: all pass.
+- **Failure propagation:** a deliberately failing test (pytest) and a deliberate lint violation
+  (ESLint) each exited **1**. A broken check therefore fails its CI step.
+
+**Adversarial review.** A Workflow ran 3 reviewer lenses (GitHub CI correctness, security/supply
+chain, reproducibility/docs) with 1 refuting skeptic per lens: 6 agents, about 11 minutes.
+Reviewers also confirmed that each pinned SHA is the commit of its tag and that every release is
+at least two weeks old.
+- **Confirmed and fixed:**
+  1. **(medium, found by all three lenses)** `cache-dependency-glob: backend/uv.lock` is resolved
+     relative to `working-directory: backend`, so it pointed at `backend/backend/uv.lock`. The uv
+     cache would never have refreshed, and every run would have printed a warning. Fixed to
+     `uv.lock`; the pinned action's `action.yml` says the glob is "relative to the working
+     directory".
+  2. **(low)** A shared `main` concurrency group lets GitHub replace a *pending* run. Non-PR runs
+     now use a unique group (`github.run_id`).
+  3. **(low)** The uv download was checked only against an online manifest that can change. Its
+     SHA-256 is now pinned in the workflow (`b4dfaef4…3da6`), matching both the release API
+     digest and the release's `.sha256` asset.
+  4. **(low)** The build backend floated. `[tool.uv] build-constraint-dependencies` now pins
+     hatchling 1.32.4 and its five dependencies. With a cold cache, uv selected
+     `hatchling==1.32.4`.
+  5. **(low)** The docs said "uv 0.12.x", and the generic installer now installs 0.13, which
+     `required-version` rejects. The docs now say "0.12.24 or a later 0.12.x" and give
+     version-pinned installers.
+  6. **(low)** The frontend Node minimum `>=22.12` was too low. Every locked package's `engines`
+     range was checked against candidate versions: the real requirement is
+     `^22.22.2 || ^24.15.0 || >=26.0.0` (jsdom). `package.json`, the lockfile's root entry (a
+     one-line change) and the README were updated, and `npm ci` stays in sync.
+- **Refuted by the skeptics:**
+  - The records under-reported the replay. They were stale but not false; the replay is recorded here.
+  - The `gh` scope-fix wording. The switch-back step is now spelled out in PROJECT_STATUS anyway.
+  - The idea that locked Python packages need a two-week cooldown. That is a policy choice, now
+    stated as out of scope in D010.
 

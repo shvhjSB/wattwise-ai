@@ -28,10 +28,20 @@ dev = [
 [tool.hatch.build.targets.wheel]
 packages = ["src/wattwise"]
 
-# Exact versions for every platform are locked in uv.lock (DECISIONS D010). The range keeps
-# local uv and CI (pinned in .github/workflows/ci.yml) on the same lockfile format.
+# Runtime and dev dependencies are locked for every platform in uv.lock (DECISIONS D010). The
+# version range keeps local uv and CI (pinned in .github/workflows/ci.yml) on one lockfile format.
 [tool.uv]
 required-version = ">=0.12.24,<0.13"
+# The build backend is not part of uv.lock; pin its whole environment so the editable build of
+# this package is reproducible too. Update together with [build-system] requires.
+build-constraint-dependencies = [
+    "hatchling==1.32.4",
+    "packaging==26.3",
+    "pathspec==1.1.1",
+    "pluggy==1.7.0",
+    "tomlkit==0.15.2",
+    "trove-classifiers==2026.9.21.13",
+]
 
 # ---------------------------------------------------------------------------
 # Tooling

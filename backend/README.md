@@ -15,10 +15,13 @@ Domain, data and ML code must never import from `wattwise.api`.
 ## Setup
 
 Dependencies are managed with [uv](https://docs.astral.sh/uv/) and locked for every platform in
-`uv.lock` (D010). You need **uv 0.12.x**, as enforced by `[tool.uv] required-version`:
+`uv.lock` (D010). You need **uv 0.12.24 or a later 0.12.x release**.
+`[tool.uv] required-version` (`>=0.12.24,<0.13`) rejects anything else, including the newest
+0.13 releases, so install a pinned version:
 
 - Windows: `winget install --id astral-sh.uv --exact --version 0.12.24`
-- macOS/Linux: see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/)
+- macOS/Linux: `curl -LsSf https://astral.sh/uv/0.12.24/install.sh | sh`
+- An existing standalone uv install: `uv self update 0.12.24`
 
 Then, from `backend/`:
 

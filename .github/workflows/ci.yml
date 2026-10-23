@@ -12,9 +12,11 @@ on:
 permissions:
   contents: read
 
-# Supersede in-progress runs for the same pull request; never cancel runs on main.
+# Pull requests: a new push cancels the older run for the same PR.
+# Everything else (main pushes, manual runs) gets a unique group per run, so no run on main is
+# ever cancelled, including pending runs, which a shared group would replace.
 concurrency:
-  group: ci-${{ github.ref }}
+  group: ci-${{ github.event_name == 'pull_request' && github.ref || github.run_id }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
@@ -34,11 +36,15 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
         with:
-          # Keep in step with [tool.uv] required-version in backend/pyproject.toml.
+          # Keep in step with [tool.uv] required-version in backend/pyproject.toml. The checksum is
+          # the SHA-256 of uv-x86_64-unknown-linux-gnu.tar.gz for this exact version, from the
+          # release's .sha256 asset. Update both together.
           version: '0.12.24'
+          checksum: 'b4dfaef47d491a7296981f8374a4595f55dbf84e8937c8ecd2983574d8bb3da6'
           working-directory: backend
           enable-cache: true
-          cache-dependency-glob: backend/uv.lock
+          # Relative to working-directory, so this is backend/uv.lock.
+          cache-dependency-glob: uv.lock
 
       - name: Install Python and locked dependencies
         # --locked fails if uv.lock is out of date with pyproject.toml.

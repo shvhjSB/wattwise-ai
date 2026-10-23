@@ -15,7 +15,9 @@ src/
 
 ## Setup
 
-Requires Node.js 22.12 or newer (developed on Node 24) and npm.
+Requires Node.js `^22.22.2`, `^24.15.0` or `>=26`. That range comes from the locked test
+toolchain (jsdom); see `engines` in `package.json`. The project is developed on Node 24, and CI
+uses the latest Node 24 release per [`.nvmrc`](.nvmrc).
 
 ```bash
 cd frontend

@@ -25,16 +25,21 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   React hooks, jsx-a11y), Prettier and a locked `package-lock.json`. (T003)
 - Continuous integration baseline: GitHub Actions workflow (`.github/workflows/ci.yml`) running
   all backend checks (ruff, mypy, pytest) and frontend checks (Prettier, ESLint, tsc, Vitest,
-  Vite build) on Ubuntu 24.04 runners with SHA-pinned actions and dependency caching. (T004)
-- Backend dependency locking: multi-platform lockfile `backend/uv.lock` and PEP 735 `[dependency-groups]`
-  in `backend/pyproject.toml` with pinned uv version requirements (D010). (T004)
+  Vite build) on Ubuntu 24.04 runners. It uses SHA-pinned actions, a checksum-verified uv
+  download and lockfile-keyed dependency caching. (T004)
+- Backend dependency locking: multi-platform lockfile `backend/uv.lock`, PEP 735
+  `[dependency-groups]`, a pinned uv version range and a pinned build backend
+  (`build-constraint-dependencies`) in `backend/pyproject.toml` (D010). (T004)
 - Version environment files: `backend/.python-version` (3.13) and `frontend/.nvmrc` (24). (T004)
-
-
-### Fixed
-- The audit records wrongly stated which credential git pushes with. They now describe the real
-  cause of the initial HTTP 403 push failure. (T001)
 
 ### Changed
 - This repository now commits and pushes as the owner's personal account, `shvhjSB`, through
   repository-local git configuration (D006). (T002)
+- Backend setup now uses uv (`uv sync --locked`, `uv run --locked ...`). The pip
+  `install -e ".[dev]"` path was removed, because the dev tools became a dependency group. (T004)
+- The frontend's declared Node.js range is now `^22.22.2 || ^24.15.0 || >=26.0.0`, matching what
+  the locked test toolchain requires. (T004)
+
+### Fixed
+- The audit records wrongly stated which credential git pushes with. They now describe the real
+  cause of the initial HTTP 403 push failure. (T001)

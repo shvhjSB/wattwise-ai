@@ -32,7 +32,9 @@ No dataset has been downloaded and no model has been trained, so no ML metrics e
 
 **T004 — CI baseline** (in progress):
 - The workflow and the backend lock (`uv.lock`) are written.
-- Remaining: Linux container replay, review, push, and the first green run on GitHub.
+- Done locally: actionlint passes, both jobs pass in Linux containers, and the adversarial review
+  is complete, with all 6 confirmed findings fixed (see WORK_LOG).
+- Remaining: push, then the first green run on GitHub.
 
 ## Next task
 
@@ -75,7 +77,7 @@ None.
 
 | Risk | Affects | Mitigation |
 |---|---|---|
-| `shvhjSB`'s `gh` token lacks the `workflow` scope; GitHub rejects pushes that add or change `.github/workflows/*` without it | **T004 (current)** | If the push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` while `shvhjSB` is selected, then the push is retried |
+| `shvhjSB`'s `gh` token lacks the `workflow` scope; GitHub rejects pushes that add or change `.github/workflows/*` without it | **T004 (current)** | If the push is rejected, the owner runs three commands. (1) `gh auth switch -h github.com -u shvhjSB`. (2) `gh auth refresh -h github.com -s workflow`, approving in a browser signed in as `shvhjSB`. (3) Switch back to the previously active account with `gh auth switch -h github.com -u aman-agntworksai`. Then the push is retried. Claude never switches the global account itself |
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence discrepancy (CC BY 4.0 vs CC BY-SA 4.0) | T007, T009 | Resolve and document in T007 before using the data |

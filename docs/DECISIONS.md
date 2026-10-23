@@ -195,7 +195,15 @@ links to the entry that replaces it.
     path no longer exists, because the `dev` extra became a dependency group.
   - uv is pinned to **0.12.24**, the newest release at least two weeks old when this decision was
     made. All 0.13.x releases were under two weeks old, and new releases are avoided briefly as a
-    supply-chain precaution.
+    supply-chain precaution. CI also verifies the uv download against a SHA-256 checksum pinned
+    in the workflow (D011).
+  - The **build backend** is pinned too. `uv.lock` does not cover the environment that builds
+    this package (hatchling and its dependencies), so `[tool.uv] build-constraint-dependencies`
+    pins all six packages, with hatchling at 1.32.4. Verified with a cold cache: uv selected
+    exactly `hatchling==1.32.4`. These pins have no hashes, unlike the main lock.
+  - Scope of the two-week rule: it covers the uv binary and CI actions. It does not cover locked
+    Python or npm packages, which are locked at their current releases with hashes. Adding a
+    cooldown for those (e.g. uv `exclude-newer`) is an option the owner may adopt later.
 - **Why a universal lock matters here:** development happens on Windows and CI runs on Linux.
   `uvicorn[standard]` pulls in platform-specific packages, e.g. `uvloop` on Linux only. A
   `pip freeze` or `pip-compile` lock made on Windows would silently omit them. `uv.lock` resolves
@@ -211,7 +219,9 @@ links to the entry that replaces it.
   - `backend/uv.lock` is committed. Change dependencies with `uv add` / `uv lock`, and commit
     `pyproject.toml` and `uv.lock` together.
   - In CI, `uv sync --locked` fails if the lock is stale.
-  - Contributors need uv 0.12.x installed (`[tool.uv] required-version`).
+  - Contributors need uv 0.12.24 or a later 0.12.x (`[tool.uv] required-version`). Other versions
+    are rejected, including newer 0.13 releases, so installs must be version-pinned
+    (see `backend/README.md`).
 
 ## D011 — CI workflow design and action pinning
 - **Date:** 2026-10-23 · **Task:** T004 · **Status:** Accepted
@@ -221,12 +231,26 @@ links to the entry that replaces it.
   - Supply-chain security: all third-party GitHub Actions are pinned to full 40-character commit
     SHAs with comment annotations naming the release tag (e.g. `actions/checkout@3d3c42e5... # v7.0.1`).
   - Least privilege: top-level `permissions: contents: read`.
-  - Concurrency control: `cancel-in-progress` enabled for pull requests, disabled on `main` to
-    preserve main-branch audit history.
+  - Concurrency:
+    - Pull-request runs share one group per PR, and a new push cancels the older run.
+    - Every other run (pushes to `main`, manual runs) gets a unique group (`github.run_id`), so no
+      run on `main` is ever cancelled.
+    - The unique group matters because GitHub replaces a *pending* run whenever another run
+      queues in the same group, even with `cancel-in-progress: false`. One shared `main` group
+      would therefore lose results during quick bursts of pushes. This was found in the T004 review.
   - Parallel jobs for backend (`ubuntu-24.04`, Python 3.13 via `astral-sh/setup-uv`) and
     frontend (`ubuntu-24.04`, Node 24 via `actions/setup-node` reading `frontend/.nvmrc`).
-  - Both jobs cache dependencies: `astral-sh/setup-uv` caches on `backend/uv.lock`, and
-    `actions/setup-node` caches on `frontend/package-lock.json`.
+  - Both jobs cache dependencies, keyed on their lockfiles:
+    - `astral-sh/setup-uv` uses `cache-dependency-glob: uv.lock`. The glob is relative to the
+      action's `working-directory: backend`, which the pinned action's own docs confirm.
+      `backend/uv.lock` would have resolved to the non-existent `backend/backend/uv.lock`, and the
+      cache would never have refreshed. This was found in the T004 review.
+    - `actions/setup-node` uses `cache-dependency-path: frontend/package-lock.json`, which that
+      action resolves from the repository root.
+  - The uv download is verified against a SHA-256 checksum pinned in the workflow
+    (`uv-x86_64-unknown-linux-gnu.tar.gz` for 0.12.24). It was cross-checked in the GitHub
+    release API digest and in the release's `.sha256` asset. Pinning the action by SHA does not
+    pin the binary it downloads.
   - Exact mirror of local checks: backend runs ruff (check and format), strict mypy and pytest;
     frontend runs Prettier, ESLint, tsc, Vitest and Vite production build.
   - Checkout uses `persist-credentials: false`, so later steps cannot reuse the job's Git token.
@@ -243,7 +267,8 @@ links to the entry that replaces it.
     status check is a separate decision for the owner.
   - Pushing workflow files requires a GitHub token with the `workflow` scope.
   - Pinned SHAs do not update themselves. Upgrades are deliberate edits, applying the same
-    two-week rule.
+    two-week rule. A uv upgrade changes three places together: `version` and `checksum` in
+    `ci.yml`, and `required-version` in `backend/pyproject.toml`.
 
 ---
 

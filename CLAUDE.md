@@ -52,7 +52,7 @@ GitHub checkpoint, Project status, Next task, Decisions needed. Use plain langua
   connections only. The superuser credentials live in the owner's libpq password file
   (`%APPDATA%\postgresql\pgpass.conf`). Never read, print or copy that file. Project roles and
   databases are created in T023 with their own credentials.
-- Python work uses `backend/.venv`, managed by uv 0.12.x from `backend/uv.lock`
+- Python work uses `backend/.venv`, managed by uv (0.12.24 or a later 0.12.x) from `backend/uv.lock`
   (`uv sync --locked`, `uv run --locked ...`). Never use the global interpreter. Change
   dependencies only with `uv add` / `uv lock`, and commit `uv.lock` together with `pyproject.toml`.
 - **All commits and pushes for this project must be made as the owner's personal account,

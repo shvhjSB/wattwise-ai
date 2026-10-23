@@ -63,6 +63,9 @@ links to the entry that replaces it.
   - **Poetry:** heavier, and adds little at this scale.
 - **Consequences:** installs are not fully locked yet. T004 (CI) decides the lock strategy,
   e.g. a compiled requirements lock or adopting uv, so CI and Docker builds are reproducible.
+- **Note (T002):** Starlette 1.x builds `TestClient` on **`httpx2`** and treats legacy `httpx` as
+  deprecated, so the dev extra depends on `httpx2`. Pytest runs with `filterwarnings = error`,
+  so upstream deprecations surface immediately instead of piling up.
 
 ## D004 — Liveness vs readiness endpoints
 - **Date:** 2026-10-23 · **Task:** T002 · **Status:** Accepted
@@ -88,6 +91,27 @@ links to the entry that replaces it.
 - **Citation:** Miller, C. et al. (2020), *The Building Data Genome Project 2, energy meter
   data from the ASHRAE Great Energy Predictor III competition*. Scientific Data 7, 368.
   <https://doi.org/10.1038/s41597-020-00712-x>
+
+## D006 — Project-scoped GitHub identity
+- **Date:** 2026-10-23 · **Task:** T002 · **Status:** Accepted (owner's instruction)
+- **Context:** several GitHub accounts are logged in to `gh` on the development machine. Git used
+  `gh auth git-credential`, which returns the *active* account (`aman-agntworksai`, read-only
+  here), so the first push failed with HTTP 403. The owner asked that all commits and pushes
+  for this project go to their personal account, `shvhjSB`, only.
+- **Decision:** pin the identity in this repository's local `.git/config` only:
+  - `user.name = shvhjSB` and `user.email` set to the address GitHub links to `shvhjSB`.
+  - A local credential helper for `https://github.com` that first resets inherited helpers, then
+    answers with `username=shvhjSB` and the token from `gh auth token --user shvhjSB`. The
+    token is read from the OS keyring at push time and is **never stored** in the config.
+- **Alternatives considered:**
+  - `gh auth switch --user shvhjSB`: rejected, because it changes the active account globally
+    and would affect the owner's other projects.
+  - Granting `aman-agntworksai` write access: rejected, because pushes must come from the personal account.
+- **Consequences:**
+  - Global account switches do not affect this repo.
+  - Commits verified on GitHub are attributed to `shvhjSB`.
+  - A fresh clone must repeat the local setup: `git config --local ...`, as recorded in
+    `docs/WORK_LOG.md` (T002).
 
 ---
 

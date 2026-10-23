@@ -2,8 +2,8 @@
 
 **Explainable energy-waste intelligence for commercial buildings.**
 
-> **Status: early development.** The repository foundation is in place, but no model has been
-> trained and no metrics exist yet. Nothing in this repository should be read as a measured
+> **Status: early development.** The repository foundation and the backend API skeleton are in
+> place, but no model has been trained and no metrics exist yet. Nothing in this repository should be read as a measured
 > result until it appears in the evaluation documentation with the command that produced it.
 > See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
 
@@ -47,7 +47,7 @@ designed to say so wherever it shows a result.
 | Operations | Docker Compose, GitHub Actions, environment-based configuration |
 
 ```
-backend/     Python project "wattwise": API, domain logic, ML pipeline (planned, T002)
+backend/     Python project "wattwise": API now; data pipeline and ML code to follow (src layout)
 frontend/    React application (planned, T003)
 scripts/     dataset acquisition, preprocessing, training and evaluation entry points (planned)
 data/        sample/ = tiny synthetic fixtures (committed); raw/ and processed/ are git-ignored
@@ -64,8 +64,9 @@ See [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
 
 ## Quickstart
 
-There is no runnable code yet. The backend foundation is task T002, and the full-stack
-quickstart arrives with the Docker Compose task (T036).
+The backend API skeleton runs today. It exposes a liveness endpoint and OpenAPI docs; see
+[backend/README.md](backend/README.md) for setup. The full-stack quickstart arrives with the
+Docker Compose task (T036).
 
 ## Project records
 

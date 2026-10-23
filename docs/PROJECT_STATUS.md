@@ -4,15 +4,17 @@
 
 ## Summary
 
-The repository audit is complete, and the project records and repo hygiene are in place. There
-is no application code yet. No dataset has been downloaded and no model has been trained, so
-no metrics exist.
+The repository foundation and a tested FastAPI backend skeleton are in place. The backend
+serves a liveness endpoint (`GET /api/v1/health`) and OpenAPI docs, and passes pytest, ruff and
+strict mypy. No dataset has been downloaded and no model has been trained, so no ML metrics
+exist yet.
 
 ## Completed tasks
 
 | ID | Title | Completed |
 |---|---|---|
 | T001 | Repository audit, project records and hygiene | 2026-10-23 |
+| T002 | Backend foundation (FastAPI, settings, liveness, tooling) | 2026-10-23 |
 
 ## Current task
 
@@ -20,14 +22,18 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T002 — Backend foundation**: a FastAPI app factory, environment-based settings, a
-`GET /api/v1/health` liveness endpoint, and pytest/ruff/mypy tooling. See [ROADMAP.md](ROADMAP.md#t002--backend-foundation).
+**T003 — Frontend foundation**:
+- a Vite + React + TypeScript + Tailwind app shell
+- a typed API client and a health page with loading and error states
+- ESLint, `tsc`, Vitest, React Testing Library and a production build
+
+See [ROADMAP.md](ROADMAP.md#t003--frontend-foundation).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
-| M1 Foundation | T001–T004 | 1 / 4 |
+| M1 Foundation | T001–T004 | 2 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 0 / 3 |
 | M3 Validation and preprocessing | T008–T010 | 0 / 3 |
 | M4 Baselines | T011–T012 | 0 / 2 |
@@ -42,16 +48,19 @@ None. Waiting for the owner to continue.
 
 ## Blockers
 
-- **GitHub push is blocked by authentication.** Local commits are safe and unpushed until the
-  owner picks a push identity (see the first row of Known risks). This does not block local work.
+None.
 
-## Known risks (from the T001 audit)
+The earlier push blocker (HTTP 403 as `aman-agntworksai`) was resolved on 2026-10-23. On the
+owner's instruction, this repo now authenticates and commits as `shvhjSB` through a
+repository-local git configuration (D006).
+
+## Known risks
 
 | Risk | Affects | Mitigation |
 |---|---|---|
 | Docker and PostgreSQL are not installed locally | T023, T034, T036 | Verify in GitHub Actions, or install Docker Desktop |
-| `shvhjSB`'s `gh` token lacks the `workflow` scope | T004 | If the workflow push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` as `shvhjSB`, or re-authenticates Git Credential Manager |
-| **Push blocked (observed 2026-10-23):** git uses `gh auth git-credential` for github.com, which returns the *active* `gh` account (`aman-agntworksai`). That account has only READ access to `shvhjSB/wattwise-ai`, so `git push` fails with HTTP 403 | Every push | The owner chooses the push identity: switch the active `gh` account to `shvhjSB` (admin on the repo), or grant `aman-agntworksai` write access. Claude never changes accounts, remotes or credentials on its own |
+| `shvhjSB`'s `gh` token lacks the `workflow` scope | T004 | If the workflow push is rejected, the owner runs `gh auth refresh -h github.com -s workflow` while `shvhjSB` is selected |
+| The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence discrepancy (CC BY 4.0 vs CC BY-SA 4.0) | T007, T009 | Resolve and document in T007 before using the data |
-| Global Python has unrelated packages installed (pandas 3, numpy 2.5) | All Python tasks | Always use `backend/.venv` |
+| Dependencies are bounded but not locked | Reproducible CI and Docker builds | Lock strategy decided in T004 (D003) |

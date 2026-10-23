@@ -21,7 +21,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | ID | Title | Milestone | Depends on | Status |
 |---|---|---|---|---|
 | T001 | Repository audit, project records and hygiene | M1 | — | Done |
-| T002 | Backend foundation (FastAPI, settings, liveness, tooling) | M1 | T001 | Not started |
+| T002 | Backend foundation (FastAPI, settings, liveness, tooling) | M1 | T001 | Done |
 | T003 | Frontend foundation (Vite, React, TS, Tailwind, typed client) | M1 | T002 | Not started |
 | T004 | CI baseline (GitHub Actions) | M1 | T002, T003 | Not started |
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Not started |
@@ -118,8 +118,9 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
   - A failing check fails the job.
 - **Validation:** `gh run list` / `gh run view` for the pushed commit.
 - **Known risk:** pushing workflow files needs a credential with the `workflow` scope. The
-  `shvhjSB` `gh` token currently lacks it. If the push is rejected, report it and give the owner
-  the fix command.
+  `shvhjSB` `gh` token, which this repo pushes with (D006), currently lacks it. If the push is
+  rejected, report it and give the owner the fix: `gh auth refresh -h github.com -s workflow`,
+  run while `shvhjSB` is selected.
 
 ## M2 — Data contracts, schemas and dataset acquisition
 

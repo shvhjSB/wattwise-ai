@@ -1069,3 +1069,80 @@ All three are recorded in D022.
   - the pinned URL
   - CLI `prepare` on BDG2-format files, and missing downloads
   - outputs only in git-ignored folders
+
+**Commit:** `4aadf9b` feat(data): add LEAD 1.0 anomaly labels joined to BDG2 meters. CI run
+[40092331016](https://github.com/shvhjSB/wattwise-ai/actions/runs/40092331016) was green
+(328 backend tests).
+
+---
+
+## 2026-10-24 — T007d Weather enrichment (ERA5 radiation, derived humidity)
+
+**Approach.** Ultracode was on, so two workflows ran alongside the implementation:
+- **Research:** three topics (per-variable time semantics, terms and attribution, formulas),
+  each fact re-checked by a skeptic.
+- **Code review:** four lenses (time maths, provenance, physics and merge, test adequacy), each
+  finding re-checked by a skeptic.
+
+A live probe came first. Open-Meteo returned the ERA5 grid cell, and radiation began in the
+hour labelled just after sunrise, which fits "mean of the preceding hour".
+
+**Done**
+- **`wattwise.data.era5`:**
+  - **Requests:** pinned to `models=era5`, `timezone=GMT`, 2015-12-31 to 2018-01-01, one per
+    located site, using corrected coordinates (Wolf).
+  - **`fetch` / `verify`:**
+    - atomic writes
+    - the manifest records the file SHA-256, a content hash that ignores `generationtime_ms`,
+      and the grid cell and its distance
+    - re-runs only verify; `--force` reports "changed" content; unrecorded files are never
+      overwritten
+  - **`parse_response`:** checks UTC, units and a regular hourly axis.
+  - **`era5_table`:** relabels radiation to interval starts; instants are kept.
+  - **`relative_humidity`:** Magnus over water, capped within 0.5 °C, otherwise missing.
+  - **Alignment checks:**
+    - `equation_of_time_min` (NOAA) and `solar_noon_offsets`, with days grouped in local mean
+      solar time
+    - `best_lag` for ERA5 temperature against observed temperature
+  - **`enrich` / `write`:** a table with provenance in its column names, a report, and a
+    manifest with attribution, terms and per-column provenance. `prepare` exits 1 if alignment
+    fails.
+- **`bdg2_prepare.site_weather`:** made public and reused.
+
+**Research results (verified):**
+- Magnus AEKR coefficients 17.625, 243.04 °C and 6.1094 hPa, over water, −40 to 50 °C.
+- The NOAA equation of time and solar noon = 720 − 4·lon − EoT, the sign convention
+  implemented.
+- Attribution: Open-Meteo's credit and link plus a note of changes; the Copernicus
+  acknowledgement with its disclaimer; the ERA5 DOI 10.24381/cds.adbb2d47; Open-Meteo DOI
+  10.5281/zenodo.7970649. The attribution text was updated to include all of these.
+- Call weighting: more than 10 variables or 14 days counts as several calls, about 785 for the
+  15 requests.
+
+**Real-data result** (15 sites, 41 s fetch, 6 s prepare):
+- Both checks passed everywhere.
+  - Solar-noon offset −8.6 to +2.0 minutes; labels taken as interval starts would give +51 to
+    +62.
+  - ERA5 temperature best lag 0 h at every site, r = 0.954–0.997. This also confirms the D016
+    weather clocks independently.
+- 334,020 rows. The ERA5 columns are missing only for the 4 sites without coordinates and each
+  site's last hour.
+- Humidity: 0 set missing, 0 capped.
+- Byte-identical on a re-run; the re-fetch only verified.
+
+**Validation** (Windows)
+- ruff: clean. Format: clean. `mypy` (strict): no issues in 53 files.
+- `pytest -W error`: **356 passed**, of which 28 are new, on synthetic Open-Meteo responses
+  from a symmetric clear-sky model:
+  - the request is pinned; coordinates are corrected; malformed responses are rejected; the
+    content hash ignores the timing field
+  - relabelling
+  - the equation of time against four known values
+  - the solar-noon check: about 0 when right, −60 min when mislabelled
+  - `best_lag` sign
+  - reference humidity values, and the cap and missing rules
+  - aligned and misaligned enrichments
+  - deterministic outputs with provenance
+  - `fetch`: download, verify, changed, never overwrite, rate limit
+  - the CLI `prepare` on BDG2-format files, a missing response, and verification of the BDG2
+    inputs

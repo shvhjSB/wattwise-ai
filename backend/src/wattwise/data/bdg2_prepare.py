@@ -175,7 +175,7 @@ def prepare(
     readings = _readings(wide, sites, sampled, utc_by_site)
     buildings = _buildings(sites, sampled)
     site_timezones = dict(zip(buildings["site_id"], buildings["timezone"], strict=True))
-    weather = _weather(raw_dir, site_timezones, weather_clocks)
+    weather = site_weather(raw_dir, site_timezones, weather_clocks)
     log = pd.DataFrame(exclusions, columns=["building_id", "meter_type", "reason", "detail"])
     log = log.sort_values(["reason", "building_id", "meter_type"], kind="stable").reset_index(
         drop=True
@@ -263,7 +263,7 @@ def _buildings(sites: pd.DataFrame, sampled: Sequence[str]) -> pd.DataFrame:
     return to_canonical(frame, BUILDINGS)
 
 
-def _weather(
+def site_weather(
     raw_dir: Path, site_timezones: Mapping[str, str], clocks: Mapping[str, Clock]
 ) -> pd.DataFrame:
     """Weather for the given sites, converted with each site's weather clock."""

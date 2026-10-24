@@ -758,6 +758,57 @@ links to the entry that replaces it.
 
 ---
 
+## D023 — Weather enrichment: ERA5 via Open-Meteo, derived humidity, checked alignment
+- **Date:** 2026-10-24 · **Task:** T007d · **Status:** Accepted
+- **Decision:** `wattwise.data.era5` builds a separate weather-enrichment table, keyed by
+  (site, UTC hour).
+  - **Kept apart from observed data.** It is never merged into the canonical *observed* weather
+    table: the contract defines that table as observations, and ERA5 is modelled.
+  - **Source:** the Open-Meteo historical archive. The free tier is allowed because WattWise is
+    non-commercial (D022).
+    - The model is pinned to `models=era5`. The default blend adds a model from 2017 onwards.
+    - Output is in UTC, with a day of margin around the BDG2 years.
+  - **Provenance in the column names:** `_era5` marks modelled grid-cell values; `_derived`
+    marks humidity computed from BDG2's observations. Nothing is gap-filled across sources.
+  - **Time convention:**
+    - Radiation is the mean over the hour that ends at its label, so it is relabelled to the
+      start of that hour, as readings are (D012).
+    - Instantaneous values (cloud cover) keep their time.
+  - **Falsifiable alignment checks:** `prepare` fails unless, at every site:
+    - the radiation-weighted centre of each solar day is within 15 minutes of solar noon
+      (NOAA equation of time; days grouped in local mean solar time)
+    - ERA5 temperature correlates best with BDG2 observed temperature at lag 0
+  - **Humidity:**
+    - The Magnus formula over water, with the Alduchov & Eskridge (1996) coefficients 17.625
+      and 243.04 °C.
+    - A dew point ≤ 0.5 °C above the temperature is treated as rounding and capped at 100%; a
+      larger excess is left missing as a data error.
+  - **Reproducibility:**
+    - Each response is saved with its file SHA-256 and a content hash. The content hash
+      excludes the server's `generationtime_ms`, so re-fetches can be compared.
+    - A second `fetch` only verifies; `--force` re-fetches and reports "changed" if the content
+      differs.
+- **Evidence (2026-10-24, 15 sites):**
+  - Solar-noon offsets were −8.6 to +2.0 minutes, against +51 to +62 if the labels were taken
+    as interval starts.
+  - Temperature lag was 0 h everywhere (r = 0.954–0.997). This also independently confirms the
+    D016 weather clocks.
+- **Alternatives considered:**
+  - **The Copernicus CDS directly:** not needed for non-commercial use. It remains the fallback
+    if the project becomes commercial.
+  - **NASA POWER:** too coarse for radiation (1°).
+  - **ERA5-Land:** returned no radiation.
+  - **Filling BDG2's missing weather from ERA5:** rejected, because it would mix observed and
+    modelled values in one column.
+  - **Computing humidity in feature engineering (T013):** rejected. Deriving it once, with its
+    rules recorded, keeps T013 simple and the provenance explicit.
+- **Consequences:**
+  - T013 can join radiation, cloud cover and humidity by (site, hour) for 15 sites, and humidity
+    for all 19.
+  - The 4 sites without coordinates have no radiation, and models must handle that explicitly.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

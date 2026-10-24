@@ -515,6 +515,55 @@ default.
     restrictions, but its radiation grid is coarse (1°), so it serves as a cross-check.
   - Reanalysis is **modelled, not observed**, and is labelled so. It covers only the 15 sites
     with coordinates.
+- **Acquired (T007d, D023).** WattWise is non-commercial, so the Open-Meteo free API is used
+  (owner decision, D022).
+
+  ```bash
+  uv run python -m wattwise.data.era5 fetch      # 15 requests, ~12 MB into ../data/raw/era5
+  uv run python -m wattwise.data.era5 verify     # local copies against the manifest
+  uv run python -m wattwise.data.era5 prepare    # ../data/processed/era5/weather_enrichment.parquet
+  ```
+
+  - **Request:** one per site with coordinates, pinned to `models=era5` and `timezone=GMT`,
+    for 2015-12-31 to 2018-01-01 (a day of margin around BDG2's local years).
+  - **Manifest:** [`data/manifests/era5.json`](../data/manifests/era5.json) records each
+    request, the file's SHA-256, and a *content* hash. The content hash ignores the server's
+    timing field, so a later re-fetch can prove the data has not changed. It also records the
+    ERA5 grid cell and its distance from the site (2–14 km). The responses are git-ignored.
+  - **Columns:** every column states its provenance by name.
+    - `ghi_w_m2_era5`, `direct_horizontal_w_m2_era5`, `diffuse_horizontal_w_m2_era5`,
+      `dni_w_m2_era5` and `cloud_cover_pct_era5` are modelled grid-cell values.
+    - `relative_humidity_pct_derived` comes from BDG2's observed temperature and dew point.
+    - Nothing is gap-filled across sources, and the 4 sites without coordinates have humidity
+      only.
+  - **Time convention, checked on the data.** Open-Meteo labels radiation with the end of the
+    hour it averages, so radiation is relabelled to the start of its hour, as readings are.
+    `prepare` fails unless two checks pass at every site:
+
+    | Check | Result at all 15 sites (2026-10-24) |
+    |---|---|
+    | Radiation-weighted centre of each solar day vs solar noon (NOAA equation of time) | **−8.6 to +2.0 min** (548–731 days per site). Taking labels as interval starts would give +51 to +62 min |
+    | ERA5 temperature vs BDG2 observed temperature | Best lag **0 h** at every site, r = 0.954–0.997. This also re-confirms the BDG2 weather clocks (D016) |
+
+  - **Humidity:** the Magnus formula over water, with the Alduchov & Eskridge (1996)
+    coefficients 17.625 and 243.04 °C. A dew point up to 0.5 °C above the air temperature is
+    treated as rounding and capped at 100%; more than that is treated as an error and left
+    missing. Neither case occurs in BDG2 (0 and 0).
+  - **Result:** 334,020 rows, ERA5 for 15 sites and humidity for 19. The outputs were
+    byte-identical on a second run, and a second `fetch` only verified the recorded files.
+  - **Attribution, carried in every manifest and report:**
+    - "Weather data by Open-Meteo.com", with a link (Zippenfenig 2023,
+      [doi:10.5281/zenodo.7970649](https://doi.org/10.5281/zenodo.7970649)).
+    - The ERA5 citation, Hersbach et al. 2023
+      ([doi:10.24381/cds.adbb2d47](https://doi.org/10.24381/cds.adbb2d47)).
+    - The Copernicus acknowledgement with its disclaimer.
+    - The change made: radiation is relabelled.
+
+    These texts were checked at Open-Meteo's licence page and the CDS dataset page.
+  - **Request budget:** under the documented call weighting (a request counts as several calls
+    beyond 10 variables or 14 days), the 15 requests count as about 785 calls, within the free
+    limit of 10,000 a day.
+  - **Validity:** the Magnus coefficients are the over-water form, valid from −40 to 50 °C.
 - **Holidays:** `holidays` 0.107 (MIT, double-checked) covers the US states, Ontario,
   England/Wales and Ireland. Pin a release at least two weeks old. Public holidays are not
   campus closures, and **no source of academic calendars** for these anonymised campuses exists.

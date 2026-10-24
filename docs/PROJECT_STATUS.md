@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1 and M3 complete; M2's T007c and T007d wait for owner decisions)
+**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1, M2 and M3 complete)
 
 ## Summary
 
@@ -90,8 +90,13 @@ The application foundation runs end to end locally, and CI checks it automatical
     - Of those anomalies, 16,848 have LEAD readings that match BDG2's raw data, so those labels
       are trusted.
     - Kept locally only, by owner decision.
-  - **Still to acquire:** T007d (ERA5 solar radiation via Open-Meteo, derived humidity), then
-    T021a, T040 and T041 when their tasks run.
+  - **Weather enrichment acquired (T007d, D023):** ERA5 radiation and cloud cover for the 15
+    located sites (Open-Meteo, `models=era5`), plus humidity derived from BDG2's observations
+    for all 19 sites.
+    - Both alignment checks passed at every site: solar noon within −8.6 to +2.0 minutes, and
+      ERA5 temperature at lag 0 against BDG2's observed temperature.
+  - **M2 data is complete.** Still to acquire later, when their tasks run: T021a (carbon and
+    price tables), T040 (Building 59) and T041 (HKUST).
 
 No model has been trained, so no ML metrics exist yet.
 
@@ -114,6 +119,7 @@ No model has been trained, so no ML metrics exist yet.
 | T009c | BDG2 site metadata corrections | 2026-10-24 |
 | T011 | Evaluation harness and metrics | 2026-10-24 |
 | T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | 2026-10-24 |
+| T007d | Weather enrichment (ERA5 radiation, derived humidity) | 2026-10-24 |
 
 ## Current task
 
@@ -121,24 +127,22 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T007d — Weather enrichment**, the last M2 task (the owner chose to finish M2 first). It will
-add:
-- ERA5 hourly global, direct and diffuse radiation and cloud cover for the 15 BDG2 sites with
-  coordinates, 2016–2017, from the Open-Meteo archive API (`models=era5`, UTC). The free tier is
-  allowed because WattWise is non-commercial (D022).
-- Relative humidity derived from BDG2's temperature and dew point.
+**T012 — Seasonal and historical baselines**: establish the bar every ML model must beat. It
+covers:
+- Seasonal-naive (the same hour in the previous week).
+- An hour-of-week median profile from the training window.
+- Both evaluated on the BDG2 sample with the T011 harness, with results and the exact command in
+  EVALUATION.md.
 
-The data is labelled "modelled" and "derived", kept in separate columns, and its alignment is
-checked against solar noon. See [ROADMAP.md](ROADMAP.md#t007d--weather-enrichment).
-
-After that comes T012, the seasonal and historical baselines.
+Tests must show the baselines use only past or training data. See
+[ROADMAP.md](ROADMAP.md#t012--seasonal-and-historical-baselines).
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 5 / 6 |
+| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 1 / 2 |
 | M5 Improved model | T013–T015, T041 | 0 / 4 |

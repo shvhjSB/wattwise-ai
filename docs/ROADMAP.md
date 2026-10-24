@@ -29,7 +29,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Done |
 | T007b | Supplementary dataset evaluation | M2 | T007, T009b | Done |
 | T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | M2 | T007b, T009c, owner decision | Done |
-| T007d | Weather enrichment: ERA5 solar radiation, derived humidity | M2 | T007b, T009c, owner decision | Not started |
+| T007d | Weather enrichment: ERA5 solar radiation, derived humidity | M2 | T007b, T009c, owner decision | Done |
 | T008 | Data-quality engine and report | M3 | T005, T006 | Done |
 | T009a | BDG2 timestamp-convention audit | M3 | T007 | Done |
 | T009b | BDG2 preprocessing pipeline | M3 | T008, T009a | Done |

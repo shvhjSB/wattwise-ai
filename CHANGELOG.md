@@ -123,6 +123,19 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - Outputs: a label table, an exclusion log, a report and a manifest. They are deterministic
     and git-ignored (D022).
 - The BDG2 test fixture's metadata now carries `building_id_kaggle`. (T007c)
+- Weather enrichment (`python -m wattwise.data.era5 fetch|verify|prepare`), D023. (T007d)
+  - **Sources:** ERA5 radiation (global, direct, diffuse, direct-normal) and cloud cover from
+    the Open-Meteo archive (`models=era5`, UTC) for the 15 located BDG2 sites, plus relative
+    humidity derived from BDG2's observed temperature and dew point (Magnus formula) for all 19.
+  - **Provenance:** in the column names (`_era5`, `_derived`). Nothing is gap-filled across
+    sources.
+  - **Time convention:** radiation is relabelled to interval starts. Two checks must pass at
+    every site, or `prepare` fails: the radiation's solar-noon centre, and ERA5 temperature
+    against observed temperature at lag 0.
+  - **Manifest:** `data/manifests/era5.json` records each request, its file and content hashes
+    and the grid cell. The responses are git-ignored.
+- `bdg2_prepare.site_weather` is public, so the enrichment reuses the observed-weather
+  conversion. (T007d)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

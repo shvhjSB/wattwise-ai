@@ -58,6 +58,13 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   reports are deterministic. (T008)
 - `docs/DATA_QUALITY.md` and an example report for the synthetic sample
   (`docs/reports/synthetic-data-quality.md`), kept up to date by a test. (T008)
+- Timestamp-convention analysis (`wattwise.data.time_convention`): daylight-saving transitions
+  from the time zone database, profile-shift evidence for human and solar signals, a
+  classifier that must hold at every margin, and `to_utc`. `to_utc` drops non-existent and
+  repeated wall-clock hours instead of guessing. (T009a)
+- BDG2 timestamp audit (`python -m wattwise.data.bdg2_audit`), with per-site verdicts pinned
+  and re-checkable against the data: 11 wall-clock, 3 standard and 5 undetermined sites for
+  electricity, and standard time for weather (D016). (T009a)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -71,5 +78,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   the locked test toolchain requires. (T004)
 
 ### Fixed
+- `docs/DATASETS.md` no longer states the T007 hypothesis that all BDG2 sites use local
+  standard time. The T009a audit refuted it, and the document now records the evidence and the
+  per-site clocks. (T009a)
 - The audit records wrongly stated which credential git pushes with. They now describe the real
   cause of the initial HTTP 403 push failure. (T001)

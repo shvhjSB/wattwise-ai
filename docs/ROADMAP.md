@@ -28,11 +28,12 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Done |
 | T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Done |
 | T008 | Data-quality engine and report | M3 | T005, T006 | Done |
-| T009 | BDG2 preprocessing pipeline | M3 | T007, T008 | Not started |
+| T009a | BDG2 timestamp-convention audit | M3 | T007 | Done |
+| T009b | BDG2 preprocessing pipeline | M3 | T008, T009a | Not started |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Not started |
 | T011 | Evaluation harness and metrics | M4 | T010 | Not started |
-| T012 | Seasonal and historical baselines | M4 | T009, T011 | Not started |
-| T013 | Leakage-safe feature engineering | M5 | T009, T010 | Not started |
+| T012 | Seasonal and historical baselines | M4 | T009b, T011 | Not started |
+| T013 | Leakage-safe feature engineering | M5 | T009b, T010 | Not started |
 | T014 | ML forecaster vs baselines | M5 | T012, T013 | Not started |
 | T015 | Model artifacts, metadata and registry | M5 | T014 | Not started |
 | T016 | Residual-based detector and event grouping | M6 | T012 | Not started |
@@ -189,28 +190,51 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
   - Each check is tested on crafted inputs, covering both true positives and true negatives.
   - A report is generated for the synthetic fixture.
 
-### T009 — BDG2 preprocessing pipeline
+### T009 — BDG2 preprocessing (split into T009a and T009b)
+
+T009 was split before implementation. The first experiment showed that BDG2's timestamp
+convention **differs by site**, which made the convention audit a substantial task of its own.
+
+### T009a — BDG2 timestamp-convention audit
+- **Objective:** determine, per BDG2 site, which clock the electricity and weather timestamps
+  follow, using reproducible evidence, so that conversion to UTC is correct rather than assumed.
+- **Scope:**
+  - `wattwise.data.time_convention` (generic):
+    - daylight-saving transitions from the time zone database
+    - the profile-shift measurement
+    - a margin-stable classifier for human and solar signals
+    - `to_utc`, which drops non-existent and repeated wall-clock hours instead of guessing
+  - `wattwise.data.bdg2_audit`: per-site evidence and verdicts, with the verdicts pinned and a
+    CLI that re-checks the pins against the data.
+  - A mini BDG2-format fixture builder for tests, also used by T009b.
+- **Acceptance:**
+  - Known conventions are recovered from synthetic series: standard and wall-clock in two time
+    zones, and a solar signal. A flat 24/7 profile is "undetermined".
+  - Borderline, mixed or conflicting evidence is "undetermined", never guessed.
+  - The audit reproduces the pinned verdicts on the real data.
+  - The per-site verdicts are documented, with a sync test.
+
+### T009b — BDG2 preprocessing pipeline
 - **Objective:** deterministically convert raw BDG2 files into the canonical format for a
   laptop-sized subset.
-- **Scope:** `scripts/prepare_bdg2.py`, which handles:
+- **Scope:** a module CLI, `wattwise.data.bdg2_prepare`, which handles:
   - electricity meters only
   - `--sample-meters N` with a fixed seed
   - reshaping from wide to long
-  - timezone handling, after verifying the BDG2 timestamp convention. T007 found the convention
-    is **not** daylight-saving wall-clock time: there is a regular 17,544-hour grid in
-    daylight-saving zones. Test the local-standard-time hypothesis, decide the interval
-    start/end convention, and confirm weather is local (see DATASETS.md, "Data conventions").
+  - converting to UTC with the T009a pinned per-site clocks (`to_utc`), excluding
+    undetermined sites and counting dropped non-existent and repeated hours
+  - the interval-start assumption, documented
   - choosing raw vs cleaned electricity per purpose, with the reason recorded
-  - joining weather by site
-  - an exclusion log with reasons
+  - joining weather by site, with weather converted using its own clock
+  - an exclusion log with reasons (non-electric meters, undetermined clock, no data, ...)
   - a T008 data-quality report
   - Parquet output to `data/processed/`
   - provenance recorded in the manifest
 - **Acceptance:**
   - Identical inputs and seed produce an identical output hash.
-  - The pipeline runs on a mini BDG2-format test fixture.
+  - The pipeline runs on the mini BDG2-format test fixture.
   - On the real download it records row counts, date ranges and meter counts.
-  - Non-electric meters are excluded with an explicit reason.
+  - Non-electric meters and undetermined-clock sites are excluded with explicit reasons.
 
 ### T010 — Leakage-safe split utilities
 - **Objective:** make temporal leakage structurally hard.

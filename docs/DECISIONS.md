@@ -433,6 +433,58 @@ links to the entry that replaces it.
   - Partial-period scaling errors can slip through; this is documented as a limitation, and
     level shifts belong to anomaly detection (T016/T017).
 
+## D016 — BDG2 timestamps: per-site clock, decided by evidence
+- **Date:** 2026-10-24 · **Task:** T009a · **Status:** Accepted
+- **Context:**
+  - BDG2's "local" timestamps form a regular 17,544-hour grid, although every site is in a
+    daylight-saving zone (T007).
+  - The hypothesis that all sites use local standard time was tested before any conversion code
+    was written. It was **refuted**: at the clock changes, weekday load profiles of most sites do
+    **not** move (wall-clock behaviour), while three sites move exactly as standard time
+    predicts.
+  - The transition hours confirm the mix. Several sites leave the spring non-existent hour
+    systematically empty; at some, the autumn hour holds about twice a normal reading (two real
+    hours summed).
+- **Decision:** classify each site separately, with `wattwise.data.time_convention` and
+  `wattwise.data.bdg2_audit`, and pin the verdicts.
+  - **Electricity (human signal):** compare weekday profiles 3 weeks before and after each of
+    the 8 transitions (2016–2017) at lags of −1, 0 and +1 h.
+    - A verdict needs at least 2 usable transitions and at least 75% agreement, and it must hold
+      at every identifiability margin (0.0025, 0.005, 0.01).
+    - A "standard" verdict is overruled to undetermined if every spring non-existent hour is
+      systematically empty, because that is the wall-clock-on-a-grid signature.
+  - **Weather (solar signal):** "standard" requires structural evidence: a real reading at every
+    spring non-existent hour, no repeated timestamps, and no wall-clock majority among the
+    transitions. The seasonal phase shift (−1.44 to +0.28 h, never about +1 h) is recorded as
+    supporting evidence.
+  - **Verdicts:**
+    - Electricity: 11 sites wall-clock, 3 standard, **5 undetermined**.
+      - Fox and Robin depend on the margin.
+      - Rat has conflicting evidence.
+      - Shrew and Swan have insufficient or mixed evidence.
+    - Weather: standard at all 19 sites.
+  - **Conversion (`to_utc`):**
+    - Standard sites: add the fixed **January** offset. This handles `Europe/Dublin`, whose
+      database "standard" is +1.
+    - Wall-clock sites: localise in the zone. Non-existent and repeated hours become NaT and
+      are dropped and counted.
+    - Undetermined sites: cannot be converted, and are excluded.
+  - **Interval convention:** interval-start is an explicit assumption, because the data cannot
+    distinguish start from end (at most a 1-hour labelling uncertainty).
+- **Alternatives considered:**
+  - **One convention for all sites:** refuted by the evidence. Applying standard time
+    everywhere would shift 11 sites by an hour for half of every year, planting false anomalies
+    at each clock change.
+  - **Guessing undetermined sites (e.g. a majority vote at one margin):** rejected, because a
+    wrong guess is invisible downstream.
+  - **Per-building classification for mixed sites such as Rat:** possible later, if Rat's 305
+    buildings are needed.
+- **Consequences:**
+  - **522 of 1,578 electricity buildings are excluded.** T009b samples only from sites with a
+    determined clock.
+  - The pinned table makes preprocessing deterministic, and the audit CLI re-checks it against
+    the data (23 s).
+
 ---
 
 ## Open decisions (tracked in tasks)

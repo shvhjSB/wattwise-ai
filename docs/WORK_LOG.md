@@ -565,3 +565,81 @@ run [39959311819](https://github.com/shvhjSB/wattwise-ai/actions/runs/3995931181
     check and threshold.
 - **Performance:** 1.75 M readings (100 meters × 2 years hourly) take 5.3 s, of which the
   contract check is 4.9 s; about 84 s extrapolated for BDG2 electricity.
+
+**Commit:** `08ecd16` feat(data): add data-quality engine with deterministic reports. CI run
+[39960884037](https://github.com/shvhjSB/wattwise-ai/actions/runs/39960884037) was green
+(164 backend tests, 21 frontend tests).
+
+---
+
+## 2026-10-24 — T009a BDG2 timestamp-convention audit (T009 split)
+
+**Why T009 was split.** The first experiment on the real data refuted T007's working hypothesis
+("BDG2 uses local standard time"). Determining each site's clock became a research task of its
+own, so under the roadmap rule T009 was split into T009a (this audit) and T009b (the pipeline)
+before any pipeline code was written.
+
+**Evidence gathered**, using throwaway scripts first, then the committed audit:
+1. **Load-profile shifts** at the 8 clock changes of 2016–2017 (weekdays, 3 weeks before vs
+   after; the best lag in −3..3).
+   - Spring: 21 of 36 site-transitions showed lag 0 (wall clock) and 11 showed −1 (standard).
+   - Autumn: 26 of 37 showed 0 and 8 showed +1.
+   - The sites are internally consistent: Eagle, Moose and Wolf show −1/+1 at all four
+     transitions; Bear, Bobcat, Bull, Hog and Peacock show 0 at all four.
+2. **Transition hours.**
+   - The spring non-existent hour is empty for **100%** of live meters at Bear, Bobcat,
+     Cockatoo, Gator, Peacock and Rat (neighbouring hours mostly filled).
+   - The autumn repeated hour is about **2×** normal at Crow, Mouse and Wolf (two hours summed).
+3. **Margin sensitivity.** Verdicts are identical at margins 0.0025 and 0.005. At 0.01, Fox and
+   Robin flip to undetermined, so the classifier now requires stability across all three.
+4. **Weather.**
+   - Every site has a real reading at each spring non-existent hour and 24 rows on autumn change
+     days (Cockatoo has one ordinary missing hour).
+   - No transition shows the wall-clock pattern.
+   - The summer-minus-winter phase of the temperature cycle is −1.44 to +0.28 h, never +1 h.
+   - So weather is a fixed offset: standard time at all sites.
+   - Several sites share identical weather (shared stations).
+
+**Done**
+- **`wattwise.data.time_convention`:** `transitions`, `winter_offset` (January total offset;
+  Europe/Dublin = 0), `nonexistent_hours`, `profile_shift`, the margin-stable `classify`
+  (human and solar rules), and `to_utc`. For wall-clock data, `to_utc` turns non-existent and
+  repeated hours into NaT; undetermined clocks raise.
+- **`wattwise.data.bdg2_audit`:**
+  - per-site electricity evidence (profile shifts plus spring-gap signatures) and weather
+    evidence (structural checks, shifts, phase)
+  - verdict rules: a "standard" verdict is overruled when the spring hours are systematically
+    empty
+  - pinned `ELECTRICITY_CLOCKS` and `WEATHER_CLOCKS`, and `mismatches()`
+  - a CLI that writes evidence to git-ignored `data/processed/bdg2/time_convention.{json,md}`
+    and exits non-zero on any mismatch with the pins
+- **Mini BDG2-format fixture builder** (`tests/data/conftest.py`): the same files, columns and
+  timestamp format as BDG2, with standard, wall-clock (empty non-existent hour, summed repeated
+  hour) or flat sites. It is reused by T009b.
+- **Docs and roadmap:** DATASETS.md "Data conventions" was rewritten with the per-site table and
+  the conversion consequences. The interval-start assumption is now explicit (D016). The roadmap
+  split T009 into T009a and T009b and updated the dependencies (T012 and T013 now depend on
+  T009b).
+
+**Real-data result** (`python -m wattwise.data.bdg2_audit`, 23 s, exit 0, all pins matched)
+- Electricity, wall-clock (11 sites): Bear, Bobcat, Bull, Cockatoo, Crow, Gator, Hog, Lamb,
+  Mouse, Panther, Peacock.
+- Electricity, standard (3 sites): Eagle, Moose, Wolf.
+- Electricity, undetermined (5 sites, 522 buildings): Fox and Robin (margin-sensitive), Rat
+  (conflicting), Shrew and Swan (insufficient or mixed).
+- Weather: standard at all 19 sites.
+
+**Validation** (Windows)
+- `uv lock --check`: pass. ruff: clean. Format: 39 files. `mypy` (strict): no issues in 38 files.
+- `pytest`: **197 passed**, of which 33 are new:
+  - time-zone facts (transition dates, winter offsets including the Dublin trap, non-existent
+    hours)
+  - `to_utc` (standard vs wall-clock, nothing guessed, undetermined and timezone-aware input
+    rejected)
+  - classification recovers standard and wall-clock in two time zones and for solar signals; a
+    flat load is undetermined
+  - margin sensitivity, too few transitions and mixed evidence all give undetermined
+  - verdict rules (conflict overrule, weather structural evidence)
+  - the audit on mini BDG2-format files recovers the known conventions
+  - pin mismatches are reported, and the CLI handles a missing download
+  - the pins cover all 19 sites and are documented row by row

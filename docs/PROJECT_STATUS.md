@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-23 · **Current milestone:** M3 — Data validation and preprocessing (M1 and M2 complete)
+**Last updated:** 2026-10-24 · **Current milestone:** M3 — Data validation and preprocessing (M1 and M2 complete)
 
 ## Summary
 
@@ -37,7 +37,14 @@ The application foundation runs end to end locally, and CI checks it automatical
   the synthetic sample it finds exactly the two injected data faults
   ([example report](reports/synthetic-data-quality.md)).
 
-The BDG2 data has been downloaded but not yet processed (T009). No model has been trained, so no
+- **BDG2 timestamp audit:** BDG2's local timestamps follow a **different clock per site**. The
+  audit found 11 wall-clock sites, 3 standard-time sites and 5 undetermined (excluded) for
+  electricity, and standard time for weather at all 19 sites. The verdicts are evidence-based,
+  pinned, and re-checkable with `python -m wattwise.data.bdg2_audit` (D016,
+  [DATASETS.md](DATASETS.md)).
+
+The BDG2 data has been downloaded and audited, but not yet converted to the canonical format
+(T009b). No model has been trained, so no
 ML metrics exist yet.
 
 ## Completed tasks
@@ -52,6 +59,7 @@ ML metrics exist yet.
 | T006 | Deterministic synthetic fixture generator | 2026-10-23 |
 | T007 | BDG2 acquisition tooling and dataset documentation | 2026-10-23 |
 | T008 | Data-quality engine and report | 2026-10-23 |
+| T009a | BDG2 timestamp-convention audit | 2026-10-24 |
 
 ## Current task
 
@@ -59,12 +67,14 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T009 — BDG2 preprocessing pipeline**: deterministically convert the downloaded BDG2 files into
-the canonical format for a laptop-sized subset. That means electricity only, a seeded meter
-sample, wide-to-long reshaping, a weather join and an exclusion log, plus a T008 quality report.
-It must first resolve the timestamp convention found in T007: local time that is not
-daylight-saving wall-clock time, and an undocumented interval start/end. See
-[ROADMAP.md](ROADMAP.md#t009--bdg2-preprocessing-pipeline).
+**T009b — BDG2 preprocessing pipeline**: deterministically convert the downloaded BDG2 files
+into the canonical format for a laptop-sized subset. That means:
+- electricity only, with a seeded meter sample and wide-to-long reshaping
+- UTC conversion with the pinned per-site clocks from T009a, excluding undetermined sites
+- a weather join and an exclusion log
+- a T008 quality report, with Parquet output and a manifest
+
+See [ROADMAP.md](ROADMAP.md#t009b--bdg2-preprocessing-pipeline).
 
 ## Milestone progress
 
@@ -72,7 +82,7 @@ daylight-saving wall-clock time, and an undocumented interval start/end. See
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
-| M3 Validation and preprocessing | T008–T010 | 1 / 3 |
+| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 2 / 4 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |
 | M6 Anomaly detection | T016–T018 | 0 / 3 |
@@ -110,7 +120,8 @@ pushes only as `shvhjSB` (D006).
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
-| BDG2 timestamps are local but **not** daylight-saving wall-clock time, and the interval start/end convention is undocumented | T009 | Test the local-standard-time hypothesis before converting to UTC (DATASETS.md) |
+| 5 of 19 BDG2 sites (522 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Per-building classification for mixed sites is possible later |
+| BDG2 interval start/end cannot be determined from the data | T009b | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

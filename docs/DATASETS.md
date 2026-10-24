@@ -90,21 +90,80 @@ checked on the downloaded files.
   in the local timezone", for weather and for meters. The paper adds that "the Building Data
   Genome 2 data set only has timestamps in the local time zone, including the weather data",
   unlike the Kaggle release.
-- **But not daylight-saving wall-clock time (verified on the files):**
+- **A regular grid in daylight-saving zones (verified on the files):**
   - All 19 sites are in daylight-saving zones (`US/Eastern`, `US/Central`, `US/Mountain`,
     `US/Pacific`, `Europe/London`, `Europe/Dublin`).
   - Yet the electricity timestamps form a perfectly regular grid: no duplicates, every step
     exactly 1 h.
   - `2016-03-13 02:00:00`, which does not exist on US clocks, is present once.
   - `2016-11-06 01:00:00`, which occurs twice on US clocks, is present once.
-  - Converting with a daylight-saving-aware zone would fail on those hours, or shift data by an
-    hour for half the year. The likeliest explanation is local *standard* time (a fixed offset),
-    but this is a **hypothesis for T009 to test** against the data, e.g. load-profile shifts
-    around the changeover dates.
+- **The clock differs by site (T009a audit, D016).** T007's hypothesis, a single
+  "local standard time" convention, **was tested and is wrong.** The audit tests each site's
+  data using the daylight-saving transitions:
+  - **Electricity is a human signal.** Schedules follow the wall clock. In standard-time
+    timestamps the weekday profile therefore moves 1 h earlier after the spring change and back
+    after the autumn change; in wall-clock timestamps it does not move. The audit compares the
+    profiles 3 weeks before and after each of the 8 transitions in 2016–2017.
+  - **A verdict needs strong agreement.** At least 2 usable transitions, at least 75% agreement,
+    and the verdict must hold at every identifiability margin (0.0025, 0.005, 0.01).
+  - **Conflicting signals are not resolved by guessing.** A "standard" verdict is overruled when
+    the site's spring non-existent hour is systematically empty, which is the signature of
+    wall-clock data forced onto a grid.
+  - **Weather is a solar signal.** Every site has a real reading at each spring non-existent
+    hour and no repeated timestamp, so its offset is fixed. No transition shows the wall-clock
+    pattern, and the summer-minus-winter phase of the temperature cycle is −1.44 to +0.28 h,
+    never the +1 h a wall clock would add. Weather is therefore taken as local standard time at
+    every site.
+
+  The resulting verdicts are pinned in
+  [`bdg2_audit.py`](../backend/src/wattwise/data/bdg2_audit.py). They were obtained on the files
+  at commit `753598e0a19400af950b1513e1daeb680658c1fd` and are reproducible with
+  `uv run python -m wattwise.data.bdg2_audit`, which exits non-zero if the data stops matching
+  them.
+
+  | Site | Time zone | Buildings | Electricity clock | Weather clock |
+  |---|---|---|---|---|
+  | Bear | US/Pacific | 92 | wall_clock | standard |
+  | Bobcat | US/Mountain | 35 | wall_clock | standard |
+  | Bull | US/Central | 123 | wall_clock | standard |
+  | Cockatoo | US/Eastern | 117 | wall_clock | standard |
+  | Crow | US/Eastern | 5 | wall_clock | standard |
+  | Eagle | US/Eastern | 106 | standard | standard |
+  | Fox | US/Mountain | 137 | undetermined | standard |
+  | Gator | US/Eastern | 74 | wall_clock | standard |
+  | Hog | US/Central | 152 | wall_clock | standard |
+  | Lamb | Europe/London | 146 | wall_clock | standard |
+  | Moose | US/Eastern | 13 | standard | standard |
+  | Mouse | Europe/London | 7 | wall_clock | standard |
+  | Panther | US/Eastern | 105 | wall_clock | standard |
+  | Peacock | US/Eastern | 45 | wall_clock | standard |
+  | Rat | US/Eastern | 305 | undetermined | standard |
+  | Robin | Europe/London | 52 | undetermined | standard |
+  | Shrew | Europe/London | 9 | undetermined | standard |
+  | Swan | US/Pacific | 19 | undetermined | standard |
+  | Wolf | Europe/Dublin | 36 | standard | standard |
+
+  Reasons for the undetermined sites:
+  - **Fox and Robin:** wall-clock at margins 0.0025 and 0.005, but not at 0.01.
+  - **Rat:** the profile shifts indicate standard time, but its spring non-existent hours are
+    systematically empty.
+  - **Shrew and Swan:** too few or mixed transitions.
+
+  **Consequences for conversion (T009b):**
+  - **Standard sites:** add the fixed January offset. For `Europe/Dublin` that is 0, not the
+    database's "standard" +1.
+  - **Wall-clock sites:** localise in the zone. The spring non-existent hour and the single
+    autumn repeated hour are **dropped and counted**, not guessed. At some sites that hour holds
+    about twice a normal reading: two real hours summed.
+  - **Undetermined sites** (5 of 19, 522 buildings) are **excluded** with the reason recorded.
+- **Shared weather stations:** some sites have identical weather (Mouse, Robin and Shrew; Crow
+  and Moose; Panther and Gator).
 - **Interval:** "Each row represents one hour, and the reading is the energy or water sum across
   that hour." The paper does not say whether the timestamp marks the start or the end of the
-  hour. The canonical contract uses the start of the interval (D012), so **T009 must determine or
-  explicitly assume** the convention.
+  hour. The data cannot settle this: a building opening at 08:00 with interval-start timestamps
+  looks the same as one opening at 09:00 with interval-end timestamps. The canonical contract
+  uses the start of the interval (D012), so T009b **explicitly assumes interval-start**. That is
+  an at most 1-hour labelling uncertainty, which does not affect daily or weekly patterns.
 - **Units:** "kWh sum for the energy-related meters and liters for the non-energy meters". Raw
   site units varied (kBTU, tons, lbs per hour, ...) and were converted by the BDG2 authors.
   Electricity therefore maps to canonical `kWh` unchanged. Water and irrigation would map from

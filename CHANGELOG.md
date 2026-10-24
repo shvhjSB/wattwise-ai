@@ -139,6 +139,12 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     response recorded for another request is refused.
 - `bdg2_prepare.site_weather` is public, so the enrichment reuses the observed-weather
   conversion. (T007d)
+- Baselines (`python -m wattwise.ml.baselines --data ...`), D024. (T012)
+  - `seasonal-naive-1w` (the reading one week earlier) and `hour-of-week-median` (training
+    rows only, in local wall time).
+  - Both are scored with the T011 harness, overall and on the rows both predict.
+  - First results on the BDG2 sample's test quarter: MAE 8.76 kWh and WAPE 8.6% (seasonal)
+    against 10.89 kWh and 10.7% (profile). Details in `docs/EVALUATION.md`.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -159,6 +165,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   sample changed. (T009c)
 
 ### Fixed
+- The evaluation report's `git_dirty` flag now counts new, uncommitted files. Before, it
+  counted only changed tracked files, so a run with new code was reported as clean. (T012)
 - ERA5 enrichment, after an adversarial review of the first T007d commit. (T007d)
   - **Alignment gate:** it used a single two-year median, so a one-hour mislabel in a third of
     the period passed. It now checks every quarter.

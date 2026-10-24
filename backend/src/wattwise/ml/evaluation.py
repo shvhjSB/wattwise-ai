@@ -115,7 +115,7 @@ class Forecaster(_Model):
 class CodeVersion(_Model):
     package_version: str
     git_commit: str | None = None
-    git_dirty: bool | None = None  # tracked files changed since the commit
+    git_dirty: bool | None = None  # changed or new (not git-ignored) files since the commit
 
 
 class DataSummary(_Model):
@@ -362,8 +362,8 @@ def fingerprint(readings: pd.DataFrame) -> str:
 
 
 def code_version(directory: Path = _BACKEND) -> CodeVersion:
-    """The package version and, when run from a git checkout, the commit and whether tracked
-    files have changed since it."""
+    """The package version and, when run from a git checkout, the commit and whether any file
+    that is not git-ignored has changed or been added since it."""
 
     def git(*args: str) -> str | None:
         try:
@@ -375,7 +375,8 @@ def code_version(directory: Path = _BACKEND) -> CodeVersion:
         return done.stdout.strip() if done.returncode == 0 else None
 
     commit = git("rev-parse", "HEAD")
-    status = git("status", "--porcelain", "--untracked-files=no") if commit else None
+    # New, uncommitted source files count as changes; git-ignored data folders do not.
+    status = git("status", "--porcelain") if commit else None
     return CodeVersion(
         package_version=__version__,
         git_commit=commit or None,

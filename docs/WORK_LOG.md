@@ -1200,3 +1200,52 @@ hour labelled just after sunrise, which fits "mean of the preceding hour".
   - the manifest kept out of git
   - failed alignment writing nothing
   - a stale request refused
+
+**Fix commit:** `121f106` fix(data): harden ERA5 alignment checks and keep its manifest local.
+CI run [40115382404](https://github.com/shvhjSB/wattwise-ai/actions/runs/40115382404) was green
+(369 backend tests). The research workflow later confirmed the per-variable semantics
+implemented: radiation is a preceding-hour mean; cloud cover and temperature are instants; all
+times are UTC. Two of its skeptic checks failed on a session usage limit.
+
+---
+
+## 2026-10-24 — T012 Seasonal and historical baselines
+
+**Done**
+- **`wattwise.ml.baselines`:**
+  - **`SeasonalNaive`:** the reading 168 h earlier. A lag of 0 or less is refused.
+  - **`HourOfWeekProfile`:** a median from training rows only, in local wall time, with a
+    meter-median fallback. Meters without training data get no forecast.
+  - **`run`:** fits on each fold's training rows, predicts without the target values, and
+    scores with the T011 harness.
+  - **`common_rows_comparison`:** compares the baselines on the rows they all predict.
+  - **CLI:** split dates can be overridden, and must carry a time zone. It writes per-baseline
+    JSON/Markdown reports and `common_rows.json`.
+- **Fix:** `code_version`'s dirty flag missed new, untracked files. The first baseline report
+  claimed "clean" while the module was uncommitted. It now uses `git status --porcelain`; data
+  stays git-ignored.
+
+**Result (BDG2 sample, 20 meters, cleaned; data fingerprint `e2fc43c651eb2a03`; split
+`dbcada8c8242`)**
+- **Test (Oct–Dec 2017):**
+  - Seasonal-naive: MAE 8.763, RMSE 17.987, bias +0.833, WAPE 8.6%, with 466 rows without a
+    prediction.
+  - Profile: MAE 10.888, RMSE 18.961, bias +1.385, WAPE 10.7%.
+- **On the 43,247 common test rows:** 8.763 against 10.918.
+- **Validation:** seasonal 8.886 against profile 12.792. The profile over-predicts (bias
+  +3.078), since it averages winter and summer weeks.
+- **Determinism and speed:** byte-identical on a re-run; about 5 s.
+
+**Validation** (Windows)
+- ruff: clean. Format: clean. `mypy` (strict): no issues in 55 files.
+- `pytest -W error`: **383 passed**, of which 14 are new:
+  - seasonal-naive repeats last week; it is unchanged when the present and future change; there
+    is no forecast without last week
+  - the profile uses only training rows (tampered test values change nothing)
+  - local time across daylight saving: a UTC profile is wrong after the change
+  - fallback, and no forecast for unknown meters
+  - perfect scores on a purely weekly load
+  - the common-rows comparison
+  - the synthetic fixture end to end
+  - CLI reports, missing data, and dates without a time zone
+  - the default split order

@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1, M2 and M3 complete)
+**Last updated:** 2026-10-24 · **Current milestone:** M5 — Improved forecasting model (M1–M4 complete)
 
 ## Summary
 
@@ -99,7 +99,14 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **M2 data is complete.** Still to acquire later, when their tasks run: T021a (carbon and
     price tables), T040 (Building 59) and T041 (HKUST).
 
-No model has been trained, so no ML metrics exist yet.
+- **Baselines (T012, D024):** the first real results, on the BDG2 sample's test quarter (Oct–Dec
+  2017).
+  - Seasonal-naive: MAE 8.76 kWh per hour, WAPE 8.6%.
+  - Hour-of-week profile: MAE 10.89 kWh, WAPE 10.7%.
+  - **Seasonal-naive is the bar** every model must beat
+    ([EVALUATION.md](EVALUATION.md#baselines-t012)).
+
+No ML model has been trained yet (T014).
 
 ## Completed tasks
 
@@ -121,6 +128,7 @@ No model has been trained, so no ML metrics exist yet.
 | T011 | Evaluation harness and metrics | 2026-10-24 |
 | T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | 2026-10-24 |
 | T007d | Weather enrichment (ERA5 radiation, derived humidity) | 2026-10-24 |
+| T012 | Seasonal and historical baselines | 2026-10-24 |
 
 ## Current task
 
@@ -128,15 +136,16 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T012 — Seasonal and historical baselines**: establish the bar every ML model must beat. It
-covers:
-- Seasonal-naive (the same hour in the previous week).
-- An hour-of-week median profile from the training window.
-- Both evaluated on the BDG2 sample with the T011 harness, with results and the exact command in
-  EVALUATION.md.
+**T013 — Leakage-safe feature engineering:** time-aware features that never use future
+information. It covers:
+- Calendar features, plus holidays where the site's region is known (T009c).
+- BDG2 weather, plus ERA5 radiation and derived humidity (T007d).
+- Sun position.
+- Lags of at least the forecast horizon, and rolling statistics shifted to exclude the target.
+- A versioned feature list.
 
-Tests must show the baselines use only past or training data. See
-[ROADMAP.md](ROADMAP.md#t012--seasonal-and-historical-baselines).
+The tests must show that changing future targets never changes past features. See
+[ROADMAP.md](ROADMAP.md#t013--leakage-safe-feature-engineering).
 
 ## Milestone progress
 
@@ -145,7 +154,7 @@ Tests must show the baselines use only past or training data. See
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
-| M4 Baselines | T011–T012 | 1 / 2 |
+| M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 0 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |

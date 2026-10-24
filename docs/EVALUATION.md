@@ -1,9 +1,9 @@
 # WattWise AI — Evaluation
 
-How WattWise models are evaluated. This page describes the method. **No model has been trained
-yet, so no metrics are reported.** The splits (T010) and the evaluation harness (T011) are in
-place. The baselines (T012) will add the first results here, each with the exact command that
-produced it.
+How WattWise models are evaluated, and the results so far. Every result states the exact command,
+data and code that produced it.
+- **Baselines (T012):** real results on the BDG2 sample are [below](#baselines-t012).
+- **ML models:** none has been trained yet (T014).
 
 ## Splits (T010)
 
@@ -210,3 +210,64 @@ The smoke run used a placeholder predictor, each meter's training mean. Its metr
 reported, because it is not a baseline. It also showed missing predictions being counted: the
 placeholder cannot predict unseen buildings, and all 3,288 of those rows were reported as missing
 predictions.
+
+## Baselines (T012)
+
+Code: [`wattwise.ml.baselines`](../backend/src/wattwise/ml/baselines.py). Design decision: D024.
+These are the bar every model must beat.
+
+| Baseline | What it predicts | Uses |
+|---|---|---|
+| `seasonal-naive-1w` | The same meter's reading exactly 168 h earlier: a one-week-ahead forecast | Only the reading one week back, never the hour itself or later (tested) |
+| `hour-of-week-median` | The median of the meter's **training** readings for the same hour of the week, in the building's local time. An hour of the week without training data falls back to the meter's training median | Only training rows (tested). Local time keeps schedules aligned across daylight-saving changes (tested) |
+
+Neither can forecast a building it has no data for, so unseen-building results wait for the
+models (T014).
+
+### Results on the BDG2 sample (2026-10-24)
+
+```bash
+uv run python -m wattwise.data.bdg2_prepare      # the default sample, pipeline version 2
+uv run python -m wattwise.ml.baselines --data ../data/processed/bdg2/cleaned
+```
+
+- **Data:** BDG2 cleaned electricity, the seeded sample of 20 meters at 9 sites. 350,816 hourly
+  readings, fingerprint `e2fc43c651eb2a03`.
+- **Split:** chronological, config `dbcada8c8242`.
+  - Train: 2016-01-01 to 2017-07-01.
+  - Validation: to 2017-10-01.
+  - Test: to 2018-01-02 UTC.
+  - Each baseline is fitted on the training rows only.
+- **Code:** the commit that adds this section. The full reports, per meter and per building,
+  are written to git-ignored `data/processed/evaluation/baselines/`; repeat runs are
+  byte-identical.
+
+Errors are in kWh per hourly reading. Bias is predicted minus actual.
+
+| Baseline | Role | MAE | RMSE | Bias | WAPE | Macro MAE | Macro WAPE (meters) | Scored | Missing prediction |
+|---|---|---|---|---|---|---|---|---|---|
+| seasonal-naive-1w | validation | 8.886 | 20.317 | −0.454 | 8.8% | 8.795 | 11.3% (20) | 43,361 | 417 |
+| seasonal-naive-1w | **test** | **8.763** | 17.987 | +0.833 | **8.6%** | 8.711 | 14.7% (20) | 43,247 | 466 |
+| hour-of-week-median | validation | 12.792 | 21.954 | +3.078 | 12.7% | 12.758 | 24.6% (20) | 43,778 | 0 |
+| hour-of-week-median | **test** | **10.888** | 18.961 | +1.385 | **10.7%** | 10.849 | 16.5% (20) | 43,713 | 0 |
+
+**Like for like:** the seasonal baseline has no prediction where last week's reading is missing,
+about 1% of rows. On exactly the rows both baselines predict, the test MAE is **8.763**
+(seasonal) against **10.918** (profile), on 43,247 rows; on validation it is 8.886 against
+12.829.
+
+**What this shows, and what it does not:**
+- **The bar to beat is the seasonal-naive baseline:** test MAE 8.76 kWh, WAPE 8.6%. A model
+  that does not beat it on the same split does not replace it (T014).
+- **The profile over-predicts** (bias +3.1 kWh on validation, +1.4 on test). It averages
+  winter and summer training weeks into one weekly shape, so it ignores weather and season.
+  Weather features (T013) target exactly that.
+- **Macro WAPE exceeds pooled WAPE** (test: 14.7% against 8.6% for the seasonal baseline).
+  This suggests small meters have larger relative errors, since pooled WAPE is dominated by
+  large meters. The per-meter reports allow this to be checked.
+- **Holidays and term breaks:** the test quarter includes them, and neither baseline knows
+  about them. Both are expected to err around them: the seasonal baseline in the week after a
+  break, the profile during it. This is a hypothesis, not yet measured; holiday features come
+  in T013.
+- **Limits:** these are results for one seeded sample of 20 meters on cleaned data, not
+  BDG2-wide or real-world performance. They are not anomaly-detection results.

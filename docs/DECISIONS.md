@@ -826,6 +826,41 @@ links to the entry that replaces it.
 
 ---
 
+## D024 — Baselines: seasonal-naive and local hour-of-week profile
+- **Date:** 2026-10-24 · **Task:** T012 · **Status:** Accepted
+- **Decision:** `wattwise.ml.baselines`.
+  - **`seasonal-naive-1w`:** the reading 168 h earlier, a one-week-ahead forecast. It may use
+    validation- or test-window readings that are a full week in the past, which is legitimate
+    at a one-week horizon, and never the hour itself or later.
+  - **`hour-of-week-median`:**
+    - The median per meter and hour of the week, from **training rows only**.
+    - Hours of the week are in the building's **local wall time**, because occupancy schedules
+      follow the wall clock. A UTC profile is an hour off for half the year (tested).
+    - The fallback is the meter's training median.
+  - **Protocol:** `fit(train)` then `predict(rows, history)`. The target rows reach `predict`
+    without their values.
+  - **Evaluation:** with the T011 harness on validation and test. Results are also given on
+    the **common rows** both baselines predict, so a coverage difference cannot decide the
+    comparison.
+  - **Default split:** chronological; train 2016-01-01 to 2017-07-01, validation to
+    2017-10-01, test to 2018-01-02. No holdout: per-meter baselines cannot forecast unseen
+    buildings.
+- **Result (BDG2 sample):** test MAE 8.763 kWh, WAPE 8.6% (seasonal), against 10.888 kWh and
+  10.7% (profile). **The seasonal-naive baseline is the bar to beat.**
+- **Alternatives considered:**
+  - **A UTC hour-of-week profile:** rejected; it shifts by an hour across daylight saving.
+  - **A mean instead of a median:** rejected; the median resists outliers, and spikes remain
+    in "cleaned" data.
+  - **Fitting on train plus validation before testing:** deferred to model selection (T014),
+    so that baselines and models are compared under the same rule.
+- **Consequences:**
+  - T014 must beat seasonal-naive on the same split and rows to be adopted.
+  - The evaluation dirty flag now also counts new, uncommitted files, so a run with new code is
+    not reported as clean. Before this, only changes to tracked files counted.
+
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

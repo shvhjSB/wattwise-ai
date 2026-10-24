@@ -551,7 +551,7 @@ default.
     | Check | Rule | Result at all 15 sites (2026-10-24) |
     |---|---|---|
     | Radiation-weighted centre of the solar days vs solar noon (NOAA equation of time) | Median within **30 min**, per site and per quarter. That is half of the one-hour error being caught; the 15 min first tried was too tight for quarterly medians | Per-site medians **−8.6 to +2.0 min** (548–731 days); quarterly medians down to −15.6 min in convective Florida summers. Labels taken as interval starts would give +51 to +62 min |
-    | ERA5 temperature phase vs BDG2 observed temperature, interpolated to fractions of an hour | Each quarter within **0.5 h** of the site's median phase, and that median within **1 h** of zero | Site medians **−0.50 to +0.30 h**; quarters within 0.33 h of their site's median. A station's daily cycle can run about half an hour from the ERA5 cell's. This also re-confirms the BDG2 weather clocks (D016) |
+    | ERA5 temperature phase vs BDG2 observed temperature, interpolated to fractions of an hour | Each quarter within **0.5 h** of the site's median phase, and that median within **0.75 h** of zero (halfway between the largest natural phase, 0.5 h, and a one-hour error at a phase-0 site) | Site medians **−0.50 to +0.30 h**; quarters within 0.33 h of their site's median. A station's daily cycle can run about half an hour from the ERA5 cell's. This also re-confirms the BDG2 weather clocks (D016) |
 
     **Limit:** at a site whose natural phase is near ±0.5 h, a whole-period one-hour error in
     BDG2's weather clock would still pass the temperature rule. That case is covered by the D016

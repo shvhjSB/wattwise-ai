@@ -91,7 +91,8 @@ def payload(
         "direct_radiation": np.round(ghi * 0.7, 1).tolist(),
         "diffuse_radiation": np.round(ghi * 0.3, 1).tolist(),
         "direct_normal_irradiance": np.round(ghi * 1.2, 1).tolist(),
-        "cloud_cover": [None] + [50] * (len(labels) - 1),  # a gap stays a gap
+        # Varies by hour, so relabelling this instant would show; a gap stays a gap.
+        "cloud_cover": [None] + [int(h) for h in np.asarray(labels.hour)[1:]],
         "temperature_2m": np.round(temps, 2).tolist(),
     }
     body = {
@@ -214,7 +215,8 @@ def test_radiation_is_relabelled_to_the_start_of_its_hour_and_instants_are_not()
     assert table.loc[label - pd.Timedelta(hours=1), "ghi_w_m2_era5"] == pytest.approx(
         response.values["shortwave_radiation"][18]
     )
-    assert table.loc[label, "cloud_cover_pct_era5"] == response.values["cloud_cover"][18]
+    assert table.loc[label, "cloud_cover_pct_era5"] == 18.0  # the instant keeps its own hour
+    assert table.loc[label - pd.Timedelta(hours=1), "cloud_cover_pct_era5"] == 17.0
     assert np.isnan(table["ghi_w_m2_era5"].iloc[-1]), "the last hour's mean is not in the response"
     assert list(table.index) == list(response.times), "the requested hourly grid is kept"
 
@@ -458,10 +460,14 @@ def test_a_different_request_is_downloaded_not_reported_as_changed(tmp_path: Pat
     manifest = tmp_path / "era5.json"
     fetch([SITE], tmp_path / "raw", manifest, opener=FakeApi(), pause=0)
     moved = Site("Test", 41.0, -75.0)
+    # Different content too: without the same-request guard this would be reported "changed".
+    api = FakeApi({request_url(moved): payload(moved, days=3)})
 
-    assert fetch([moved], tmp_path / "raw", manifest, opener=FakeApi(), pause=0, force=True) == {
+    assert fetch([moved], tmp_path / "raw", manifest, opener=api, pause=0, force=True) == {
         "Test": "downloaded"
     }
+    entry = json.loads(manifest.read_text(encoding="utf-8"))["files"]["Test"]
+    assert "previous_content_sha256" not in entry
 
 
 def test_http_errors_carry_open_meteos_reason(tmp_path: Path) -> None:
@@ -511,9 +517,14 @@ def test_fetch_reports_changed_content_on_a_forced_refetch(tmp_path: Path) -> No
     fetch([SITE], tmp_path / "raw", manifest, opener=FakeApi(), pause=0)
     changed = FakeApi({request_url(SITE): payload(days=3)})
 
+    first = json.loads(manifest.read_text(encoding="utf-8"))["files"]["Test"]["content_sha256"]
+
     assert fetch([SITE], tmp_path / "raw", manifest, opener=changed, pause=0, force=True) == {
         "Test": "changed"
     }
+    entry = json.loads(manifest.read_text(encoding="utf-8"))["files"]["Test"]
+    assert entry["previous_content_sha256"] == first, "the earlier content stays on record"
+    assert entry["content_sha256"] == content_sha256(payload(days=3))
 
 
 def test_fetch_never_overwrites_an_unrecorded_file(tmp_path: Path) -> None:
@@ -571,6 +582,34 @@ def test_cli_prepare_writes_nothing_when_the_alignment_fails(
     assert main(args) == 1
     assert "alignment checks failed; nothing was written" in capsys.readouterr().err
     assert not (tmp_path / "out" / "weather_enrichment.parquet").exists()
+
+
+def test_cli_verify_passes_and_then_catches_a_changed_era5_file(
+    make_bdg2_raw: BDG2Builder, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    args, manifest = cli_prepare(make_bdg2_raw, tmp_path)
+    verify_args = ["verify", *args[1:5], "--manifest", str(manifest), "--skip-input-verification"]
+
+    assert main(verify_args) == 0
+    assert "1 site responses verified" in capsys.readouterr().out
+    response = tmp_path / "raw" / "Eagle.json"
+    response.write_bytes(response.read_bytes().replace(b'"elevation": 50.0', b'"elevation": 51.0'))
+
+    assert main(verify_args) == 1, "the ERA5 checksum is checked even when BDG2's is skipped"
+    assert main(args) == 1
+
+
+def test_a_uniform_one_hour_weather_clock_error_is_caught() -> None:
+    response = parse_response(payload(start=START_DATE, days=733))
+    late = observed_weather(response).assign(
+        timestamp=lambda f: f["timestamp"] + pd.Timedelta(hours=1)
+    )
+
+    result = enrich({"Test": response}, [SITE], late)
+
+    assert not result.aligned
+    phase = result.checks["Test"]["temperature_phase_h"]
+    assert isinstance(phase, float) and abs(phase) == pytest.approx(1.0, abs=0.1)
 
 
 def test_cli_prepare_refuses_a_response_recorded_for_another_request(

@@ -1249,3 +1249,33 @@ times are UTC. Two of its skeptic checks failed on a session usage limit.
   - the synthetic fixture end to end
   - CLI reports, missing data, and dates without a time zone
   - the default split order
+
+**Commit:** `c856177` feat(ml): add seasonal-naive and hour-of-week baselines with first
+results. CI run [40116527334](https://github.com/shvhjSB/wattwise-ai/actions/runs/40116527334)
+was green (383 backend tests). A re-run at the commit reproduced every number, and the report
+was stamped clean at `c856177`.
+
+---
+
+## 2026-10-24 — T007d follow-up: the rest of the code review
+
+The T007d review workflow finished after T012. Its provenance skeptic confirmed the findings
+already fixed in `121f106`. Its tests lens confirmed five more against the original code; four
+were still open:
+1. **A uniform one-hour weather-clock error could pass.** At a site with natural phase 0 it sat
+   exactly on the 1 h limit. The site limit is now 0.75 h: halfway between the largest natural
+   phase (0.5 h) and that error. The real data still passes (largest |phase| 0.50 h). A new test
+   shows the error is caught.
+2. **The "instants keep their time" check was vacuous**, because synthetic cloud cover was
+   constant. It now varies by hour, and the test checks the exact hour.
+3. **The ERA5 integrity check and the verify success path were untested.** The integrity check
+   was also skipped together with BDG2 verification. The ERA5 checksum is now always checked, and
+   `verify` takes `--skip-input-verification` for BDG2 only. A new test passes `verify`, then
+   alters the file and sees `verify` and `prepare` refuse it.
+4. **The "different request" test returned identical content**, so it passed without the guard.
+   It now uses different content. The "changed" test now checks that the previous content hash is
+   kept.
+
+The fifth (the "only" in the content-hash test name) was judged not real. Real data after the
+fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
+`pytest -W error`: **385 passed**.

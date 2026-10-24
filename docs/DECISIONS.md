@@ -781,8 +781,10 @@ links to the entry that replaces it.
       time). 30 minutes is half of the one-hour error being caught.
     - **Temperature phase:** the phase of ERA5 temperature against BDG2's observed temperature
       is interpolated to fractions of an hour (a parabola through the correlation peak). Each
-      quarter must lie within **0.5 h** of the site's median, and the median within **1 h** of
-      zero.
+      quarter must lie within **0.5 h** of the site's median, and the median within **0.75 h**
+      of zero. 0.75 h is halfway between the largest natural phase seen (0.5 h) and a one-hour
+      error at a site whose natural phase is 0. It was tightened from 1 h, at which such an error
+      sat exactly on the limit (review finding).
     - **Why it changed after review:** the first version used one whole-period median, a 15-minute
       tolerance and a whole-hour lag that had to be 0. The review reproduced a one-hour mislabel
       over a third of the period that still passed. Quarterly checks then showed two things:

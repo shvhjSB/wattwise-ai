@@ -15,7 +15,7 @@ in every calendar quarter with enough data, and `prepare` writes nothing if a ch
 - the median radiation-weighted centre of the solar days must lie within 30 min of solar noon
   (half of the one-hour error the check exists to catch)
 - the temperature phase of ERA5 against BDG2's observed temperature must be stable across
-  quarters (each within 0.5 h of the site's median) and within 1 h of zero
+  quarters (each within 0.5 h of the site's median) and within 0.75 h of zero
 
 Nothing is gap-filled across sources, and sites without coordinates get no ERA5 data.
 
@@ -98,9 +98,11 @@ TEMPERATURE_LAGS: Final = range(-3, 4)
 MIN_LAG_PAIRS: Final = 48  # overlapping hours needed to measure a lag
 #: A station's daily temperature cycle can run up to ~0.5 h from the ERA5 cell's (real data: site
 #: medians -0.50 to +0.30 h, quarters within 0.33 h of their site's median). A quarter more than
-#: PHASE_CONSISTENCY_H from its site's median phase, or a site beyond PHASE_MAX_H, is misaligned.
+#: PHASE_CONSISTENCY_H from its site's median phase is misaligned, and so is a site beyond
+#: PHASE_MAX_H: halfway between the largest natural phase (0.5 h) and a one-hour error at a site
+#: whose natural phase is 0 (1 h).
 PHASE_CONSISTENCY_H: Final = 0.5
-PHASE_MAX_H: Final = 1.0
+PHASE_MAX_H: Final = 0.75
 #: The checks also run per calendar quarter; a quarter with less data than this is skipped.
 QUARTER_MIN_SOLAR_DAYS: Final = 20
 QUARTER_MIN_TEMPERATURE_HOURS: Final = 24 * 30
@@ -771,9 +773,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         sub.add_argument("--manifest", type=Path, default=DEFAULT_MANIFEST)
         if name == "fetch":
             sub.add_argument("--force", action="store_true", help="re-fetch and replace copies")
+        if name in ("verify", "prepare"):
+            sub.add_argument(
+                "--skip-input-verification",
+                action="store_true",
+                help="skip the BDG2 pinned-checksum check (ERA5 files are always checked)",
+            )
         if name == "prepare":
             sub.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-            sub.add_argument("--skip-input-verification", action="store_true")
     args = parser.parse_args(argv)
 
     metadata_file, weather_file = BDG2_FILES["metadata"], BDG2_FILES["weather"]
@@ -803,7 +810,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             path = args.dest / f"{site.site_id}.json"
             entry = recorded.get(site.site_id, {})
             stale = entry.get("url") != request_url(site)  # recorded for a different request
-            if not path.exists() or stale or (verified and sha256_of(path) != entry.get("sha256")):
+            # Always checked: the ERA5 copy must be the one the manifest recorded.
+            if not path.exists() or stale or sha256_of(path) != entry.get("sha256"):
                 missing.append(site.site_id)
         if missing:
             raise AcquisitionError(

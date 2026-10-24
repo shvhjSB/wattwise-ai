@@ -133,7 +133,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     whole period and in every calendar quarter, and `prepare` writes nothing unless every site
     passes:
     - the radiation's solar-noon centre, within 30 min
-    - the ERA5 temperature phase, stable within 0.5 h across quarters and within 1 h of zero
+    - the ERA5 temperature phase, stable within 0.5 h across quarters and within 0.75 h of
+      zero
   - **Manifest:** a git-ignored manifest (`data/raw/era5/manifest.json`) records each request,
     its file and content hashes, and the grid cell. It is saved after every site, and a
     response recorded for another request is refused.
@@ -165,6 +166,16 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   sample changed. (T009c)
 
 ### Fixed
+- ERA5 checks and tests, after the rest of the review completed. (T007d)
+  - **Phase limit:** tightened from 1 h to 0.75 h; a uniform one-hour clock error at a site
+    with natural phase 0 had sat exactly on the limit.
+  - **Integrity:** the ERA5 file checksum is now always checked, even when BDG2 input
+    verification is skipped.
+  - **Tests:** four tests could pass without the behaviour they claim and now cannot:
+    - instants keeping their hour
+    - a different request not reported as "changed"
+    - the previous hash being kept
+    - the verify success path
 - The evaluation report's `git_dirty` flag now counts new, uncommitted files. Before, it
   counted only changed tracked files, so a run with new code was reported as clean. (T012)
 - ERA5 enrichment, after an adversarial review of the first T007d commit. (T007d)

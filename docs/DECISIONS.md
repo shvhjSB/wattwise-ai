@@ -434,7 +434,9 @@ links to the entry that replaces it.
     level shifts belong to anomaly detection (T016/T017).
 
 ## D016 — BDG2 timestamps: per-site clock, decided by evidence
-- **Date:** 2026-10-24 · **Task:** T009a · **Status:** Accepted
+- **Date:** 2026-10-24 · **Task:** T009a · **Status:** Accepted. Amended by
+  [D020](#d020--bdg2-metadata-corrections-with-a-falsifiable-zone-check): Fox's time zone is
+  corrected, so Fox is now standard (fixed UTC−7) and 4 sites (385 buildings) stay undetermined.
 - **Context:**
   - BDG2's "local" timestamps form a regular 17,544-hour grid, although every site is in a
     daylight-saving zone (T007).
@@ -488,7 +490,9 @@ links to the entry that replaces it.
 ---
 
 ## D017 — BDG2 preprocessing pipeline design
-- **Date:** 2026-10-24 · **Task:** T009b · **Status:** Accepted
+- **Date:** 2026-10-24 · **Task:** T009b · **Status:** Accepted. Pipeline version 2 applies the
+  D020 metadata corrections, so the first-run counts below are superseded (current run in
+  DATASETS.md).
 - **Decision:** `wattwise.data.bdg2_prepare` converts the pinned BDG2 files into canonical
   tables. Every step is deterministic, and every dropped meter or hour is counted.
   - **Variant: cleaned by default, raw optional (`--variant raw`).**
@@ -627,6 +631,55 @@ links to the entry that replaces it.
   - New tasks: T007c (labels), T007d (weather), T009c (metadata corrections, which may recover
     Fox's 137 buildings), T021a (reference tables), T040 (Building 59) and T041 (HKUST).
   - Nothing is acquired until its task runs; no supplementary data is committed.
+
+---
+
+## D020 — BDG2 metadata corrections with a falsifiable zone check
+- **Date:** 2026-10-24 · **Task:** T009c · **Status:** Accepted
+- **Context:** T007b found two metadata errors:
+  - **Fox:** its coordinates are in Arizona, which has no daylight saving time, but it was
+    published as `US/Mountain`.
+  - **Wolf:** its longitude sign is flipped, which puts it in the Netherlands instead of Dublin.
+
+  Excluding Fox would waste 137 buildings. Correcting the metadata on coordinates alone would
+  trust one field to fix another.
+- **Decision:**
+  - **Pinned corrections.** `wattwise.data.bdg2_sites.CORRECTIONS` records each correction with
+    the published value, the corrected value and the evidence.
+    - They are applied before the audit and the preparation, and recorded in every manifest
+      (pipeline version 2).
+    - A correction **refuses to run** if the data holds a different published value.
+  - **A time-zone correction must pass a zone check against the readings**, made under the
+    published zone. Otherwise the site stays undetermined. The check:
+    - Allows no occupant shift at any usable clock change.
+    - Allows no daylight-saving fingerprint at any clock-change hour: an empty hour, an empty
+      neighbouring hour, copied or interpolated readings, or merged hours. Each hour is compared
+      with the same hour 1–3 weeks before and after.
+    - Only corrections to zones without clock changes are supported. Their time is a fixed
+      offset, so the standard and wall clocks coincide.
+  - **Site regions** (ISO 3166 country and subdivision) are pinned from the corrected
+    coordinates, and are `None` where coordinates are missing.
+- **Evidence:**
+  - **Fox passes.** Its lags are 0, 0, +1 and 0, and its four clock-change hours show no
+    fingerprint.
+  - **The check rejects all 18 other sites** when each is wrongly "corrected" to a zone without
+    daylight saving: 11 wall-clock sites by fingerprint, 3 standard-time sites by shift, and the 4
+    undetermined sites.
+  - The first rule, "no majority of shifts", accepted Robin (London). It was tightened to "no
+    shift at all", which Fox still passes.
+- **Alternatives considered:**
+  - **Correcting from coordinates alone:** rejected. A wrong coordinate (Wolf's) would then
+    silently change a clock.
+  - **Leaving Fox excluded:** rejected, because the evidence is strong and testable.
+  - **A per-building zone check:** not needed. All 137 Fox buildings share one zone and
+    coordinate.
+- **Consequences:**
+  - 1,148 eligible meters instead of 1,013.
+  - 4 undetermined sites (385 buildings) instead of 5 (522).
+  - Usable LEAD buildings rise from 152 to 173.
+  - The seeded sample changed, so every BDG2-derived count is restated for version 2.
+  - Passing the zone check does not prove a zone; the coordinates do. The check is there to
+    catch a wrong correction.
 
 ---
 

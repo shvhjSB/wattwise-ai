@@ -129,7 +129,7 @@ checked on the downloaded files.
   | Cockatoo | US/Eastern | 117 | wall_clock | standard |
   | Crow | US/Eastern | 5 | wall_clock | standard |
   | Eagle | US/Eastern | 106 | standard | standard |
-  | Fox | US/Mountain | 137 | undetermined | standard |
+  | Fox | America/Phoenix (published: US/Mountain) | 137 | standard | standard |
   | Gator | US/Eastern | 74 | wall_clock | standard |
   | Hog | US/Central | 152 | wall_clock | standard |
   | Lamb | Europe/London | 146 | wall_clock | standard |
@@ -144,10 +144,15 @@ checked on the downloaded files.
   | Wolf | Europe/Dublin | 36 | standard | standard |
 
   Reasons for the undetermined sites:
-  - **Fox and Robin:** wall-clock at margins 0.0025 and 0.005, but not at 0.01.
+  - **Robin:** wall-clock at margins 0.0025 and 0.005, but not at 0.01.
   - **Rat:** the profile shifts indicate standard time, but its spring non-existent hours are
     systematically empty.
   - **Shrew and Swan:** too few or mixed transitions.
+
+  **Fox** was undetermined under its published zone, `US/Mountain`: wall-clock at two margins
+  only. Its metadata time zone was wrong. Since T009c it is audited in `America/Phoenix`, which
+  has no clock changes, so its time is a fixed UTC−7 (see
+  [Metadata corrections](#metadata-corrections-t009c)).
 
   **Consequences for conversion (T009b):**
   - **Standard sites:** add the fixed January offset. For `Europe/Dublin` that is 0, not the
@@ -155,7 +160,8 @@ checked on the downloaded files.
   - **Wall-clock sites:** localise in the zone. The spring non-existent hour and the single
     autumn repeated hour are **dropped and counted**, not guessed. At some sites that hour holds
     about twice a normal reading: two real hours summed.
-  - **Undetermined sites** (5 of 19, 522 buildings) are **excluded** with the reason recorded.
+  - **Undetermined sites** (4 of 19, 385 buildings, since T009c) are **excluded** with the
+    reason recorded.
 - **Shared weather stations:** some sites have identical weather (Mouse, Robin and Shrew; Crow
   and Moose; Panther and Gator).
 - **Interval:** "Each row represents one hour, and the reading is the energy or water sum across
@@ -207,17 +213,21 @@ It writes the following to `data/processed/bdg2/<variant>/` (git-ignored, never 
 
 Identical inputs and options give byte-identical files.
 
-**First real run** (2026-10-24, defaults: cleaned, 20 meters, seed 2016). These are observed
-counts for one seeded sample; they do not describe all of BDG2.
+**Current real run** (2026-10-24, pipeline version 2 with the T009c metadata corrections;
+defaults: cleaned, 20 meters, seed 2016). These are observed counts for one seeded sample; they do
+not describe all of BDG2.
+- **Why the sample changed:** correcting Fox enlarged the eligible pool, so the seeded sample
+  differs from the first run.
+- **First run** (version 1): 1,013 eligible meters, 350,804 readings, 93.02% coverage.
 
 | | |
 |---|---|
-| Electricity meters | 1,578. Excluded: 522 undetermined clock, 43 insufficient data. 1,013 eligible |
-| Sample | 20 meters from 9 sites (Bull 3, Cockatoo 3, Crow 1, Eagle 1, Gator 1, Hog 4, Lamb 3, Panther 2, Peacock 2) |
-| Readings | 350,804 rows, 2016-01-01T00:00Z to 2018-01-01T05:00Z. 8 sites are wall-clock (4 hours dropped per meter), Eagle is standard |
-| Weather | 156,569 rows. Reading hours with weather: 96.1–99.98% per site |
-| Quality | 93.02% coverage. Warnings for 18 of 20 meters: gaps 19 (including the 2-hour UTC gap at each autumn change), missing values 18, flatlines 12, low coverage 10 |
-| Runtime | About 12 s on the development laptop. A second run gave byte-identical files |
+| Electricity meters | 1,578. Excluded: 385 undetermined clock, 45 insufficient data. 1,148 eligible |
+| Sample | 20 meters from 9 sites (Bull 2, Cockatoo 3, Eagle 3, Fox 1, Gator 2, Hog 4, Lamb 1, Panther 2, Peacock 2) |
+| Readings | 350,816 rows, 2016-01-01T00:00Z to 2018-01-01T06:00Z. 7 sites are wall-clock (4 hours dropped per meter); Eagle and Fox are fixed-offset |
+| Weather | 157,252 rows. Reading hours with weather: 96.75–99.99% per site |
+| Quality | 95.65% coverage. Warnings for 16 of 20 meters: gaps 16 (including the 2-hour UTC gap at each autumn change), missing values 19, flatlines 12, low coverage 7 |
+| Runtime | About 11 s on the development laptop. A second run gave byte-identical files |
 
 The flatlines show that BDG2's cleaning removes zero runs but not constant non-zero runs.
 
@@ -266,43 +276,84 @@ The joins for carbon factors, prices, holidays and weather all depend on where e
 location column comes from reverse-geocoding the metadata coordinates with OpenStreetMap
 Nominatim (double-checked). Only the region is recorded here; nothing finer is needed.
 
+Region codes are ISO 3166 codes (country, and subdivision where needed), pinned in
+[`bdg2_sites.py`](../backend/src/wattwise/data/bdg2_sites.py). A test keeps this table in sync
+with the code.
+
 | Site | Metadata time zone | Location from coordinates | Note |
 |---|---|---|---|
-| Bear | US/Pacific | USA, California | |
+| Bear | US/Pacific | USA, California (US-CA) | |
 | Bobcat | US/Mountain | no coordinates | |
-| Bull | US/Central | USA, Texas | |
-| Cockatoo | US/Eastern | USA, New York | |
-| Crow | US/Eastern | **Canada, Ontario** | The time rules match US/Eastern; the country does not |
+| Bull | US/Central | USA, Texas (US-TX) | |
+| Cockatoo | US/Eastern | USA, New York (US-NY) | |
+| Crow | US/Eastern | **Canada, Ontario** (CA-ON) | The time rules match US/Eastern; the country does not |
 | Eagle | US/Eastern | no coordinates | The country is unknown (see Crow) |
-| Fox | US/Mountain | **USA, Arizona** | Arizona does not observe daylight saving time (see below) |
+| Fox | US/Mountain, **corrected to America/Phoenix** | **USA, Arizona** (US-AZ) | Arizona does not observe daylight saving time (see below) |
 | Gator | US/Eastern | no coordinates | The country is unknown |
-| Hog | US/Central | USA, Minnesota | |
-| Lamb | Europe/London | UK, Wales | |
-| Moose | US/Eastern | **Canada, Ontario** | |
-| Mouse | Europe/London | UK, England (London) | |
-| Panther | US/Eastern | USA, Florida | |
-| Peacock | US/Eastern | USA, New Jersey | |
-| Rat | US/Eastern | USA, District of Columbia | |
-| Robin | Europe/London | UK, England (London) | |
-| Shrew | Europe/London | UK, England (London) | |
+| Hog | US/Central | USA, Minnesota (US-MN) | |
+| Lamb | Europe/London | UK, Wales (GB-WLS) | |
+| Moose | US/Eastern | **Canada, Ontario** (CA-ON) | |
+| Mouse | Europe/London | UK, England (London) (GB-ENG) | |
+| Panther | US/Eastern | USA, Florida (US-FL) | |
+| Peacock | US/Eastern | USA, New Jersey (US-NJ) | |
+| Rat | US/Eastern | USA, District of Columbia (US-DC) | |
+| Robin | Europe/London | UK, England (London) (GB-ENG) | |
+| Shrew | Europe/London | UK, England (London) (GB-ENG) | |
 | Swan | US/Pacific | no coordinates | |
-| Wolf | Europe/Dublin | **Ireland**, once the longitude sign is corrected | As published, the coordinates fall in the Netherlands |
+| Wolf | Europe/Dublin | **Ireland** (IE), after the longitude sign was corrected | As published, the coordinates fall in the Netherlands |
 
-**Metadata problems found** (to be corrected, with evidence, in T009c):
+**Metadata problems found** (corrected with evidence in T009c; see
+[Metadata corrections](#metadata-corrections-t009c)):
 - **Wolf's longitude sign is flipped.** The metadata says `6.2603`; Dublin is at `−6.2603`.
-- **Fox is probably in the wrong time zone.**
-  - Fox's coordinates are in Arizona, which keeps UTC−7 all year. Its metadata says
-    `US/Mountain`, which has daylight saving time.
-  - The audit evidence fits Arizona:
-    - Weekday load profiles do not move at the US clock changes (best lag 0 at 3 of 4).
-    - The spring "non-existent" hour holds real readings (0% and 0.74% missing, the same as the
-      neighbouring hours).
-  - Under `US/Mountain` these two signals conflict, which is why the audit left Fox undetermined
-    (D016). Under `America/Phoenix` they agree.
-  - Correcting the zone could recover up to **137 buildings**.
+- **Fox was in the wrong time zone.** Its coordinates are in Arizona, but its metadata said
+  `US/Mountain`. This is now corrected.
 - **The `US/...` prefix does not prove a site is in the US.** Crow and Moose are in Canada. The
   sites without coordinates (Bobcat, Eagle, Gator, Swan) therefore get **no** carbon factor,
   price or location-based weather.
+
+### Metadata corrections (T009c)
+
+The corrections are pinned in
+[`bdg2_sites.py`](../backend/src/wattwise/data/bdg2_sites.py), each with its evidence (D020).
+They are applied before the timestamp audit and before preparation, and recorded in every
+manifest. A correction stops the pipeline if the published value differs from the data it was
+made for.
+
+| Site | Field | Published | Corrected | Evidence |
+|---|---|---|---|---|
+| Fox | time zone | `US/Mountain` | `America/Phoenix` | The coordinates are in Arizona, which does not observe daylight saving time. The readings pass the zone check (below) |
+| Wolf | longitude | `6.2603` | `−6.2603` | As published, the coordinates fall in the Netherlands, while the time zone is Europe/Dublin; `53.3498, −6.2603` is Dublin |
+
+**The zone check.** A corrected time zone without daylight saving time must agree with the
+readings, examined under the *published* zone. Two things are checked, and failing either rejects
+the correction and keeps the site excluded:
+1. **No occupant shift:** no usable clock change may show occupants shifting their schedules, as
+   standard-time data would.
+2. **No fingerprint:** no clock-change hour may show the fingerprint of wall-clock data forced
+   onto a regular grid. Each hour is compared with the same hour 1–3 weeks before and after:
+   - an empty hour, or an empty neighbouring hour
+   - copied or interpolated readings, at least 20 points above the control days
+   - a jump of at least 0.25 in the hour's ratio to its neighbours (two hours merged)
+
+**Result for Fox.** Accepted.
+- **No occupant shift:** under US/Mountain, the lags at its four clock changes are 0, 0, +1 and
+  0. None of these is the standard-time shift.
+- **No fingerprint at any clock-change hour** (values from the audit output):
+  - The spring hours are 0% and 0.7% empty, the same as their neighbours.
+  - 2.9% and 2.2% of the spring readings look copied, against 4.4% and 3.5% on the control days.
+  - The autumn hours have a ratio of 1.00 to their neighbours, against 1.00 on the control days.
+- **Effect:** Fox's 137 buildings now convert at a fixed UTC−7. 135 of them are eligible; 2 have
+  too little data.
+
+**Falsification test.** The check was also run on the 18 other sites, as if each had been
+"corrected" to a zone without daylight saving. It **rejected all 18**:
+- all 11 wall-clock sites, for fingerprints (empty, displaced, filled or merged hours)
+- all 3 standard-time sites, for occupant shifts
+- the undetermined Rat, Robin, Shrew and Swan
+
+Robin was rejected only after the rule was tightened from "no majority of shifts" to "no shift
+at all": Robin shows one standard-time shift in four. Passing the check therefore does not prove a
+zone. The coordinates are the evidence, and the check is a test the correction could fail.
 
 ### Recommendation by gap
 
@@ -350,8 +401,8 @@ Nominatim (double-checked). Only the region is recorded here; nothing finer is n
     at labelled anomalies. **Use LEAD's labels with BDG2's readings**, not LEAD's readings.
 - **Usable buildings:**
   - The 200 buildings are spread over 14 sites, mostly Bull 52, Eagle 47 and Lamb 24.
-  - **152 are at sites with a determined clock.** Fox (21) would be added if T009c confirms its
-    time zone.
+  - **173 are at sites with a determined clock**, including Fox's 21 since T009c. The other 27
+    are at Robin and Rat.
   - Labels cover **2016 only**, so a chronological evaluation must stay within 2016.
 - **Licence: unresolved.**
   - The GitHub repository has **no licence** (double-checked). An Apache-2.0 file was added and

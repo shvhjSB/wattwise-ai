@@ -125,15 +125,15 @@ train = split.folds[0].rows(Role.TRAIN)
 write_manifest(split, path)
 ```
 
-**Observed on the BDG2 sample** (2026-10-24; 20 meters from 9 sites; the T009b default sample).
-This shows split sizes only. It is not a model result.
+**Observed on the BDG2 sample** (2026-10-24; 20 meters from 9 sites; the T009b default sample,
+pipeline version 2). This shows split sizes only. It is not a model result.
 
 | Role | Rows | Non-missing | Meters | First | Last |
 |---|---|---|---|---|---|
-| `train` | 196,825 | 183,325 | 15 | 2016-01-01T00:00Z | 2017-06-30T23:00Z |
-| `validation` | 33,120 | 30,743 | 15 | 2017-07-01T00:00Z | 2017-09-30T23:00Z |
-| `test` | 33,159 | 28,982 | 15 | 2017-10-01T00:00Z | 2018-01-01T05:00Z |
-| `test_unseen` | 11,055 | 11,028 | 5 | 2017-10-01T00:00Z | 2018-01-01T04:00Z |
+| `train` | 196,820 | 186,731 | 15 | 2016-01-01T00:00Z | 2017-06-30T23:00Z |
+| `validation` | 33,120 | 32,963 | 15 | 2017-07-01T00:00Z | 2017-09-30T23:00Z |
+| `test` | 33,176 | 32,687 | 15 | 2017-10-01T00:00Z | 2018-01-01T06:00Z |
+| `test_unseen` | 11,055 | 11,026 | 5 | 2017-10-01T00:00Z | 2018-01-01T04:00Z |
 
 - The site holdout drew Cockatoo and Peacock: 5 meters. Their 76,645 earlier readings are
   unused.

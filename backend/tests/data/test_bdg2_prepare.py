@@ -5,8 +5,9 @@ from pathlib import Path
 import pandas as pd
 import pytest
 
-from tests.data.conftest import SiteSpec
+from tests.data.conftest import BDG2Builder, SiteSpec
 from wattwise.data.bdg2_prepare import Options, Prepared, Reason, Variant, main, prepare, write
+from wattwise.data.bdg2_sites import Correction
 from wattwise.data.contracts import BUILDINGS, READINGS, WEATHER
 from wattwise.data.time_convention import Clock
 from wattwise.data.validation import validate
@@ -93,6 +94,71 @@ def test_weather_is_converted_with_its_own_clock(make_bdg2_raw: Builder) -> None
 
     assert float(row["air_temperature_c"].iloc[0]) == float(naive["airTemperature"].iloc[0])
     assert prepared.stats["weather_join_coverage_pct"] == {"Std": 100.0, "Wall": 100.0}
+
+
+# ---------------------------------------------------------------------------
+# Metadata corrections (T009c)
+# ---------------------------------------------------------------------------
+
+AZ_CORRECTIONS = (
+    Correction(
+        site_id="Az", field="timezone", published="US/Mountain", corrected="America/Phoenix",
+        evidence="test",
+    ),
+    Correction(site_id="Az", field="lng", published=111.93, corrected=-111.93, evidence="test"),
+)  # fmt: skip
+
+
+def arizona_raw(make_bdg2_raw: BDG2Builder) -> Path:
+    """An Arizona-time site whose metadata says US/Mountain and has a sign-flipped longitude."""
+    return make_bdg2_raw(
+        [("Az", "America/Phoenix", Clock.STANDARD, 2, False)],
+        published_timezones={"Az": "US/Mountain"},
+        coordinates={"Az": (33.42, 111.93)},
+    )
+
+
+def test_metadata_corrections_are_applied_before_conversion(make_bdg2_raw: BDG2Builder) -> None:
+    raw = arizona_raw(make_bdg2_raw)
+    clocks = {"Az": Clock.STANDARD}
+
+    prepared = prepare(raw, ALL, clocks, clocks, corrections=AZ_CORRECTIONS)
+
+    assert set(prepared.buildings["timezone"]) == {"America/Phoenix"}
+    assert set(prepared.buildings["longitude"]) == {-111.93}
+    # UTC-7 all year: summer noon is 19:00 UTC (US/Mountain wall-clock time would give 18:00).
+    assert reading_at(prepared, "Az_office_B0", "2016-07-01T19:00:00Z") == raw_value(
+        raw, "Az_office_B0", "2016-07-01 12:00:00"
+    )
+    assert prepared.stats["dropped_unconvertible_hours_by_site"] == {"Az": 0}
+    assert prepared.corrections == AZ_CORRECTIONS
+
+
+def test_the_manifest_records_the_corrections(make_bdg2_raw: BDG2Builder, tmp_path: Path) -> None:
+    raw = arizona_raw(make_bdg2_raw)
+    clocks = {"Az": Clock.STANDARD}
+    write(prepare(raw, ALL, clocks, clocks, AZ_CORRECTIONS), raw, tmp_path, inputs_verified=False)
+
+    manifest = json.loads((tmp_path / "manifest.json").read_text(encoding="utf-8"))
+
+    assert manifest["pipeline_version"] == "2"
+    assert [
+        (c["site_id"], c["field"], c["corrected"]) for c in manifest["metadata_corrections"]
+    ] == [
+        ("Az", "timezone", "America/Phoenix"),
+        ("Az", "lng", -111.93),
+    ]
+    assert all(c["evidence"] for c in manifest["metadata_corrections"])
+
+
+def test_a_correction_for_different_source_data_stops_the_pipeline(
+    make_bdg2_raw: BDG2Builder,
+) -> None:
+    raw = arizona_raw(make_bdg2_raw)
+    stale = AZ_CORRECTIONS[0].model_copy(update={"published": "US/Pacific"})
+
+    with pytest.raises(ValueError, match="expected the published value"):
+        prepare(raw, ALL, {"Az": Clock.STANDARD}, {"Az": Clock.STANDARD}, corrections=(stale,))
 
 
 # ---------------------------------------------------------------------------

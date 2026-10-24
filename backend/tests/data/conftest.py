@@ -1,5 +1,6 @@
-from collections.abc import Callable, Sequence
+from collections.abc import Mapping, Sequence
 from pathlib import Path
+from typing import Protocol
 
 import numpy as np
 import pandas as pd
@@ -8,8 +9,19 @@ import pytest
 from wattwise.data.time_convention import Clock, winter_offset
 
 #: (site_id, timezone, electricity clock, buildings, flat load?) for a mini BDG2-format dataset.
+#: The timezone drives behaviour and storage; the metadata can publish another (see below).
 SiteSpec = tuple[str, str, Clock, int, bool]
 BDG2_GRID = pd.date_range("2016-01-01", "2018-01-01", freq="h", inclusive="left")
+
+
+class BDG2Builder(Protocol):
+    def __call__(
+        self,
+        sites: Sequence[SiteSpec],
+        seed: int = 0,
+        published_timezones: Mapping[str, str] | None = None,
+        coordinates: Mapping[str, tuple[float, float]] | None = None,
+    ) -> Path: ...
 
 
 @pytest.fixture
@@ -73,11 +85,21 @@ def on_bdg2_grid(values: pd.Series, timezone: str, clock: Clock) -> pd.Series:
 
 
 @pytest.fixture
-def make_bdg2_raw(tmp_path: Path) -> Callable[[Sequence[SiteSpec]], Path]:
-    """Build a mini BDG2-format raw directory (same files, columns and timestamp format)."""
+def make_bdg2_raw(tmp_path: Path) -> BDG2Builder:
+    """Build a mini BDG2-format raw directory (same files, columns and timestamp format).
 
-    def build(sites: Sequence[SiteSpec], seed: int = 0) -> Path:
+    `published_timezones` writes a different zone into the metadata than the one the site
+    behaves in, as BDG2 did for Fox; `coordinates` sets a site's (lat, lng)."""
+
+    def build(
+        sites: Sequence[SiteSpec],
+        seed: int = 0,
+        published_timezones: Mapping[str, str] | None = None,
+        coordinates: Mapping[str, tuple[float, float]] | None = None,
+    ) -> Path:
         rng = np.random.default_rng(seed)
+        published_timezones = published_timezones or {}
+        coordinates = coordinates or {}
         utc = pd.date_range("2015-12-31", "2018-01-02", freq="h", tz="UTC")
         metadata: list[dict[str, object]] = []
         electricity: dict[str, pd.Series] = {}
@@ -98,9 +120,9 @@ def make_bdg2_raw(tmp_path: Path) -> Callable[[Sequence[SiteSpec]], Path]:
                         "site_id": site_id,
                         "primaryspaceusage": "Office",
                         "sqm": 1000.0 + 100 * i,
-                        "lat": None,
-                        "lng": None,
-                        "timezone": timezone,
+                        "lat": coordinates.get(site_id, (None, None))[0],
+                        "lng": coordinates.get(site_id, (None, None))[1],
+                        "timezone": published_timezones.get(site_id, timezone),
                         "electricity": "Yes",
                         "hotwater": "Yes" if i == 0 else None,
                     }

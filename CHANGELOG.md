@@ -95,6 +95,16 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   Arizona time. (T007b)
 - Roadmap tasks T007c, T007d, T009c, T021a, T040 and T041 to acquire and use the recommended
   data. (T007b)
+- BDG2 metadata corrections (`wattwise.data.bdg2_sites`). Each correction is pinned with its
+  evidence and refuses changed source data (D020). (T009c)
+  - Fox's time zone: `US/Mountain` → `America/Phoenix`.
+  - Wolf's longitude sign.
+  - Each site's ISO country and region.
+- A zone check in the timestamp audit, which a time-zone correction must pass against the
+  readings. It allows no occupant shift and no daylight-saving fingerprint (empty, displaced,
+  copied or merged clock-change hours). It rejected all 18 other sites in a falsification test.
+  (T009c)
+- `time_convention.repeated_hours` for the autumn hours that occur twice. (T009c)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -108,6 +118,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   the locked test toolchain requires. (T004)
 - The quality engine's interval rule is public as `wattwise.data.quality.infer_interval`, so
   the splits use the same rule. (T010)
+- Fox is now audited as fixed-offset time (UTC−7). Its 137 buildings are no longer excluded;
+  135 are eligible. (T009c)
+- The BDG2 pipeline is version 2: it applies the corrections first and records them in the
+  manifest. With Fox included there are 1,148 eligible meters instead of 1,013, and the seeded
+  sample changed. (T009c)
 
 ### Fixed
 - `docs/DATASETS.md` no longer states the T007 hypothesis that all BDG2 sites use local

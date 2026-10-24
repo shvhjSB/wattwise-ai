@@ -857,3 +857,91 @@ kept their downloads in the session scratchpad, outside the repository:
 - the LEAD sample
 - the source files and documentation for the carbon factors and prices
 - metadata files for the candidate datasets
+
+**Commit:** `6f0e8b6` docs(data): evaluate supplementary datasets for BDG2 gaps. CI run
+[40084149157](https://github.com/shvhjSB/wattwise-ai/actions/runs/40084149157) was green.
+
+---
+
+## 2026-10-24 — T009c BDG2 site metadata corrections
+
+**Exploration first.** Before writing code, I measured daylight-saving fingerprints at every
+site's clock-change hours, under its published zone, against the same hour on control days.
+- **Wall-clock sites:**
+  - Most show at least one fingerprint:
+    - empty spring hours: Bear, Bobcat, Cockatoo, Gator, Peacock, Panther in 2017
+    - an empty *neighbouring* hour: Bull (03:00 is 100% empty)
+    - filled spring hours: Hog (100% copied, against 14% on control days)
+    - merged autumn hours: Crow 1.99×, Mouse 1.96×
+  - Lamb shows no clean fingerprint, so a missing fingerprint cannot prove anything on its own.
+- **Standard-time sites** (Eagle, Moose, Wolf) have no fingerprints either. They are separated
+  by occupant behaviour: their schedules shift with the clock changes.
+- **Fox** shows neither a fingerprint nor a shift.
+
+**Done**
+- **`wattwise.data.bdg2_sites`:**
+  - `CORRECTIONS`: Fox `timezone` US/Mountain → America/Phoenix, and Wolf `lng` 6.2603 →
+    −6.2603, each with its evidence.
+  - `apply_corrections`: refuses data whose published value differs, skips absent sites and
+    fields, and never mutates its input.
+  - `SITE_REGIONS`: ISO 3166 codes, None for the 4 sites without coordinates.
+- **Audit (`bdg2_audit`):**
+  - It audits the corrected metadata.
+  - A time-zone correction gets a `ZoneCheck` under the published zone:
+    - shift evidence, plus per-hour `HourEvidence` with a `fingerprint` property (empty hour,
+      empty neighbour, copied or interpolated readings at least 0.2 above the control days, or
+      a ratio change of at least 0.25)
+    - "no usable shift at all" plus "no fingerprint at all"
+  - Zones without transitions get a fixed-offset verdict, or undetermined if the correction is
+    rejected.
+  - The Fox pin is now `standard`.
+- **Helper:** `time_convention.repeated_hours`.
+- **Pipeline (`bdg2_prepare`):** version 2. It applies the corrections and records them in the
+  manifest.
+- **Test fixture:** the builder takes `published_timezones` and `coordinates` overrides,
+  through a typed `BDG2Builder` protocol.
+
+**Falsification test.** The zone check was run on the 18 other sites, as if each had been
+"corrected" to America/Phoenix.
+- The first rule ("no majority of standard-time shifts") wrongly accepted **Robin** (London, one
+  shift in four).
+- Tightened to "no shift at all", the check rejects all 18:
+  - 11 wall-clock sites, by fingerprint
+  - 3 standard-time sites, by shift
+  - Rat, Robin, Shrew and Swan
+- Fox still passes, with lags 0, 0, +1 and 0.
+
+**Real-data results**
+- **Audit:** exit 0, all pins match, about 13 s.
+  - Fox's clock-change hours, from the audit output: spring 0% and 0.7% empty; copied readings
+    2.9% and 2.2%, against 4.4% and 3.5% on control days; autumn ratio 1.00 against 1.00.
+- **Pipeline:**
+  - Eligible meters: 1,148 (was 1,013). Excluded: 385 undetermined (was 522) and 45
+    insufficient data (was 43; 2 of Fox's).
+  - The new seeded sample: 20 meters from 9 sites, including Fox 1.
+  - 350,816 readings (20 × 17,544 − 16 wall-clock meters × 4).
+  - 95.65% coverage. Weather join coverage is 96.75–99.99% per site.
+  - A second run gave byte-identical files for all 7 outputs.
+- **Splits on the new sample:** train 196,820, validation 33,120, test 33,176, test_unseen 11,055
+  (Cockatoo and Peacock held out again). The EVALUATION.md example still runs.
+- **Restated docs:** DATASETS.md, EVALUATION.md and PROJECT_STATUS.md now give the version-2
+  numbers. D016 and D017 point to D020.
+- **LEAD:** usable buildings rise from 152 to 173.
+
+**Validation** (Windows)
+- ruff: clean. Format: clean. `mypy` (strict): no issues in 46 files.
+- `pytest -W error`: **284 passed**, of which 24 are new:
+  - corrections: apply, refuse, skip, input unchanged
+  - the target zone has no transitions
+  - region coverage, and the geography table in sync
+  - `repeated_hours`, and Arizona against US/Mountain facts
+  - the zone check:
+    - a mislabelled Arizona-like site is corrected and accepted
+    - without the correction it is misread as wall-clock
+    - corrections are rejected for wall-clock data (fingerprint) and for standard data (shift)
+    - only zones without daylight saving can be checked
+    - eight fingerprint cases
+  - the pipeline:
+    - corrections applied before conversion (summer noon becomes 19:00 UTC, no dropped hours)
+    - corrections recorded in the manifest
+    - mismatched corrections stop the pipeline

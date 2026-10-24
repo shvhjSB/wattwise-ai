@@ -1,8 +1,9 @@
 """BDG2 preprocessing: raw files to canonical, UTC, contract-validated tables (D017).
 
-Electricity only. Each site's timestamps are converted with its audited clock (D016); sites with
-an undetermined clock are excluded, as are non-electric meters and meters with too little data.
-Every exclusion is recorded with a reason. A seeded sample keeps the output laptop-sized.
+Electricity only. The pinned metadata corrections are applied first (D020). Each site's
+timestamps are converted with its audited clock (D016). Sites with an undetermined clock are
+excluded, as are non-electric meters and meters with too little data. Every exclusion is recorded
+with a reason. A seeded sample keeps the output laptop-sized.
 
     uv run python -m wattwise.data.bdg2_prepare --variant cleaned --sample-meters 20 --seed 2016
 
@@ -29,11 +30,12 @@ from wattwise.data import quality
 from wattwise.data.acquisition import AcquisitionError, sha256_of, verify
 from wattwise.data.bdg2 import COMMIT, DEFAULT_DESTINATION, FILES_BY_KEY
 from wattwise.data.bdg2_audit import ELECTRICITY_CLOCKS, TIMESTAMP_FORMAT, WEATHER_CLOCKS
+from wattwise.data.bdg2_sites import CORRECTIONS, Correction, apply_corrections
 from wattwise.data.contracts import BUILDINGS, READINGS, WEATHER, MeterType, Unit
 from wattwise.data.time_convention import Clock, to_utc
 from wattwise.data.validation import to_canonical
 
-PIPELINE_VERSION: Final = "1"
+PIPELINE_VERSION: Final = "2"  # 2: metadata corrections (T009c)
 DEFAULT_OUTPUT: Final = Path("../data/processed/bdg2")
 #: Metadata columns that flag a building's other meters ("Yes"), named like MeterType values.
 OTHER_METER_FLAGS: Final = tuple(m.value for m in MeterType if m is not MeterType.ELECTRICITY)
@@ -82,6 +84,7 @@ class Prepared:
     weather: pd.DataFrame
     exclusions: pd.DataFrame
     stats: dict[str, object] = field(default_factory=dict)
+    corrections: tuple[Correction, ...] = ()  # metadata corrections that applied
 
 
 def prepare(
@@ -89,8 +92,11 @@ def prepare(
     options: Options,
     electricity_clocks: Mapping[str, Clock] = ELECTRICITY_CLOCKS,
     weather_clocks: Mapping[str, Clock] = WEATHER_CLOCKS,
+    corrections: Sequence[Correction] = CORRECTIONS,
 ) -> Prepared:
-    metadata = pd.read_csv(raw_dir / FILES_BY_KEY["metadata"].local_path)
+    metadata, applied = apply_corrections(
+        pd.read_csv(raw_dir / FILES_BY_KEY["metadata"].local_path), corrections
+    )
     wide = pd.read_csv(raw_dir / FILES_BY_KEY[VARIANT_FILE[options.variant]].local_path)
     naive = pd.DatetimeIndex(pd.to_datetime(wide.pop("timestamp"), format=TIMESTAMP_FORMAT))
     sites = metadata.set_index("building_id")
@@ -199,7 +205,7 @@ def prepare(
         "weather_join_coverage_pct": _join_coverage(readings, buildings, weather),
         "sampled_coverage_pct": {b: coverage_pct[b] for b in sampled},
     }
-    return Prepared(options, readings, buildings, weather, log, stats)
+    return Prepared(options, readings, buildings, weather, log, stats, applied)
 
 
 def _sample(eligible: Sequence[str], options: Options) -> list[str]:
@@ -385,6 +391,7 @@ def write(
             "interval": INTERVAL_ASSUMPTION,
             "clocks": "Per-site clocks from the T009a audit (D016); weather uses its own clock.",
         },
+        "metadata_corrections": [c.model_dump(mode="json") for c in prepared.corrections],
         "stats": prepared.stats,
         "outputs": _output_entries(prepared, digests),
         "licence": "BDG2-derived data: attribute the source and do not redistribute (D014).",

@@ -33,7 +33,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T008 | Data-quality engine and report | M3 | T005, T006 | Done |
 | T009a | BDG2 timestamp-convention audit | M3 | T007 | Done |
 | T009b | BDG2 preprocessing pipeline | M3 | T008, T009a | Done |
-| T009c | BDG2 site metadata corrections (Fox time zone, Wolf longitude, site regions) | M3 | T009a, T007b | Not started |
+| T009c | BDG2 site metadata corrections (Fox time zone, Wolf longitude, site regions) | M3 | T009a, T007b | Done |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Done |
 | T011 | Evaluation harness and metrics | M4 | T010 | Not started |
 | T012 | Seasonal and historical baselines | M4 | T009b, T011 | Not started |

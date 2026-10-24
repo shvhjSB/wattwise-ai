@@ -10,6 +10,7 @@ from wattwise.data.time_convention import (
     classify,
     nonexistent_hours,
     profile_shift,
+    repeated_hours,
     to_utc,
     transitions,
     winter_offset,
@@ -78,6 +79,24 @@ def test_nonexistent_hours_are_the_skipped_spring_hours() -> None:
     assert nonexistent_hours("Europe/London", "2016-01-01", "2017-01-01") == [
         pd.Timestamp("2016-03-27 01:00")
     ]
+
+
+def test_repeated_hours_are_the_autumn_hours_that_occur_twice() -> None:
+    assert repeated_hours("US/Eastern", "2016-01-01", "2018-01-01") == [
+        pd.Timestamp("2016-11-06 01:00"),
+        pd.Timestamp("2017-11-05 01:00"),
+    ]
+    assert repeated_hours("Europe/London", "2016-01-01", "2017-01-01") == [
+        pd.Timestamp("2016-10-30 01:00")
+    ]
+
+
+def test_arizona_has_no_clock_changes_unlike_us_mountain() -> None:
+    assert transitions("America/Phoenix", "2016-01-01", "2018-01-01") == []
+    assert nonexistent_hours("America/Phoenix", "2016-01-01", "2018-01-01") == []
+    assert repeated_hours("America/Phoenix", "2016-01-01", "2018-01-01") == []
+    assert len(transitions("US/Mountain", "2016-01-01", "2018-01-01")) == 4
+    assert winter_offset("America/Phoenix", 2016) == winter_offset("US/Mountain", 2016)
 
 
 # ---------------------------------------------------------------------------

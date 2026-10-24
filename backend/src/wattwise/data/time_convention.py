@@ -218,14 +218,23 @@ def _classify_at(evidence: Sequence[ShiftEvidence], signal: Signal, margin: floa
 
 def nonexistent_hours(timezone: str, start: str, end: str) -> list[pd.Timestamp]:
     """Naive local times skipped by the spring change (e.g. 02:00 on US spring days)."""
-    skipped: list[pd.Timestamp] = []
+    return _unconvertible_hours(timezone, start, end, "spring")
+
+
+def repeated_hours(timezone: str, start: str, end: str) -> list[pd.Timestamp]:
+    """Naive local times that occur twice at the autumn change (e.g. 01:00 on US autumn days)."""
+    return _unconvertible_hours(timezone, start, end, "autumn")
+
+
+def _unconvertible_hours(timezone: str, start: str, end: str, kind: str) -> list[pd.Timestamp]:
+    found: list[pd.Timestamp] = []
     for transition in transitions(timezone, start, end):
-        if transition.kind != "spring":
+        if transition.kind != kind:
             continue
         hours = pd.date_range(transition.day, periods=24, freq="h")
         localised = hours.tz_localize(timezone, nonexistent="NaT", ambiguous="NaT")
-        skipped.extend(hours[localised.isna()])
-    return skipped
+        found.extend(hours[localised.isna()])
+    return found
 
 
 def to_utc(naive: pd.DatetimeIndex, timezone: str, clock: Clock) -> pd.DatetimeIndex:

@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M3 — finishing T009c (metadata corrections), then M4 — Baseline forecasting and evaluation (M1 complete; M2 and M3 gained follow-up tasks from T007b)
+**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1 and M3 complete; M2's T007c and T007d wait for owner decisions)
 
 ## Summary
 
@@ -37,18 +37,29 @@ The application foundation runs end to end locally, and CI checks it automatical
   the synthetic sample it finds exactly the two injected data faults
   ([example report](reports/synthetic-data-quality.md)).
 
-- **BDG2 timestamp audit:** BDG2's local timestamps follow a **different clock per site**. The
-  audit found 11 wall-clock sites, 3 standard-time sites and 5 undetermined (excluded) for
-  electricity, and standard time for weather at all 19 sites. The verdicts are evidence-based,
-  pinned, and re-checkable with `python -m wattwise.data.bdg2_audit` (D016,
-  [DATASETS.md](DATASETS.md)).
+- **BDG2 timestamp audit:** BDG2's local timestamps follow a **different clock per site**.
+  - **Electricity:** 11 wall-clock sites, 4 fixed-offset (standard) sites including Fox, and 4
+    undetermined, excluded (385 buildings).
+  - **Weather:** standard time at all 19 sites.
+  - The verdicts are evidence-based, pinned, and re-checkable with
+    `python -m wattwise.data.bdg2_audit` (D016, D020, [DATASETS.md](DATASETS.md)).
+
+- **BDG2 metadata corrections (T009c, D020):**
+  - **Fox's time zone:** corrected to `America/Phoenix`, because Arizona has no daylight saving
+    time. The readings passed a zone check that rejected all 18 other sites when each was wrongly
+    "corrected". This recovers 135 eligible meters.
+  - **Wolf's longitude:** the sign is fixed.
+  - **Regions:** each site's country and region is pinned, for holidays, prices and carbon
+    later.
 
 - **BDG2 preprocessing:** `python -m wattwise.data.bdg2_prepare` converts the download into
-  canonical Parquet tables in git-ignored `data/processed/bdg2/`. It also writes an exclusion
-  log with a reason for every meter not used, a quality report and a manifest. The outputs are
-  byte-identical across runs (D017). The first real run used a seeded sample of 20 of 1,013
-  eligible meters from 9 sites: 350,804 readings, 93.02% coverage
-  ([DATASETS.md](DATASETS.md#preparing-bdg2-for-analysis)).
+  canonical Parquet tables in git-ignored `data/processed/bdg2/`.
+  - It also writes an exclusion log with a reason for every meter not used, a quality report and
+    a manifest recording the metadata corrections.
+  - The outputs are byte-identical across runs (D017).
+  - The current run (pipeline version 2) used a seeded sample of 20 of 1,148 eligible meters
+    from 9 sites: 350,816 readings, 95.65% coverage
+    ([DATASETS.md](DATASETS.md#preparing-bdg2-for-analysis)).
 - **Leakage-safe splits:** `wattwise.ml.splits` builds chronological and rolling-origin splits
   from explicit UTC windows, optionally holding out buildings or whole sites. Held-out buildings
   are tested only in the future window. Every split re-checks itself on the actual rows, raises
@@ -64,10 +75,8 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Weather:** ERA5 solar radiation; humidity derived from BDG2.
   - **Calendar:** holidays and sun position.
   - **Other buildings:** Building 59 (sub-metered) and HKUST (independent).
-  - **Metadata errors found in BDG2:**
-    - Two "US/Eastern" sites are in Canada.
-    - Wolf's longitude sign is flipped.
-    - Fox is very likely on Arizona time, which could recover 137 excluded buildings (T009c).
+  - **Metadata errors found in BDG2:** two "US/Eastern" sites are in Canada, and Fox and Wolf
+    had the errors corrected in T009c.
   - Nothing has been acquired yet.
 
 No model has been trained, so no ML metrics exist yet.
@@ -88,6 +97,7 @@ No model has been trained, so no ML metrics exist yet.
 | T009b | BDG2 preprocessing pipeline | 2026-10-24 |
 | T010 | Leakage-safe split utilities | 2026-10-24 |
 | T007b | Supplementary dataset evaluation | 2026-10-24 |
+| T009c | BDG2 site metadata corrections | 2026-10-24 |
 
 ## Current task
 
@@ -95,17 +105,18 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T009c — BDG2 site metadata corrections.** It needs no owner decision, and it changes which
-data later tasks can use. It will:
-- add a pinned, evidenced correction table: Fox → `America/Phoenix`, Wolf longitude → −6.2603,
-  and each site's country and region
-- re-run the Fox clock audit and update the pins only if the evidence agrees
-- re-run the preparation
+**T011 — Evaluation harness and metrics**: one trusted way to score any forecaster. It covers:
+- MAE and RMSE.
+- WAPE, reported only when total actual consumption is meaningfully positive.
+- Per-meter and per-building results, plus macro averages.
+- JSON and Markdown reports that include the split manifest (T010), a data fingerprint and the
+  code version.
 
-See [ROADMAP.md](ROADMAP.md#t009c--bdg2-site-metadata-corrections).
+The metrics are tested against hand-computed values, the WAPE guard is tested, and reports are
+reproducible. See [ROADMAP.md](ROADMAP.md#t011--evaluation-harness-and-metrics).
 
-After that comes T011, the evaluation harness. T007c (LEAD labels) and T007d (weather
-enrichment) wait for the owner's decisions below.
+T007c (LEAD labels) and T007d (weather enrichment) are waiting for owner decisions (see
+DECISIONS.md, Open decisions). They are not blocking T011.
 
 ## Milestone progress
 
@@ -113,7 +124,7 @@ enrichment) wait for the owner's decisions below.
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 4 / 6 |
-| M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 4 / 5 |
+| M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015, T041 | 0 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
@@ -151,11 +162,12 @@ pushes only as `shvhjSB` (D006).
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
-| 5 of 19 BDG2 sites (522 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Fox (137) is likely a metadata time-zone error, re-checked in T009c. Per-building classification for mixed sites is possible later |
+| 4 of 19 BDG2 sites (385 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Fox was a metadata error, corrected with a falsifiable check (D020). Per-building classification for mixed sites such as Rat is possible later |
 | LEAD 1.0 has no licence on GitHub, and the Kaggle rules forbid redistribution | T007c, T018 | Local evaluation only, never committed or redistributed, cited; owner decision pending (D019) |
 | Supplementary sources differ by country and year; 4 BDG2 sites have no location | T021a, T007d | Per-site sourced tables; unlocated sites get "not configured", never a guess (D019) |
 | BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
-| The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,013 eligible meters (D017) |
+| The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,148 eligible meters (D017) |
+| BDG2 metadata may hold more errors like Fox's and Wolf's | Joins by location or time zone | Corrections are pinned with evidence and refuse changed data; a time-zone correction must pass the zone check (D020) |
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
 | Splits cannot stop features from looking ahead, or repeated use of the test window | T013, T014 | Feature leakage tests in T013; model selection on validation or rolling folds only (D018) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |

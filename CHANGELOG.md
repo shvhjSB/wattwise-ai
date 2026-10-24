@@ -84,6 +84,17 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - Every split re-checks itself on the rows (`LeakageError`) and writes a deterministic
     manifest that can re-create it (D018). (T010)
 - `docs/EVALUATION.md`: the evaluation method, starting with splits. No metrics yet. (T010)
+- Supplementary dataset evaluation in `docs/DATASETS.md`. For each gap BDG2 leaves, it records
+  a verified, cited recommendation, or that no source can fill it (D019). (T007b) The gaps:
+  - anomaly labels
+  - carbon factors and prices
+  - solar radiation, holidays and daylight
+  - sub-metered and independent buildings
+- A site-geography table from the BDG2 coordinates. It records three metadata problems: two
+  "US/Eastern" sites are in Canada, Wolf's longitude sign is flipped, and Fox is probably on
+  Arizona time. (T007b)
+- Roadmap tasks T007c, T007d, T009c, T021a, T040 and T041 to acquire and use the recommended
+  data. (T007b)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

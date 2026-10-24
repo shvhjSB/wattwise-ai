@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1–M3 complete)
+**Last updated:** 2026-10-24 · **Current milestone:** M3 — finishing T009c (metadata corrections), then M4 — Baseline forecasting and evaluation (M1 complete; M2 and M3 gained follow-up tasks from T007b)
 
 ## Summary
 
@@ -54,6 +54,21 @@ The application foundation runs end to end locally, and CI checks it automatical
   are tested only in the future window. Every split re-checks itself on the actual rows, raises
   `LeakageError` on any violation, and records a deterministic manifest (D018,
   [EVALUATION.md](EVALUATION.md)).
+- **Supplementary data evaluated (T007b, D019):** every gap BDG2 leaves now has a recommended,
+  source-verified option, or is stated as unfillable
+  ([DATASETS.md](DATASETS.md#supplementary-data-evaluation-t007b)).
+  - **Labels:** LEAD 1.0, human anomaly labels on 200 BDG2 meters in 2016, which join to our
+    data exactly.
+  - **Carbon factors:** eGRID2016, DESNZ, SEAI and the ECCC National Inventory Report.
+  - **Prices:** EIA, DESNZ and CSO.
+  - **Weather:** ERA5 solar radiation; humidity derived from BDG2.
+  - **Calendar:** holidays and sun position.
+  - **Other buildings:** Building 59 (sub-metered) and HKUST (independent).
+  - **Metadata errors found in BDG2:**
+    - Two "US/Eastern" sites are in Canada.
+    - Wolf's longitude sign is flipped.
+    - Fox is very likely on Arizona time, which could recover 137 excluded buildings (T009c).
+  - Nothing has been acquired yet.
 
 No model has been trained, so no ML metrics exist yet.
 
@@ -72,6 +87,7 @@ No model has been trained, so no ML metrics exist yet.
 | T009a | BDG2 timestamp-convention audit | 2026-10-24 |
 | T009b | BDG2 preprocessing pipeline | 2026-10-24 |
 | T010 | Leakage-safe split utilities | 2026-10-24 |
+| T007b | Supplementary dataset evaluation | 2026-10-24 |
 
 ## Current task
 
@@ -79,28 +95,30 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T011 — Evaluation harness and metrics**: one trusted way to score any forecaster. It covers:
-- MAE and RMSE.
-- WAPE, reported only when total actual consumption is meaningfully positive.
-- Per-meter and per-building results, plus macro averages.
-- JSON and Markdown reports that include the split manifest (T010), a data fingerprint and the
-  code version.
+**T009c — BDG2 site metadata corrections.** It needs no owner decision, and it changes which
+data later tasks can use. It will:
+- add a pinned, evidenced correction table: Fox → `America/Phoenix`, Wolf longitude → −6.2603,
+  and each site's country and region
+- re-run the Fox clock audit and update the pins only if the evidence agrees
+- re-run the preparation
 
-The metrics are tested against hand-computed values, the WAPE guard is tested, and reports are
-reproducible. See [ROADMAP.md](ROADMAP.md#t011--evaluation-harness-and-metrics).
+See [ROADMAP.md](ROADMAP.md#t009c--bdg2-site-metadata-corrections).
+
+After that comes T011, the evaluation harness. T007c (LEAD labels) and T007d (weather
+enrichment) wait for the owner's decisions below.
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
-| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 4 / 4 |
+| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 4 / 6 |
+| M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 4 / 5 |
 | M4 Baselines | T011–T012 | 0 / 2 |
-| M5 Improved model | T013–T015 | 0 / 3 |
-| M6 Anomaly detection | T016–T018 | 0 / 3 |
+| M5 Improved model | T013–T015, T041 | 0 / 4 |
+| M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
-| M8 Business impact | T021–T022 | 0 / 2 |
+| M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
@@ -133,7 +151,9 @@ pushes only as `shvhjSB` (D006).
 | The push identity is pinned only in this clone's `.git/config` | Every push from another clone | Repeat the D006 setup in any new clone. The commands are in WORK_LOG (T002) |
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
-| 5 of 19 BDG2 sites (522 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Per-building classification for mixed sites is possible later |
+| 5 of 19 BDG2 sites (522 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Fox (137) is likely a metadata time-zone error, re-checked in T009c. Per-building classification for mixed sites is possible later |
+| LEAD 1.0 has no licence on GitHub, and the Kaggle rules forbid redistribution | T007c, T018 | Local evaluation only, never committed or redistributed, cited; owner decision pending (D019) |
+| Supplementary sources differ by country and year; 4 BDG2 sites have no location | T021a, T007d | Per-site sourced tables; unlocated sites get "not configured", never a guess (D019) |
 | BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
 | The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,013 eligible meters (D017) |
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |

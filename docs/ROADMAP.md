@@ -27,9 +27,13 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T005 | Canonical data contracts and CSV upload format | M2 | T002 | Done |
 | T006 | Deterministic synthetic fixture generator | M2 | T005 | Done |
 | T007 | BDG2 acquisition tooling and dataset documentation | M2 | T005 | Done |
+| T007b | Supplementary dataset evaluation | M2 | T007, T009b | Done |
+| T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | M2 | T007b, T009c, owner decision | Not started |
+| T007d | Weather enrichment: ERA5 solar radiation, derived humidity | M2 | T007b, T009c, owner decision | Not started |
 | T008 | Data-quality engine and report | M3 | T005, T006 | Done |
 | T009a | BDG2 timestamp-convention audit | M3 | T007 | Done |
 | T009b | BDG2 preprocessing pipeline | M3 | T008, T009a | Done |
+| T009c | BDG2 site metadata corrections (Fox time zone, Wolf longitude, site regions) | M3 | T009a, T007b | Not started |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Done |
 | T011 | Evaluation harness and metrics | M4 | T010 | Not started |
 | T012 | Seasonal and historical baselines | M4 | T009b, T011 | Not started |
@@ -41,7 +45,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T018 | Injected-anomaly benchmark | M6 | T016, T017 | Not started |
 | T019 | Prediction intervals | M7 | T010, T012 | Not started |
 | T020 | Alert explanations | M7 | T017, T019 | Not started |
-| T021 | Excess energy, cost and carbon estimates | M8 | T019 | Not started |
+| T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
+| T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |
 | T022 | Alert prioritisation | M8 | T020, T021 | Not started |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Not started |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Not started |
@@ -60,6 +65,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T037 | Security hardening | M12 | T026 | Not started |
 | T038 | Deployment recipe and guide | M12 | T036 | Not started |
 | T039 | Final documentation | M12 | T034, T038 | Not started |
+| T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
+| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
 
 ---
 
@@ -177,6 +184,61 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
   - Nothing under `data/raw/` is tracked.
   - Unit tests use mocked HTTP.
 
+### T007b — Supplementary dataset evaluation
+- **Objective:** BDG2 lacks data the product needs. For each gap, find the best available data
+  from verified evidence, without inventing or guessing.
+- **Gaps:**
+  - real anomaly labels
+  - carbon factors and electricity prices for the sites' countries, regions and years
+  - solar radiation and the weather variables BDG2 lacks
+  - holidays
+  - sub-metered or occupancy data for cause hypotheses
+  - independent commercial buildings for generalisation
+- **Scope:**
+  - For each candidate, verify at the primary source:
+    - publisher, access and licence
+    - period, resolution, geography and size
+    - label or factor definitions
+    - overlap with BDG2
+  - Check the site geography the joins depend on, from the BDG2 metadata.
+  - Inspect small samples where needed to confirm content, e.g. that labels join to BDG2 meters.
+  - Recommend one source per gap, or "no adequate source", and plan acquisition and integration
+    as follow-up roadmap tasks.
+- **Acceptance:**
+  - `docs/DATASETS.md` has a candidate table with the evidence and a recommendation per gap.
+  - Every licence and number links to its source, and anything unverified is marked as such.
+  - Gaps no source can fill are stated plainly.
+  - The roadmap holds the follow-up tasks.
+
+### T007c — LEAD 1.0 anomaly labels
+- **Objective:** real human anomaly labels for BDG2 meters, kept local.
+- **Precondition:** the owner accepts local-only use of the unlicensed data.
+- **Scope:**
+  - A pinned, checksum-verified download of `lead1.0-small.zip` to git-ignored `data/raw/lead/`.
+  - Join the labels to BDG2 readings on `building_id_kaggle` and the local timestamp, then
+    convert to UTC with each site's clock.
+  - Use LEAD's labels only, never its readings.
+  - A label table plus a report: buildings per site, label rate, and readings that disagree
+    with BDG2.
+- **Acceptance:**
+  - Join coverage is measured on the full file.
+  - Exclusions have reasons.
+  - Tests run on a mini fixture.
+  - No LEAD data is committed.
+
+### T007d — Weather enrichment
+- **Objective:** add the weather drivers BDG2 lacks.
+- **Precondition:** the owner chooses the Copernicus CDS or Open-Meteo.
+- **Scope:**
+  - ERA5 hourly global, direct and diffuse radiation (and cloud cover) for the 15 sites with
+    coordinates, 2016–2017, in UTC, labelled "modelled (reanalysis)".
+  - Relative humidity derived from BDG2 temperature and dew point, labelled "derived".
+  - Kept as separate columns. Nothing is gap-filled across sources.
+- **Acceptance:**
+  - Pinned requests or files, with provenance in a manifest.
+  - Alignment is checked: radiation peaks near local solar noon.
+  - Sites without coordinates get none.
+
 ## M3 — Data validation and preprocessing
 
 ### T008 — Data-quality engine and report
@@ -236,6 +298,23 @@ convention **differs by site**, which made the convention audit a substantial ta
   - On the real download it records row counts, date ranges and meter counts.
   - Non-electric meters and undetermined-clock sites are excluded with explicit reasons.
 
+### T009c — BDG2 site metadata corrections
+- **Objective:** fix the metadata errors found in T007b, with evidence, instead of excluding
+  the data.
+- **Scope:**
+  - A pinned correction table, applied before the audit and preparation:
+    - Fox → `America/Phoenix` (Arizona has no daylight saving time).
+    - Wolf longitude → −6.2603.
+    - Each site's country and region, from its coordinates. There are none for Bobcat, Eagle,
+      Gator and Swan.
+  - Re-run the T009a audit for Fox under the corrected zone, and update the pins only if the
+    evidence agrees.
+  - Re-run T009b.
+- **Acceptance:**
+  - Every correction cites its evidence.
+  - The audit result for Fox is reported whatever it is.
+  - DATASETS.md and the pins stay in sync, with tests.
+
 ### T010 — Leakage-safe split utilities
 - **Objective:** make temporal leakage structurally hard.
 - **Scope:**
@@ -280,8 +359,10 @@ convention **differs by site**, which made the convention audit a substantial ta
 - **Objective:** time-aware features that never use future information.
 - **Scope:**
   - Calendar features: hour, day of week, month/season.
-  - Holidays, only where the site country is known.
-  - BDG2 site weather.
+  - Holidays, only where the site country is known: the `holidays` package (MIT), using the
+    T009c site regions.
+  - BDG2 site weather, plus the T007d radiation and derived humidity where available.
+  - Sun elevation and daylight from pvlib (BSD-3-Clause).
   - Lags of at least the forecast horizon, and rolling statistics shifted to exclude the current target.
   - A versioned feature list.
 - **Acceptance:**
@@ -340,9 +421,11 @@ convention **differs by site**, which made the convention audit a substantial ta
     - detection latency
     - false-alert rate on uninjected windows
   - Compare against a rolling z-score baseline and, optionally, Isolation Forest.
+  - If T007c is done, also score against LEAD's human labels (BDG2 meters, 2016). These results
+    are reported separately as "real data, human labels without measured agreement".
 - **Acceptance:**
   - The benchmark command is reproducible.
-  - Results are labelled "synthetic benchmark" in `docs/EVALUATION.md`.
+  - Results are labelled "synthetic benchmark" or "LEAD labels" in `docs/EVALUATION.md`.
   - A model-based detector is kept only where it beats the simple baseline.
 
 ## M7 — Explanation and uncertainty
@@ -370,6 +453,27 @@ convention **differs by site**, which made the convention audit a substantial ta
   - Tests guard against causal wording.
 
 ## M8 — Cost and potential-impact calculations
+
+### T021a — Sourced carbon-factor and price reference tables
+- **Objective:** real, cited factors and prices for the BDG2 sites, so estimates need no
+  invented numbers.
+- **Scope:** versioned reference tables, each value with its source, URL, year, unit and
+  geography, from the sources chosen in T007b:
+  - **Carbon:**
+    - US: eGRID2016, with subregions from a point-in-polygon lookup on the 2016 shapefiles.
+    - UK: DESNZ conversion factors 2016/2017.
+    - Ireland: SEAI.
+    - Ontario: the ECCC National Inventory Report.
+  - **Prices:**
+    - US: EIA-861 state commercial averages.
+    - UK: DESNZ Quarterly Energy Prices.
+    - Ireland: CSO TMEGB04.
+    - Ontario: none.
+  - Decide and record (D-entry) whether US factors are average or non-baseload, and which UK
+    factor-year convention applies.
+- **Acceptance:**
+  - Values are checked against the source files by a test or a recorded checksum.
+  - Sites without location, or without a source, return "not configured".
 
 ### T021 — Excess energy, cost and carbon estimates
 - **Objective:** transparent impact estimates with explicit assumptions.
@@ -522,3 +626,27 @@ convention **differs by site**, which made the convention audit a substantial ta
   - The README: Mermaid architecture diagram, features, quickstart, ML methodology and limitations.
   - `docs/ARCHITECTURE.md` and `docs/MODEL_CARD.md`.
   - A finalised `docs/DATASETS.md` and `LICENSES.md`.
+
+## Added after T007b (supplementary data)
+
+### T040 — Detector checks on a sub-metered building
+- **Objective:** test whether the whole-building detector reacts to known kinds of event, using
+  data with end uses, HVAC points and occupancy.
+- **Scope:**
+  - Download LBNL Building 59 (CC0, Dryad 10.7941/D1N33Q, 263 MB), pinned and git-ignored.
+  - Mask the spans its authors imputed.
+  - Run the baseline and detector on the whole-building series. Compare the alerts with the
+    end-use, HVAC and occupancy data and with the dated events (wildfire damper closures,
+    COVID shelter-in-place).
+- **Acceptance:**
+  - Results are reported as one building's case study.
+  - Nothing is claimed about causes in BDG2 buildings.
+
+### T041 — Generalisation test on independent buildings
+- **Objective:** measure how the chosen forecaster performs outside BDG2's population and years.
+- **Scope:** evaluate on the HKUST campus smart-meter database (CC0, Dryad
+  10.5061/dryad.k3j9kd5h6, 2022–2024), pinned and git-ignored, with the T011 harness and the
+  T010 splits. It is reported separately from the BDG2 results.
+- **Acceptance:**
+  - Real-run metrics, or "not run" with the reason.
+  - Coverage and missing data are reported per meter.

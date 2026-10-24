@@ -783,3 +783,77 @@ only, not model results.
   - empty roles and non-canonical input
   - the documentation sync test
   - the synthetic fixture with a site holdout
+
+**Commit:** `b088f74` feat(ml): add leakage-safe evaluation splits. CI run
+[40075177047](https://github.com/shvhjSB/wattwise-ai/actions/runs/40075177047) was green
+(260 backend tests, 21 frontend tests). The local Linux replay also passed (260 tests), after
+two attempts that failed on PyPI network timeouts.
+
+---
+
+## 2026-10-24 — T007b Supplementary dataset evaluation
+
+**Why.** The owner asked how complete the data is, then asked for an evaluation of other
+datasets to fill BDG2's gaps with the best available data. The task was added to the roadmap
+as T007b before any work started.
+
+**Method**
+1. **Site geography, from the BDG2 metadata.**
+   - 1,449 buildings carry `building_id_kaggle`.
+   - The 15 sites with coordinates were reverse-geocoded with OpenStreetMap Nominatim, at one
+     request per second with an identifying User-Agent.
+2. **Research.** Four parallel research passes (labels; carbon and prices; weather and
+   calendar; sub-metered and independent buildings). Each had to cite the primary source for
+   every fact and mark anything unverified.
+3. **Independent double-checks**, before anything was written down:
+   - Repository APIs for licences and sizes: Dryad (Building 59, HKUST), figshare (CU-BEMS),
+     PyPI (`holidays`, pvlib) and GitHub (LEAD: no licence, file size, open issues).
+   - Open-Meteo's terms and licence pages.
+   - The EIA API for AZ, NY and TX commercial prices.
+   - Parsing the original files: eGRID2016 Table 1, the DESNZ 2016 flat file, SEAI Energy in
+     Ireland 2018, and NIR Table A13-7 for Ontario.
+   - Re-running the LEAD-to-BDG2 join check.
+   - One correction to a research pass: figshare lists CU-BEMS as 16 files and 742 MB, not
+     about 1.48 GB.
+
+**Findings**
+- **Metadata problems:**
+  - Crow and Moose ("US/Eastern") are in Ontario, Canada.
+  - Wolf's longitude sign is flipped. As published it geocodes to the Netherlands; corrected,
+    it gives Dublin.
+  - Fox's coordinates are in Arizona, which has no daylight saving time. Its audit evidence
+    (no profile shift, and real readings at the spring "non-existent" hour) fits `America/Phoenix`
+    and explains its "undetermined" verdict.
+- **LEAD 1.0:**
+  - All 200 public buildings map to BDG2.
+  - On a 117-hour sample, 97.6% of 21,804 readings equal BDG2 raw at zero shift; at every other
+    shift, at most 14% do.
+  - It has 152 usable buildings at sites with a determined clock, and 2016 only.
+  - It has no licence on GitHub, and the Kaggle rules forbid redistribution.
+- **Carbon and prices:**
+  - Annual factors exist for every located region for 2016 and 2017 (eGRID has no 2017
+    edition, and EPA says to use 2016).
+  - Prices exist for the US, the UK and Ireland. For Ontario, no adequate open retail price
+    was found.
+- **Weather:**
+  - Humidity can be derived from BDG2 itself.
+  - Radiation must come from ERA5 reanalysis. The Copernicus CDS needs an account; the
+    Open-Meteo free tier is non-commercial only.
+- **Sub-metered and independent buildings:** Building 59 (CC0) is the only candidate with end
+  uses, HVAC points and measured occupancy. HKUST (CC0) is the best independent set.
+- **Cannot be filled:** missing building metadata, academic calendars, and anything
+  location-based for the 4 sites without coordinates.
+
+**Records**
+- **DATASETS.md:** a new section, "Supplementary data", with the site geography, a
+  recommendation per gap and the evidence tables.
+- **DECISIONS.md:** D019, plus three open decisions for the owner.
+- **Roadmap:**
+  - T007b, plus follow-ups T007c, T007d, T009c, T021a, T040 and T041.
+  - T013, T018 and T021 now reference the new sources.
+
+**Not done.** Nothing was acquired into the repository or into `data/raw`. The research passes
+kept their downloads in the session scratchpad, outside the repository:
+- the LEAD sample
+- the source files and documentation for the carbon factors and prices
+- metadata files for the candidate datasets

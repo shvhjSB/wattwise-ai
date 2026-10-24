@@ -592,6 +592,44 @@ links to the entry that replaces it.
 
 ---
 
+## D019 — Supplementary data sources per gap
+- **Date:** 2026-10-24 · **Task:** T007b · **Status:** Accepted. Three items await the owner
+  (see Open decisions).
+- **Context:** BDG2 has no anomaly labels, prices, carbon factors or solar radiation, and thin
+  metadata. Its "US/..." time zones hide two Canadian sites and an Arizona site.
+- **Decision:** one recommended source per gap, each chosen on evidence: primary-source licence,
+  coverage of the BDG2 sites and years, and independence. The full evidence is in
+  [DATASETS.md](DATASETS.md#supplementary-data-evaluation-t007b).
+  - **Labels: LEAD 1.0.**
+    - The only real, human-labelled whole-building hourly dataset found. It is BDG2's own meters
+      in 2016.
+    - It joins to BDG2 at zero time shift (97.6% of sampled readings identical).
+    - Only its labels are used, never its readings.
+  - **Carbon factors:** eGRID2016 (US, also used for 2017, as EPA advises), DESNZ 2016/2017 (UK),
+    SEAI (Ireland) and the ECCC National Inventory Report (Ontario). All are annual averages for
+    the data year, with source and unit recorded.
+  - **Prices:** EIA-861 state commercial averages (US), DESNZ Quarterly Energy Prices (UK) and
+    CSO TMEGB04 (Ireland), labelled as averages and estimates. **Ontario gets no price**,
+    because no open retail commercial source was verified.
+  - **Weather:** ERA5 radiation (modelled) for the 15 located sites; humidity derived from BDG2.
+    Holidays from `holidays` (MIT), and sun position from pvlib (BSD-3-Clause).
+  - **Other buildings:** LBNL Building 59 (CC0) for detector checks against end uses, HVAC and
+    occupancy. HKUST (CC0) for generalisation. Both are reported separately from BDG2.
+  - **Not filled:** building metadata, academic calendars, and every location-based input for
+    the 4 sites without coordinates. They stay missing; nothing is inferred.
+- **Alternatives considered:**
+  - **EnerNOC** (CC BY-NC) and the **Open-Meteo free tier** (non-commercial): usable only if
+    WattWise is non-commercial.
+  - **NREL ComStock:** rejected until its conflicting licence statements are clarified.
+  - **Building Data Genome 1:** rejected for independence; most of its buildings match BDG2.
+  - **The UK Carbon Intensity API:** rejected, as it starts in September 2017.
+- **Consequences:**
+  - New tasks: T007c (labels), T007d (weather), T009c (metadata corrections, which may recover
+    Fox's 137 buildings), T021a (reference tables), T040 (Building 59) and T041 (HKUST).
+  - Nothing is acquired until its task runs; no supplementary data is committed.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
@@ -602,4 +640,7 @@ links to the entry that replaces it.
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
+| LEAD 1.0 use under an unclear licence | T007c | Recommended: local evaluation only, never redistributed, cited (D019) |
+| Is WattWise non-commercial? | T007d, T041 | Decides the Open-Meteo free tier and EnerNOC; otherwise use the Copernicus CDS |
+| US carbon rate type and UK factor-year convention | T021a | Recommended: average (total output) factors; the publisher's reporting-year convention |
 

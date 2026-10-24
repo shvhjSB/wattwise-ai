@@ -1343,3 +1343,68 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - **Other:** determinism and row order; input checks; group selection; config bounds; the
     manifest; FEATURES.md in sync; the CLI writes identical outputs and reports what is missing.
 - The frontend was not re-run locally: no frontend file changed. CI runs it.
+---
+
+## 2026-10-25 — T014 ML forecaster vs baselines
+
+**Inputs checked first.** Before any training:
+- The BDG2, ERA5 and LEAD raw files all passed their pinned checksums (`verify`).
+- Every processed output matched its manifest hash (BDG2 pipeline version 2, ERA5 with
+  alignment passed, LEAD, features).
+- The feature manifest's inputs matched the current files.
+
+**Done**
+- **`wattwise.ml.models`:** a `FeatureModel` with the baselines' `fit`/`predict` interface,
+  so the T011 harness scores it unchanged.
+  - **Families:** ridge, HistGradientBoosting, LightGBM.
+  - **Variants:** `full` (target divided by the meter's mean over the week ending 168 h
+    before; no meter identity) and `conditions` (no history; training mean and training
+    hour-of-week median as a ratio).
+  - **Rules:** everything is fitted on training rows. Columns with no training value are
+    dropped. Rows without a usable scale (missing, or below 0.01) get no prediction.
+    Predictions are clipped at zero.
+  - **Study:** grid on validation, then the chosen settings scored once on test, plus building
+    and site holdouts (25%, seed 0) for unseen buildings. A written adoption decision.
+  - **CLI:** `comparison.json`, `comparison.md` and T011 reports per model and split.
+- **Dependencies:** `uv add "scikit-learn>=1.9.1,<1.10" "lightgbm>=4.7,<4.8"`.
+  - Added: scikit-learn 1.9.1 (2026-09-10), LightGBM 4.7.0 (2026-07-18), scipy 1.18.1,
+    joblib 1.6.0, threadpoolctl 3.7.0, cloudpickle 3.1.2, narwhals 2.27.1 (2026-10-10,
+    exactly 14 days).
+  - A mypy override marks scikit-learn as untyped (it has no `py.typed`).
+- **Fixed during the task:** HistGradientBoosting crashed on a feature that was missing in
+  every training row (the synthetic tests have no ERA5). Such columns are now dropped at fit.
+  Models also share the feature table instead of copying it.
+
+**Result (BDG2 sample, same split as T012; about 5 minutes)**
+- **Validation winner:** LightGBM full, 200 trees (MAE 7.570). Best per family: HGB full
+  7.679, ridge full 8.391, LightGBM conditions 10.920, HGB conditions 11.007, ridge conditions
+  13.570.
+- **Test (scored once):** LightGBM full MAE 7.490 (seasonal-naive 8.763). On the 43,000
+  common rows, 7.486 against 8.764 (**−14.6%**). Better on 17 of 20 meters; macro MAE 7.43
+  against 8.71.
+- **Unseen buildings** (LightGBM full against seasonal-naive):
+  - building holdout (5 buildings at Eagle, Gator and Hog): +0.1%
+  - site holdout (Hog and Lamb): −14.4%
+  - So not adopted for unseen buildings.
+- **No-history models:** 15–37% worse than seasonal-naive on test.
+- **Decision (D026):** LightGBM full adopted for seen buildings; seasonal-naive stays for
+  unseen buildings.
+- **Determinism:** a second full run gave byte-identical files (44 of 44).
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 61
+  files.
+- `pytest -W error`: **467 passed**, 28 new, on a synthetic weather-driven load (labelled
+  synthetic):
+  - every family and variant beats seasonal-naive by more than 20% there
+  - predictions are deterministic and never negative
+  - conditions models are unchanged when every value outside training is rewritten
+  - full models are unchanged before cutoff + 168 h when later readings are rewritten
+  - unknown meters, unusable scales and unfitted models are handled
+  - names and parameters
+  - the conditions variant has no history inputs
+  - grid choice on validation, with no test in the trials
+  - the decision on common rows and unseen buildings
+  - conditions models give no unseen predictions
+  - summary and Markdown
+  - the CLI without data

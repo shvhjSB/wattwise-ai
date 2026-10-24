@@ -901,6 +901,36 @@ links to the entry that replaces it.
     from before the test window. That is legitimate at forecast time. A strict cold-start claim
     must drop the `history` group.
 
+## D026 — Adopt LightGBM (full features) for seen buildings; seasonal-naive stays elsewhere
+- **Date:** 2026-10-24 · **Task:** T014 · **Status:** Accepted
+- **Decision:** `wattwise.ml.models` (results in [EVALUATION.md](EVALUATION.md#models-t014)).
+  - **Model for seen buildings:** LightGBM, full features, 200 trees, learning rate 0.05, 31
+    leaves, at least 50 rows per leaf, seed 0, deterministic single-threaded training. The
+    target is the reading divided by the meter's mean over the week ending 168 h before.
+  - **Evidence:** it was the validation winner among 16 trials (3 families × 2 variants × small
+    grids). On the test quarter it reduces MAE by 14.6% against seasonal-naive on the 43,000
+    rows both predict (7.486 against 8.764 kWh), and it is better on 17 of 20 meters.
+  - **Unseen buildings:** seasonal-naive stays the default. The best full model ties it on a
+    building holdout (+0.1%) and loses on a site holdout (−14.4%).
+  - **Rule applied:** settings and the winner are chosen on validation only; test is scored
+    once for the chosen settings; adoption needs a lower MAE on common rows.
+  - **Libraries:** scikit-learn 1.9.1 (BSD-3-Clause) and LightGBM 4.7.0 (MIT), both at least
+    two weeks old. scikit-learn ships no type information, so mypy treats it as untyped.
+- **Alternatives considered:**
+  - **No-history ("conditions") models,** which cannot absorb a sustained anomaly: rejected for
+    now. They were 15–37% worse than seasonal-naive on test.
+  - **Meter identity as a feature:** rejected. It cannot serve unseen buildings, and the full
+    model's scaling already carries each meter's level.
+  - **Refitting on train plus validation before testing:** not done, so models and baselines
+    follow the same rule (D024). The production fit is T015's decision.
+  - **Larger grids or early stopping:** deferred. The small grids were flat (ridge: identical
+    to 3 decimals; boosting: 200 vs 500 trees within 0.5%), and more searching on one
+    validation quarter risks overfitting it.
+- **Consequences:**
+  - T015 packages this model with its feature set version, scale rule and settings.
+  - T016 must account for history absorbing sustained anomalies after a week (D025).
+  - Results are expected-consumption accuracy with observed weather, not forecast accuracy.
+
 
 ---
 

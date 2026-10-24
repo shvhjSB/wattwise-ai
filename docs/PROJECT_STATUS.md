@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M5 — Improved forecasting model (M1–M4 complete)
+**Last updated:** 2026-10-25 · **Current milestone:** M5 — Improved forecasting model (M1–M4 complete)
 
 ## Summary
 
@@ -118,7 +118,17 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Deterministic:** byte-identical outputs, independent of row order; 350,816 rows in about
     7 s.
 
-No ML model has been trained yet (T014).
+- **Models (T014, D026):** `python -m wattwise.ml.models` trains ridge, HistGradientBoosting
+  and LightGBM, with and without consumption history. Settings and the winner are chosen on
+  validation, and test is scored once ([EVALUATION.md](EVALUATION.md#models-t014)).
+  - **Adopted for seen buildings: LightGBM with all features.** Test MAE 7.49 kWh against 8.76
+    for seasonal-naive (−14.6% on the rows both predict); better on 17 of 20 meters.
+  - **Not adopted for unseen buildings:** a tie on a building holdout (+0.1%) and 14.4% worse
+    on a site holdout. Seasonal-naive stays the default there.
+  - **No-history models lose to seasonal-naive** (15–37% worse on test). History absorbing
+    sustained anomalies remains a known issue for T016.
+  - These are expected-consumption results with observed weather, on one 20-meter sample; not
+    forecast accuracy, and not anomaly detection.
 
 ## Completed tasks
 
@@ -142,6 +152,7 @@ No ML model has been trained yet (T014).
 | T007d | Weather enrichment (ERA5 radiation, derived humidity) | 2026-10-24 |
 | T012 | Seasonal and historical baselines | 2026-10-24 |
 | T013 | Leakage-safe feature engineering | 2026-10-24 |
+| T014 | ML forecaster vs baselines | 2026-10-25 |
 
 ## Current task
 
@@ -149,14 +160,14 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T014 — ML forecaster vs baselines:** adopt a model only if it measurably beats seasonal-naive
-(test MAE 8.763 kWh, WAPE 8.6%) on the same split and rows. It covers:
-- Ridge regression, HistGradientBoosting and LightGBM (if installable), on the T013 features.
-- Imputation and scaling fitted on training rows only.
-- Future-period and unseen-building evaluation, with fixed seeds.
-- Results with and without the history features.
+**T015 — Model artifacts, metadata and registry:** save the adopted LightGBM model (D026) as a
+versioned artifact the API can load safely. It covers:
+- `artifacts/models/<version>/`: the model plus its training period, data fingerprint, code
+  version, settings, feature set version, scale rule and metrics.
+- Atomic promotion of a new model, and graceful handling when none exists.
+- Train and evaluate commands, and round-trip tests. Artifacts stay git-ignored.
 
-See [ROADMAP.md](ROADMAP.md#t014--ml-forecaster-vs-baselines).
+See [ROADMAP.md](ROADMAP.md#t015--model-artifacts-metadata-and-registry).
 
 ## Milestone progress
 
@@ -166,7 +177,7 @@ See [ROADMAP.md](ROADMAP.md#t014--ml-forecaster-vs-baselines).
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
-| M5 Improved model | T013–T015, T041 | 1 / 4 |
+| M5 Improved model | T013–T015, T041 | 2 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
@@ -212,7 +223,8 @@ pushes only as `shvhjSB` (D006).
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
 | Splits cannot stop features from looking ahead, or repeated use of the test window | T014 | T013 features are proven leakage-safe by tests (D025); model selection on validation or rolling folds only (D018) |
 | Weather features use the observed weather of the target hour | T014 reporting | Results are expected-consumption accuracy, not forecast accuracy; say so with every result (D025) |
-| History features absorb a sustained anomaly after the horizon | T014, T016 | Compare models with and without the `history` group (D025) |
+| History features absorb a sustained anomaly after the horizon | T016 | Compared in T014: no-history models lose to seasonal-naive, so the adopted model uses history. T016 must score residuals before an anomaly reaches the history window, or exclude flagged periods (D026) |
+| The adopted model does not generalise to unseen sites on this sample | Uploads of new buildings | Seasonal-naive stays the default for buildings without training data (D026) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

@@ -3,10 +3,11 @@
 **Explainable energy-waste intelligence for commercial buildings.**
 
 > **Status: early development.** The backend API skeleton, the frontend shell, the data pipeline,
-> leakage-safe evaluation splits, two simple baselines with first metrics, and leakage-safe
-> features are in place. No ML model has been trained yet. Nothing in this repository should be
-> read as a measured result until it appears in [docs/EVALUATION.md](docs/EVALUATION.md) with the
-> command that produced it.
+> leakage-safe evaluation splits, two simple baselines, leakage-safe features and a first ML
+> model are in place. LightGBM beats the seasonal baseline on a 20-meter BDG2 sample for
+> buildings it was trained on, but not yet for unseen buildings. No anomaly detection exists
+> yet. Nothing in this repository should be read as a measured result until it appears in
+> [docs/EVALUATION.md](docs/EVALUATION.md) with the command that produced it.
 > See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
 
 ## The problem
@@ -49,7 +50,7 @@ designed to say so wherever it shows a result.
 | Operations | Docker Compose, GitHub Actions, environment-based configuration |
 
 ```
-backend/     Python project "wattwise" (src layout): api, data (contracts, BDG2, quality, weather), ml (splits, evaluation, baselines, features; models to follow)
+backend/     Python project "wattwise" (src layout): api, data (contracts, BDG2, quality, weather), ml (splits, evaluation, baselines, features, models)
 frontend/    React + TypeScript + Vite application
 scripts/     dataset acquisition, preprocessing, training and evaluation entry points (planned)
 data/        sample/ = tiny synthetic fixtures (committed); raw/ and processed/ are git-ignored

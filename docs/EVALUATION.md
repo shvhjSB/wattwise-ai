@@ -273,3 +273,91 @@ about 1% of rows. On exactly the rows both baselines predict, the test MAE is **
   in T013.
 - **Limits:** these are results for one seeded sample of 20 meters on cleaned data, not
   BDG2-wide or real-world performance. They are not anomaly-detection results.
+
+## Models (T014)
+
+`wattwise.ml.models` trains ML models on the T013 features and compares them with seasonal-naive
+(D026). Models use the baselines' `fit`/`predict` interface, so the T011 harness scores them in
+exactly the same way.
+
+**Candidates.** Ridge regression, scikit-learn's HistGradientBoosting and LightGBM, each in two
+variants:
+- **full:** every feature group. The target is the reading divided by the meter's mean over the
+  week ending 168 h before (`rolling_mean_168h`), and history features use the same scale. No
+  meter identity is used, so the model can forecast unseen buildings from their own past.
+- **conditions:** no consumption history. The scale is the meter's training mean, and the
+  meter's training median for the local hour of the week is a feature. It cannot forecast
+  buildings without training data.
+
+**Procedure.**
+1. All learned parts (scales, profiles, imputation, standardisation, the model) are fitted on
+   training rows only. Ridge imputes medians with missing-value indicators; the tree models
+   handle missing values natively. Predictions below zero become zero.
+2. A small settings grid per family (ridge `alpha`; tree count for the boosted models) is
+   scored on **validation**. The setting with the lowest validation MAE is kept, and the
+   validation winner across all six family-variant pairs is the candidate.
+3. The kept settings are scored **once** on test. Grid trials never touch the test window.
+4. **Adoption rule:** the candidate replaces seasonal-naive only if its MAE is lower on the rows
+   both predicted. Unseen buildings are judged separately: the best full model must beat
+   seasonal-naive on held-out buildings under both a building holdout and a site holdout (25%,
+   seed 0), with the settings chosen above.
+
+```bash
+uv run python -m wattwise.ml.models --data ../data/processed/bdg2/cleaned \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet
+```
+
+### Results on the BDG2 sample (2026-10-24)
+
+The data and the chronological split are the same as for the baselines. Errors are in kWh per
+hourly reading. Every number below is **expected-consumption accuracy with observed weather,
+not forecast accuracy** (D025). The run takes about 5 minutes; repeat runs give byte-identical
+reports, which are written to git-ignored `data/processed/evaluation/models/`.
+
+**Validation grid** (MAE): ridge full 8.391 (any `alpha`); ridge conditions 13.570; HGB full
+7.679 (200 trees) and 7.690 (500); HGB conditions 11.025 and 11.007; **LightGBM full 7.570
+(200 trees)** and 7.608 (500); LightGBM conditions 10.969 and 10.920.
+
+| Model (chosen setting) | Validation MAE | Test MAE | Test RMSE | Test bias | Test WAPE | Test missing prediction |
+|---|---|---|---|---|---|---|
+| seasonal-naive-1w | 8.886 | 8.763 | 17.987 | +0.833 | 8.6% | 466 |
+| ridge full (α 0.1) | 8.391 | 8.414 | 15.734 | −0.067 | 8.2% | 415 |
+| HGB full (200) | 7.679 | 7.637 | 14.022 | +0.333 | 7.4% | 415 |
+| **LightGBM full (200)** | **7.570** | **7.490** | **13.903** | +0.211 | **7.3%** | 415 |
+| ridge conditions (α 100) | 13.570 | 11.950 | 19.453 | +2.231 | 11.7% | 0 |
+| HGB conditions (500) | 11.007 | 10.061 | 16.909 | +2.634 | 9.9% | 0 |
+| LightGBM conditions (500) | 10.920 | 10.134 | 17.085 | +2.657 | 9.9% | 0 |
+
+**Against seasonal-naive on the rows both predicted** (MAE reduction; negative is worse):
+
+| Model | Validation | Test | Building holdout, unseen | Site holdout, unseen |
+|---|---|---|---|---|
+| ridge full | +7.3% | +4.0% | −5.0% | −2.0% |
+| HGB full | +15.1% | +12.8% | +0.4% | −12.4% |
+| **LightGBM full** | **+16.3%** | **+14.6%** (7.486 vs 8.764, 43,000 rows) | +0.1% (7.451 vs 7.461) | −14.4% (15.368 vs 13.434) |
+| conditions models | −23% to −53% | −15% to −37% | no prediction | no prediction |
+
+The held-out buildings were 5 at Eagle, Gator and Hog (building holdout), and the 5 buildings
+of Hog and Lamb (site holdout). On the seen buildings of those holdouts, the full models still
+beat seasonal-naive by 6–20% on test.
+
+**Decision (D026):**
+- **Seen buildings: LightGBM full (200 trees) is adopted.** It was the validation winner, and
+  on test it reduces MAE by 14.6% against seasonal-naive on common rows. It is better on 17 of
+  20 meters (per-meter test MAE), and its macro MAE is 7.43 against 8.71.
+- **Unseen buildings: not adopted; seasonal-naive stays.** The best full model only ties
+  seasonal-naive on the building holdout (+0.1%), and is 14.4% worse on the site holdout.
+- **No-history models are not adopted.** All are clearly worse than seasonal-naive: a
+  training-period weekly profile plus weather does not capture these meters' changes over time.
+
+**What this shows, and what it does not:**
+- The gain comes from combining recent history with conditions. Every model without history
+  loses to a one-week-old reading.
+- **The counterfactual concern stays open for T016.** The adopted model uses history, so a
+  sustained anomaly enters its inputs after a week (D025). T016 must handle that, for example
+  by scoring residuals before the anomaly reaches the history window, or by excluding flagged
+  periods from history. The no-history models are not good enough to replace it.
+- Unseen sites behave differently (the site-holdout errors are larger for every method), and
+  20 meters at 9 sites cannot show whether a model generalises to new campuses.
+- **Limits:** one seeded sample of 20 meters on cleaned data, one split, fixed small grids. Not
+  BDG2-wide or real-world performance, and not anomaly-detection results.

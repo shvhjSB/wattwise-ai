@@ -160,6 +160,22 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - `docs/FEATURES.md` lists every feature, and a test keeps it in sync.
 - `wattwise.data.solar`: NOAA sun position (elevation, declination, day length), cross-checked
   against pvlib's NREL SPA. (T013)
+- ML models and their comparison with the baselines (`python -m wattwise.ml.models --data
+  ...`), D026. (T014)
+  - **Candidates:** ridge, HistGradientBoosting and LightGBM, each with all features
+    (target scaled by the meter's recent week) or without consumption history (scaled by the
+    training mean, with a training weekly profile).
+  - **Procedure:** everything is fitted on training rows; settings and the winner are chosen
+    on validation; test is scored once; building and site holdouts test unseen buildings.
+  - **Result on the BDG2 sample:** LightGBM with all features is adopted for seen buildings:
+    test MAE 7.49 kWh against 8.76 for seasonal-naive (−14.6% on common rows). It is not
+    adopted for unseen buildings (a tie, and a site-holdout loss). No-history models lose to
+    seasonal-naive.
+  - **Outputs:** `comparison.json` and `comparison.md`, plus T011 reports per model, in
+    git-ignored `data/processed/evaluation/models/`.
+- New runtime dependencies scikit-learn 1.9.1 and LightGBM 4.7.0, with scipy 1.18.1, joblib,
+  threadpoolctl, narwhals and cloudpickle; every new lock entry is at least two weeks old.
+  (T014)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

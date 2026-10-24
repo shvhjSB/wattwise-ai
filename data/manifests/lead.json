@@ -1,0 +1,19 @@
+{
+  "dataset": "LEAD 1.0 (public subset of the Large-scale Energy Anomaly Detection dataset)",
+  "repository": "https://github.com/samy101/lead-dataset",
+  "commit": "80e1368228413d8550690ffbce67118bc4f6ea9d",
+  "git_blob_sha1": "867c4af643b887d10662a3739dd3dbe52846a054",
+  "citation": "Gulati, M., Arjunan, P. LEAD1.0: A Large-scale Annotated Dataset for Energy Anomaly Detection in Commercial Buildings. In Proc. ACM e-Energy '22, 485-488 (2022). https://doi.org/10.1145/3538637.3539761",
+  "licence_status": "No licence stated in the repository; the Kaggle competition rules forbid redistribution. Owner decision (D022): local evaluation only, never committed or redistributed, cited.",
+  "documentation": "docs/DATASETS.md",
+  "files": {
+    "lead_small": {
+      "url": "https://raw.githubusercontent.com/samy101/lead-dataset/80e1368228413d8550690ffbce67118bc4f6ea9d/data/lead1.0-small.zip",
+      "local_path": "lead1.0-small.zip",
+      "bytes": 10027589,
+      "sha256": "b0e34c66c0c4ce780b7bb19b199d33e19210675f16be102a5ac32d6b22e39d8f",
+      "downloaded_at": "2026-10-24T11:52:36Z",
+      "last_verified_at": "2026-10-24T11:52:36Z"
+    }
+  }
+}

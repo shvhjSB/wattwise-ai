@@ -1001,3 +1001,71 @@ was re-downloaded and checked against the workflow's pinned SHA-256.
   - **Fingerprint:** ignores order and index, changes with any value, timestamp or label, and
     treats signed zeros and NaN consistently.
   - **Code version:** in and outside a checkout.
+
+**Commit:** `0989016` feat(ml): add evaluation harness with reproducible reports. CI run
+[40091123402](https://github.com/shvhjSB/wattwise-ai/actions/runs/40091123402) was green
+(314 backend tests). The local Docker replay was skipped for speed; GitHub CI is the Linux check.
+
+---
+
+## 2026-10-24 — T007c LEAD 1.0 anomaly labels
+
+**Owner decisions (asked at the end of T011):**
+- LEAD may be used locally for evaluation only.
+- WattWise is non-commercial.
+- M2 is finished before the baselines.
+
+All three are recorded in D022.
+
+**Done**
+- **`wattwise.data.lead`:**
+  - **The pinned file:** commit `80e13682`, the only commit that touched the data file.
+    - The first download matched GitHub's git object id `867c4af6…`, a check independent of
+      the SHA-256 then pinned.
+  - **`fetch` and `verify`,** reusing `acquisition.ensure`. The manifest
+    `data/manifests/lead.json` holds provenance only.
+  - **`read_lead`:** checks the columns, 0/1 labels and no duplicate hours.
+  - **`prepare_labels`:**
+    - joins by `building_id_kaggle` and local time
+    - converts to UTC with the audited site clocks
+    - gives each excluded row one reason
+    - flags whether LEAD's reading agrees with BDG2's raw reading
+    - measures the share of anomalies that BDG2's cleaning removed
+  - **`write`:** a label table, an exclusion log, a report and a manifest.
+  - **CLI:** `prepare` verifies all inputs against the pinned checksums.
+- **Test fixture:** BDG2 fixture metadata now has `building_id_kaggle`.
+
+**Two bugs caught by the new tests before any result was kept:**
+1. **Clocks became plain strings.** Mapping clocks through a pandas Series turned the `Clock`
+   StrEnum into plain strings, and `to_utc` compares by identity, so standard-time sites (Eagle,
+   Fox, Moose, Wolf) were silently converted as wall-clock.
+   - The first real run showed it: 278 unconvertible hours, more than the 206 possible.
+   - Clocks are now looked up in a plain dict; no other code uses this pattern.
+2. **A mask assignment** into a pandas Series was replaced by positional numpy assignment.
+
+**Real-data result** (full file, 19 s, byte-identical on a second run):
+- **LEAD:** 1,749,494 rows, 200 buildings, 37,296 anomalies.
+- **Usable:** 1,438,672 rows, 173 buildings and 31,166 anomalies (2.17%), at 12 sites.
+- **Excluded rows:**
+  - 236,714 at undetermined-clock sites (Robin and Rat)
+  - 73,925 not annotated
+  - 183 unconvertible daylight-saving hours
+  - 0 unmatched
+- **Agreement with BDG2 raw:** 98.41% of rows match, but only 54.06% of anomalies (16,848). At
+  differing anomalies, LEAD often holds 1.0, or BDG2 holds 0.
+- **Cleaning:** 22.85% of anomalies have no cleaned BDG2 reading.
+- **Rules for T018:** use the raw variant, and trust only labels whose readings match.
+
+**Validation** (Windows)
+- ruff: clean. Format: clean. `mypy` (strict): no issues in 51 files.
+- `pytest -W error`: **328 passed**, of which 14 are new:
+  - the join in UTC for a standard-time and a wall-clock site
+  - one reason per excluded row, for all four reasons
+  - labels only, with disagreeing readings flagged
+  - the share of anomalies removed by cleaning
+  - the exclusion log
+  - malformed files rejected (3 cases), and the file read back
+  - byte-identical outputs, with the licence recorded in the manifest
+  - the pinned URL
+  - CLI `prepare` on BDG2-format files, and missing downloads
+  - outputs only in git-ignored folders

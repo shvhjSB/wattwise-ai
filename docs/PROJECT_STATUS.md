@@ -85,9 +85,13 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Other buildings:** Building 59 (sub-metered) and HKUST (independent).
   - **Metadata errors found in BDG2:** two "US/Eastern" sites are in Canada, and Fox and Wolf
     had the errors corrected in T009c.
-  - **Nothing has been acquired yet.** Only BDG2 is downloaded and preprocessed. The
-    supplementary data is downloaded in T007c (LEAD labels) and T007d (weather), which wait for
-    owner decisions, and later in T021a, T040 and T041.
+  - **LEAD labels acquired and joined (T007c, D022):**
+    - 1,438,672 usable hourly label rows on 173 BDG2 buildings in 2016, with 31,166 anomalies.
+    - Of those anomalies, 16,848 have LEAD readings that match BDG2's raw data, so those labels
+      are trusted.
+    - Kept locally only, by owner decision.
+  - **Still to acquire:** T007d (ERA5 solar radiation via Open-Meteo, derived humidity), then
+    T021a, T040 and T041 when their tasks run.
 
 No model has been trained, so no ML metrics exist yet.
 
@@ -109,6 +113,7 @@ No model has been trained, so no ML metrics exist yet.
 | T007b | Supplementary dataset evaluation | 2026-10-24 |
 | T009c | BDG2 site metadata corrections | 2026-10-24 |
 | T011 | Evaluation harness and metrics | 2026-10-24 |
+| T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | 2026-10-24 |
 
 ## Current task
 
@@ -116,25 +121,24 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T012 — Seasonal and historical baselines**: establish the bar every ML model must beat. It
-covers:
-- Seasonal-naive (the same hour in the previous week).
-- An hour-of-week median profile from the training window.
-- Both evaluated on the BDG2 sample with the T011 harness, with results and the exact command in
-  EVALUATION.md.
+**T007d — Weather enrichment**, the last M2 task (the owner chose to finish M2 first). It will
+add:
+- ERA5 hourly global, direct and diffuse radiation and cloud cover for the 15 BDG2 sites with
+  coordinates, 2016–2017, from the Open-Meteo archive API (`models=era5`, UTC). The free tier is
+  allowed because WattWise is non-commercial (D022).
+- Relative humidity derived from BDG2's temperature and dew point.
 
-Tests must show the baselines use only past or training data. See
-[ROADMAP.md](ROADMAP.md#t012--seasonal-and-historical-baselines).
+The data is labelled "modelled" and "derived", kept in separate columns, and its alignment is
+checked against solar noon. See [ROADMAP.md](ROADMAP.md#t007d--weather-enrichment).
 
-If the owner decides first, T007c (LEAD labels) or T007d (weather enrichment) can run before
-T012. Both wait for the decisions in DECISIONS.md, under Open decisions.
+After that comes T012, the seasonal and historical baselines.
 
 ## Milestone progress
 
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 4 / 6 |
+| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 5 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 1 / 2 |
 | M5 Improved model | T013–T015, T041 | 0 / 4 |
@@ -174,7 +178,8 @@ pushes only as `shvhjSB` (D006).
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
 | 4 of 19 BDG2 sites (385 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Fox was a metadata error, corrected with a falsifiable check (D020). Per-building classification for mixed sites such as Rat is possible later |
-| LEAD 1.0 has no licence on GitHub, and the Kaggle rules forbid redistribution | T007c, T018 | Local evaluation only, never committed or redistributed, cited; owner decision pending (D019) |
+| LEAD 1.0 has no licence on GitHub, and the Kaggle rules forbid redistribution | T018 | Owner decision (D022): local evaluation only, never committed or redistributed, cited. Data lives only in git-ignored folders (tested) |
+| LEAD's readings differ from BDG2's at 46% of labelled anomalies | T018 | Trust a label only where the readings match (per-row flag); report the others separately (D022) |
 | Supplementary sources differ by country and year; 4 BDG2 sites have no location | T021a, T007d | Per-site sourced tables; unlocated sites get "not configured", never a guess (D019) |
 | BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
 | The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,148 eligible meters (D017) |

@@ -117,6 +117,7 @@ def make_bdg2_raw(tmp_path: Path) -> BDG2Builder:
                 metadata.append(
                     {
                         "building_id": building,
+                        "building_id_kaggle": len(metadata),
                         "site_id": site_id,
                         "primaryspaceusage": "Office",
                         "sqm": 1000.0 + 100 * i,

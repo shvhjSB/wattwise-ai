@@ -412,6 +412,43 @@ zone. The coordinates are the evidence, and the check is a test the correction c
   - The arXiv CC BY 4.0 licence covers the paper.
   - **Recommendation:** use it locally for evaluation only. Never commit or redistribute it, cite
     the paper, and ask the authors to clarify the licence.
+  - **Owner decision (2026-10-24, D022):** accepted. LEAD is used locally for evaluation only.
+- **Acquired and joined (T007c):**
+
+  ```bash
+  uv run python -m wattwise.data.lead fetch      # 10 MB into ../data/raw/lead
+  uv run python -m wattwise.data.lead prepare    # labels into ../data/processed/lead
+  ```
+
+  - **Pinned download:** commit `80e13682`, 10,027,589 bytes, SHA-256 `b0e34c66…`. The download
+    also matched GitHub's own git hash for the file (double-checked). Provenance is in
+    [`data/manifests/lead.json`](../data/manifests/lead.json); the data is git-ignored.
+  - **The join:** each label joins to its BDG2 meter by `building_id_kaggle` and local time,
+    then converts to UTC with the site's audited clock. Only LEAD's labels are used, never its
+    readings.
+  - **Full-file result** (2026-10-24, byte-identical on a second run):
+
+    | | |
+    |---|---|
+    | LEAD | 1,749,494 rows, 200 buildings, 37,296 anomalies |
+    | Usable labels | **1,438,672 rows, 173 buildings, 31,166 anomalies (2.17%)** in 2016, across 12 sites |
+    | Excluded rows | 236,714 at undetermined-clock sites (Robin and Rat); 73,925 not annotated (LEAD blanked the reading, so it was never judged); 183 daylight-saving hours with no single UTC time; 0 without a BDG2 match |
+    | LEAD reading equals BDG2 raw | 98.41% of usable rows, but only **54.06% of usable anomalies (16,848 of 31,166)** |
+    | Anomalies without a cleaned BDG2 reading | 22.85% |
+
+  - **Rules for evaluation (T018):**
+    1. **Score against BDG2's raw readings.** BDG2's cleaning removed 22.85% of the labelled
+       anomalies.
+    2. **Trust a label only where LEAD's reading equals BDG2's**
+       (`lead_reading_matches_bdg2_raw`). At 14,318 labelled anomalies the readings differ:
+       - Across all of LEAD's anomalies, 7,192 have a BDG2 reading of 0 where LEAD has a value.
+       - Most of the others are far lower in LEAD (a median ratio of 0.05), often exactly 1.0
+         where BDG2 has an ordinary value.
+       - LEAD does not document why. Those labels describe data that differs from BDG2's, so they
+         are reported separately.
+    3. Moose's single building never matches (a units difference), so it is excluded by rule 2.
+    4. The labels mark readings the annotators found unusual. They are not confirmed waste, and
+       the annotators' agreement was never measured.
 - **Alternatives considered** (fit for evaluating a whole-building hourly detector):
   - **LBNL fault detection datasets:** HVAC equipment, mostly simulated, 1-minute. Fit 1 of 5.
   - **REFIT annotated anomalies:** 5 houses, appliance level. Fit 1 of 5.

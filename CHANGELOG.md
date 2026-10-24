@@ -114,6 +114,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - JSON and Markdown reports embed the split manifest, a content fingerprint of the readings
     and the code version, and are byte-identical for the same inputs.
 - The test helpers for canonical readings moved to `tests/ml/conftest.py`. (T011)
+- LEAD 1.0 anomaly labels (`python -m wattwise.data.lead fetch|verify|prepare`), local use only
+  by owner decision. (T007c)
+  - A pinned download, verified by SHA-256 and GitHub's git hash. Provenance is in
+    `data/manifests/lead.json`.
+  - The labels join to BDG2 meters in UTC through the audited site clocks. Every excluded row
+    has one reason, and a per-row flag records whether LEAD's reading equals BDG2's.
+  - Outputs: a label table, an exclusion log, a report and a manifest. They are deterministic
+    and git-ignored (D022).
+- The BDG2 test fixture's metadata now carries `building_id_kaggle`. (T007c)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -723,6 +723,41 @@ links to the entry that replaces it.
 
 ---
 
+## D022 — Owner decisions on LEAD and usage, and the LEAD label join
+- **Date:** 2026-10-24 · **Task:** T007c · **Status:** Accepted (owner decisions of 2026-10-24)
+- **Owner decisions:**
+  1. **LEAD 1.0 is used locally for evaluation only.** It is never committed or redistributed,
+     and the paper is always cited. Its repository has no licence and the Kaggle rules forbid
+     redistribution (D019).
+  2. **WattWise is non-commercial**, a personal portfolio and research project.
+     - So the Open-Meteo free API may be used for ERA5 weather (T007d).
+     - EnerNOC's CC BY-NC data is also usable (T041).
+     - This must be revisited if the project is ever used commercially.
+- **Decision (join design):** `wattwise.data.lead`.
+  - **Pinned download:** commit `80e13682` and SHA-256, also matched against GitHub's git hash.
+    Provenance only is committed, in `data/manifests/lead.json`.
+  - **Join:** labels join by `building_id_kaggle` and local time, and are converted to UTC with
+    each site's audited clock.
+  - **Exclusions,** each with one reason: no BDG2 building, undetermined clock, not annotated
+    (LEAD blanked the reading), or an unconvertible daylight-saving hour.
+  - **Labels only:** LEAD's readings are never used. A per-row flag records whether LEAD's
+    reading equals BDG2's raw reading, within 1e-3.
+- **Evidence (full file):**
+  - 1,438,672 usable rows on 173 buildings, with 31,166 anomalies.
+  - LEAD's readings equal BDG2's at 98.41% of rows but only 54.06% of anomalies.
+  - 22.85% of the anomalies have no cleaned BDG2 reading.
+- **Consequences:**
+  - T018 scores detectors against LEAD on the raw variant, on rows where the readings match.
+    Mismatched labels are reported separately.
+  - Two bugs were found by the tests and fixed before any result was kept:
+    - **Clock identity:** pandas `Series.map` turns the `Clock` StrEnum into plain strings, so
+      `to_utc`'s identity check treated standard-time sites as wall-clock. Clocks are now looked
+      up in a plain dict. It is the only such use in the code base.
+    - **Assignment:** a mask assignment into a pandas Series was replaced by positional numpy
+      assignment.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
@@ -733,7 +768,5 @@ links to the entry that replaces it.
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
-| LEAD 1.0 use under an unclear licence | T007c | Recommended: local evaluation only, never redistributed, cited (D019) |
-| Is WattWise non-commercial? | T007d, T041 | Decides the Open-Meteo free tier and EnerNOC; otherwise use the Copernicus CDS |
 | US carbon rate type and UK factor-year convention | T021a | Recommended: average (total output) factors; the publisher's reporting-year convention |
 

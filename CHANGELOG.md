@@ -75,6 +75,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     byte-identical across runs (D017)
   Outputs stay in git-ignored `data/processed/`. (T009b)
 - Backend dependency: pyarrow 26 for Parquet. (T009b)
+- Leakage-safe evaluation splits (`wattwise.ml.splits`):
+  - Chronological train/validation/test splits and rolling-origin folds with expanding
+    windows, from explicit UTC windows with an optional gap.
+  - A building or site holdout; held-out buildings are tested only in the future window, as
+    `test_unseen`.
+  - A reading counts only if its whole interval fits its window.
+  - Every split re-checks itself on the rows (`LeakageError`) and writes a deterministic
+    manifest that can re-create it (D018). (T010)
+- `docs/EVALUATION.md`: the evaluation method, starting with splits. No metrics yet. (T010)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -86,6 +95,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   `install -e ".[dev]"` path was removed, because the dev tools became a dependency group. (T004)
 - The frontend's declared Node.js range is now `^22.22.2 || ^24.15.0 || >=26.0.0`, matching what
   the locked test toolchain requires. (T004)
+- The quality engine's interval rule is public as `wattwise.data.quality.infer_interval`, so
+  the splits use the same rule. (T010)
 
 ### Fixed
 - `docs/DATASETS.md` no longer states the T007 hypothesis that all BDG2 sites use local

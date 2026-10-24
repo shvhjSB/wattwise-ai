@@ -709,3 +709,77 @@ before any pipeline code was written.
   - the Parquet output satisfies the contracts and reads back unchanged
   - the manifest content, and the raw variant
   - the CLI rejects unverified inputs and runs with real site names
+
+**Commit:** `9c534f2` feat(data): add deterministic BDG2 preprocessing pipeline. CI run
+[40072783539](https://github.com/shvhjSB/wattwise-ai/actions/runs/40072783539) was green
+(212 backend tests, 21 frontend tests).
+
+---
+
+## 2026-10-24 — T010 Leakage-safe split utilities
+
+**Done**
+- **`wattwise.ml.splits`** (the first `wattwise.ml` module). Its configs are frozen pydantic
+  models that reject unknown fields, naive datetimes, negative gaps and empty or overlapping
+  windows:
+  - `Chronological`: train / optional validation / test, with an optional gap.
+  - `RollingOrigin`: expanding folds with horizon, step, number of folds and gap.
+  - `Holdout`: a fraction, a seed, and grouping by building or site.
+  - `SplitConfig` combines a time config with an optional holdout and has a SHA-256.
+- **`make_split(readings, config, buildings)`** does the following:
+  - assigns every reading a role (`train`, `validation`, `test`, `test_unseen`) or one unused
+    reason
+  - counts a reading only if its whole interval fits its window
+  - re-checks each fold on the rows with `verify`, raising `LeakageError`
+  - raises an error for any role with no readings
+  - stores folds as row positions into the source table, not copies
+- **Manifest:** `write_manifest` writes deterministic JSON (config, SHA-256, holdout IDs, and per
+  fold the windows, role statistics and unused counts). `read_config` re-creates the config and
+  rejects an edited manifest.
+- **`infer_interval`** in the quality engine is now public, so both modules share one interval
+  rule.
+- **Docs:** a new `docs/EVALUATION.md` (method only, no metrics) and D018. A test keeps its role
+  and reason tables in sync with the code.
+
+**Performance fix found by profiling.** The first version took 12.1 s for 13 rolling folds on
+the BDG2 sample. 8 s of that was iterating Arrow-backed strings in Python, to collect the
+buildings per role. Building sets now come from `pd.factorize` codes, and the duplicate check uses
+`np.bincount` instead of a sort. Results:
+- the BDG2 sample: 0.8 s
+- a synthetic 5.3 M-row table, 13 folds plus a holdout: 21 s, down from 137 s
+
+**Observed on the BDG2 sample** (`data/processed/bdg2/cleaned`, 20 meters). These are split sizes
+only, not model results.
+- **Chronological split:** train 2016-01-01 to 2017-07-01, validation to 2017-10-01, test to
+  2018-01-02, site holdout 0.2 with seed 2016.
+  - The holdout drew Cockatoo and Peacock: 5 meters.
+  - Train 196,825 rows, validation 33,120, test 33,159, test_unseen 11,055.
+  - 76,645 held-out readings before the test window are unused; there are no other unused rows.
+- **Rolling origin:** from 2017-01-02, 28-day horizon and step, 13 folds.
+  - Training grows from 176,030 to 337,272 rows; each test window has 13,440.
+  - The last window ends 2018-01-01T00:00Z, so 92 late-UTC rows are outside the windows.
+- **The documented example** in EVALUATION.md was executed verbatim on this sample and gave the
+  same 196,825 training rows.
+
+**Validation** (Windows)
+- `uv lock --check`: pass. ruff: clean. Format: 45 files. `mypy` (strict): no issues in 44 files.
+- `pytest -W error`: **260 passed**, of which 48 are new. They cover:
+  - role counts for chronological splits with and without validation, the gap and rows outside
+    the windows
+  - invalid configs, with seven cases
+  - UTC normalisation
+  - the interval rule: a daily reading across a boundary, 15-minute meters, a single-reading
+    meter
+  - rolling folds expanding, and a 9-case sweep that tests strictly after training, honours
+    the gap and isolates the holdout
+  - holdout size limits, the site holdout and its input errors, and the seed (row order
+    doesn't matter)
+  - determinism: identical manifests from a JSON round-trip of the config, unchanged results
+    for shuffled rows, re-creating a split from a saved manifest, and rejecting edited or
+    foreign manifests
+  - manifest content
+  - `verify` catching four kinds of tampering: test rows in training, a row with two roles, a
+    held-out building in training, and training after testing in a stretched fold
+  - empty roles and non-canonical input
+  - the documentation sync test
+  - the synthetic fixture with a site holdout

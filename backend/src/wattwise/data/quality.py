@@ -191,7 +191,7 @@ def _assess_meter(
     findings: list[Finding] = []
 
     diffs = np.diff(times)
-    interval = _infer_interval(diffs)
+    interval = infer_interval(diffs)
     if interval is None:
         contiguous = np.zeros(len(times), dtype=bool)
         expected, absent = len(times), 0
@@ -251,8 +251,9 @@ def _assess_meter(
     )
 
 
-def _infer_interval(diffs: IntArray) -> int | None:
-    """The most common positive step (ties: the shortest), in microseconds."""
+def infer_interval(diffs: IntArray) -> int | None:
+    """A meter's interval: the most common positive step between its sorted timestamps (ties: the
+    shortest), in microseconds. None if there is no positive step. Also used by the splits."""
     positive = diffs[diffs > 0]
     if positive.size == 0:
         return None

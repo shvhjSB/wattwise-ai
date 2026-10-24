@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-24 · **Current milestone:** M3 — Data validation and preprocessing (M1 and M2 complete)
+**Last updated:** 2026-10-24 · **Current milestone:** M4 — Baseline forecasting and evaluation (M1–M3 complete)
 
 ## Summary
 
@@ -49,6 +49,11 @@ The application foundation runs end to end locally, and CI checks it automatical
   byte-identical across runs (D017). The first real run used a seeded sample of 20 of 1,013
   eligible meters from 9 sites: 350,804 readings, 93.02% coverage
   ([DATASETS.md](DATASETS.md#preparing-bdg2-for-analysis)).
+- **Leakage-safe splits:** `wattwise.ml.splits` builds chronological and rolling-origin splits
+  from explicit UTC windows, optionally holding out buildings or whole sites. Held-out buildings
+  are tested only in the future window. Every split re-checks itself on the actual rows, raises
+  `LeakageError` on any violation, and records a deterministic manifest (D018,
+  [EVALUATION.md](EVALUATION.md)).
 
 No model has been trained, so no ML metrics exist yet.
 
@@ -66,6 +71,7 @@ No model has been trained, so no ML metrics exist yet.
 | T008 | Data-quality engine and report | 2026-10-23 |
 | T009a | BDG2 timestamp-convention audit | 2026-10-24 |
 | T009b | BDG2 preprocessing pipeline | 2026-10-24 |
+| T010 | Leakage-safe split utilities | 2026-10-24 |
 
 ## Current task
 
@@ -73,15 +79,15 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T010 — Leakage-safe split utilities**: make temporal leakage structurally hard. That means:
-- a chronological train/validation/test split
-- rolling-origin (expanding window) folds
-- a building-level holdout for unseen buildings
-- a split manifest saved with every evaluation
+**T011 — Evaluation harness and metrics**: one trusted way to score any forecaster. It covers:
+- MAE and RMSE.
+- WAPE, reported only when total actual consumption is meaningfully positive.
+- Per-meter and per-building results, plus macro averages.
+- JSON and Markdown reports that include the split manifest (T010), a data fingerprint and the
+  code version.
 
-The tests must show that training always ends before testing begins, that holdout buildings
-never appear in training, and that splits are deterministic. See
-[ROADMAP.md](ROADMAP.md#t010--leakage-safe-split-utilities).
+The metrics are tested against hand-computed values, the WAPE guard is tested, and reports are
+reproducible. See [ROADMAP.md](ROADMAP.md#t011--evaluation-harness-and-metrics).
 
 ## Milestone progress
 
@@ -89,7 +95,7 @@ never appear in training, and that splits are deterministic. See
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
-| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 3 / 4 |
+| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 4 / 4 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |
 | M6 Anomaly detection | T016–T018 | 0 / 3 |
@@ -131,6 +137,7 @@ pushes only as `shvhjSB` (D006).
 | BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
 | The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,013 eligible meters (D017) |
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
+| Splits cannot stop features from looking ahead, or repeated use of the test window | T013, T014 | Feature leakage tests in T013; model selection on validation or rolling folds only (D018) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

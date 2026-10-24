@@ -547,6 +547,51 @@ links to the entry that replaces it.
 
 ---
 
+## D018 — Leakage-safe split design
+- **Date:** 2026-10-24 · **Task:** T010 · **Status:** Accepted
+- **Decision:** `wattwise.ml.splits` defines every split by **explicit UTC time windows**
+  ([EVALUATION.md](EVALUATION.md#splits-t010)).
+  - **Configs are frozen pydantic models** that reject unknown fields, naive datetimes, negative
+    gaps and empty or overlapping windows. They serialise to JSON with UTC timestamps and ISO
+    8601 durations, and their SHA-256 identifies the split.
+  - **Windows are half-open, and the whole interval must fit.** A reading is in a window only if
+    `[timestamp, timestamp + interval)` lies inside it. The interval uses the quality engine's
+    rule, now public as `infer_interval`. Readings that cross a boundary are not used, and are
+    counted.
+  - **The gap is carved from the end of the preceding window.** The test window is then exactly
+    the configured one, which is what reports cite.
+  - **Rolling origin uses expanding windows of fixed durations.** It does not use calendar
+    months; multiples of 7 days keep the weekday mix equal.
+  - **Holdout:**
+    - By building or by whole site, a seeded draw over sorted IDs, at least one and never all.
+    - Held-out buildings are tested **only in the test window** (`test_unseen`), so an
+      unseen-building result is also a future-period result. Their earlier readings are not used.
+  - **Self-verification:**
+    - `make_split` re-checks every fold on its rows and raises `LeakageError`. The checks:
+      disjoint roles, rows inside their windows, earlier roles end first, and holdout isolation.
+    - A role with no readings is an error.
+  - **Memory:** folds hold row positions into the source table, not copies.
+- **Alternatives considered:**
+  - **Boundaries as fractions of the data:** rejected. Meters cover different periods, so a
+    fraction is ambiguous and changes when the data changes. Explicit dates are reproducible and
+    citable.
+  - **scikit-learn `TimeSeriesSplit`:** rejected. It splits by row position, which is wrong for
+    stacked multi-meter tables. It also has no notion of intervals, buildings or sites.
+  - **Testing held-out buildings over the whole period:** rejected. It shares time, weather and
+    campus events with training, which gives optimistic results.
+  - **Sliding windows and calendar-month steps:** deferred until a model needs them.
+- **Consequences:**
+  - T011 saves the manifest with every result.
+  - T014 chooses models on validation or rolling folds only. The test window is used once per
+    reported result.
+  - **Feature leakage is out of scope here** (T013). Splits cannot stop a feature from looking
+    ahead.
+  - **Performance:** checked on 13 rolling folds plus a holdout:
+    - the BDG2 sample (350,804 rows): 0.8 s
+    - a synthetic 5.3 M-row table: 21 s
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

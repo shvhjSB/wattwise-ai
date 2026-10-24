@@ -774,10 +774,20 @@ links to the entry that replaces it.
     - Radiation is the mean over the hour that ends at its label, so it is relabelled to the
       start of that hour, as readings are (D012).
     - Instantaneous values (cloud cover) keep their time.
-  - **Falsifiable alignment checks:** `prepare` fails unless, at every site:
-    - the radiation-weighted centre of each solar day is within 15 minutes of solar noon
-      (NOAA equation of time; days grouped in local mean solar time)
-    - ERA5 temperature correlates best with BDG2 observed temperature at lag 0
+  - **Falsifiable alignment checks:** `prepare` writes nothing unless every site passes, over
+    the whole period and in every calendar quarter with enough data:
+    - **Solar noon:** the median radiation-weighted centre of the solar days is within
+      **30 minutes** of solar noon (NOAA equation of time; days grouped in local mean solar
+      time). 30 minutes is half of the one-hour error being caught.
+    - **Temperature phase:** the phase of ERA5 temperature against BDG2's observed temperature
+      is interpolated to fractions of an hour (a parabola through the correlation peak). Each
+      quarter must lie within **0.5 h** of the site's median, and the median within **1 h** of
+      zero.
+    - **Why it changed after review:** the first version used one whole-period median, a 15-minute
+      tolerance and a whole-hour lag that had to be 0. The review reproduced a one-hour mislabel
+      over a third of the period that still passed. Quarterly checks then showed two things:
+      convective summers bias quarterly medians by up to 16 minutes, and some stations sit half
+      an hour from the ERA5 cell, where whole-hour lags tie.
   - **Humidity:**
     - The Magnus formula over water, with the Alduchov & Eskridge (1996) coefficients 17.625
       and 243.04 °C.
@@ -786,13 +796,18 @@ links to the entry that replaces it.
   - **Reproducibility:**
     - Each response is saved with its file SHA-256 and a content hash. The content hash
       excludes the server's `generationtime_ms`, so re-fetches can be compared.
-    - A second `fetch` only verifies; `--force` re-fetches and reports "changed" if the content
-      differs.
-- **Evidence (2026-10-24, 15 sites):**
-  - Solar-noon offsets were −8.6 to +2.0 minutes, against +51 to +62 if the labels were taken
-    as interval starts.
-  - Temperature lag was 0 h everywhere (r = 0.954–0.997). This also independently confirms the
-    D016 weather clocks.
+    - A second `fetch` only verifies; `--force` re-fetches and reports "changed" (keeping the
+      previous hash) if the same request returns different content.
+    - The manifest is saved after every site, so a failure part-way loses nothing.
+    - A response recorded for a different request is refused.
+  - **The manifest stays git-ignored** with the responses (`data/raw/era5/manifest.json`),
+    because its URLs contain BDG2 site coordinates (D014).
+- **Evidence (2026-10-24, 15 sites, 8 quarters each, none failed):**
+  - Solar-noon per-site medians were −8.6 to +2.0 minutes, against +51 to +62 if the labels
+    were taken as interval starts.
+  - Temperature phase site medians were −0.50 to +0.30 h, with quarters within 0.33 h of their
+    site's median. This also independently confirms the D016 weather clocks.
+  - A forced re-fetch returned identical content for all 15 sites.
 - **Alternatives considered:**
   - **The Copernicus CDS directly:** not needed for non-commercial use. It remains the fallback
     if the project becomes commercial.
@@ -806,6 +821,8 @@ links to the entry that replaces it.
   - T013 can join radiation, cloud cover and humidity by (site, hour) for 15 sites, and humidity
     for all 19.
   - The 4 sites without coordinates have no radiation, and models must handle that explicitly.
+  - **Known limit:** at a site whose natural phase is near ±0.5 h, a whole-period one-hour error
+    in BDG2's weather clock would pass the temperature rule. The D016 audit covers that case.
 
 ---
 

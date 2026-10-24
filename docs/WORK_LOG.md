@@ -1146,3 +1146,57 @@ hour labelled just after sunrise, which fits "mean of the preceding hour".
   - `fetch`: download, verify, changed, never overwrite, rate limit
   - the CLI `prepare` on BDG2-format files, a missing response, and verification of the BDG2
     inputs
+
+**First commit:** `a624b5d`. Pushed for speed while the review was still running.
+
+**Adversarial review (workflow, four lenses plus skeptics) and fixes:**
+- **Acquisition and provenance:**
+  - The manifest is now saved after each site; one failure part-way had orphaned the files
+    already fetched.
+  - A failed alignment no longer overwrites outputs.
+  - A response recorded for another request is refused.
+  - "changed" is reported only for the same request, keeping the previous hash.
+  - HTTP errors carry Open-Meteo's reason; truncated and invalid bodies give clear errors.
+  - `grid_elevation_m` was renamed `dem_elevation_m`.
+- **The committed manifest held BDG2 site coordinates** (in its fields and URLs), against
+  D014. It now stays git-ignored in `data/raw/era5/`, and the committed copy was removed. Commit
+  `a624b5d` still contains it; published history is not rewritten, and the values are public
+  BDG2 metadata.
+- **Physics and table:**
+  - Missing-value statistics are now counted only where a source is meant to have values.
+  - With no located sites, the run no longer crashes and no longer counts as "aligned".
+  - `best_lag` no longer invents a lag without overlap, and NaN is refused in JSON.
+- **Time maths:** the gate used one two-year median, and the reviewer reproduced a one-hour
+  mislabel over a third of the period that still passed.
+  - Both checks now also run per calendar quarter.
+  - The first quarterly run failed Panther 2017Q3 (−15.6 min, convective afternoon clouds) and
+    Crow/Moose in 4 quarters (whole-hour lag −1 against 0).
+  - Measurement showed those lags were ties (correlation margins of 0.0001–0.0007). The true
+    phase there is about −0.5 h, where a whole-hour test cannot resolve a one-hour error.
+  - **The redesign:**
+    - The solar tolerance became 30 min, half the one-hour error being caught.
+    - The temperature check uses a fractional phase (a parabola through the correlation peak).
+      Each quarter must lie within 0.5 h of the site's median, which must lie within 1 h of
+      zero.
+    - Measured natural spread: 0.33 h at most.
+  - The known limit (a whole-period error at a site with phase near ±0.5 h) is documented;
+    D016 covers it.
+- **Real data after the fixes:**
+  - The forced re-fetch returned identical content for all 15 sites.
+  - All 15 sites passed with 8 quarters each.
+  - ERA5 has zero real gaps (only the 15 final hours, by design).
+  - Humidity: 328 observations lack inputs.
+  - Byte-identical on a re-run.
+- `pytest -W error`: **369 passed.** The new tests cover:
+  - a partial-period mislabel caught per quarter
+  - a one-hour temperature shift in one quarter
+  - half-hour phase resolution
+  - no invented lag
+  - no located sites
+  - per-site manifest progress
+  - "changed" only for the same request
+  - HTTP error reasons
+  - broken responses
+  - the manifest kept out of git
+  - failed alignment writing nothing
+  - a stale request refused

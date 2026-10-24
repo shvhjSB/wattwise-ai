@@ -93,8 +93,9 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Weather enrichment acquired (T007d, D023):** ERA5 radiation and cloud cover for the 15
     located sites (Open-Meteo, `models=era5`), plus humidity derived from BDG2's observations
     for all 19 sites.
-    - Both alignment checks passed at every site: solar noon within −8.6 to +2.0 minutes, and
-      ERA5 temperature at lag 0 against BDG2's observed temperature.
+    - Both alignment checks passed at every site and in all 8 quarters. Solar-noon per-site
+      medians were −8.6 to +2.0 minutes. The ERA5 temperature phase against BDG2's observed
+      temperature was −0.50 to +0.30 h, stable across quarters.
   - **M2 data is complete.** Still to acquire later, when their tasks run: T021a (carbon and
     price tables), T040 (Building 59) and T041 (HKUST).
 

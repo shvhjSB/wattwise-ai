@@ -526,10 +526,16 @@ default.
 
   - **Request:** one per site with coordinates, pinned to `models=era5` and `timezone=GMT`,
     for 2015-12-31 to 2018-01-01 (a day of margin around BDG2's local years).
-  - **Manifest:** [`data/manifests/era5.json`](../data/manifests/era5.json) records each
-    request, the file's SHA-256, and a *content* hash. The content hash ignores the server's
-    timing field, so a later re-fetch can prove the data has not changed. It also records the
-    ERA5 grid cell and its distance from the site (2–14 km). The responses are git-ignored.
+  - **Manifest:** `data/raw/era5/manifest.json` records each request, the file's SHA-256, and a
+    *content* hash. The content hash ignores the server's timing field, so a later re-fetch can
+    prove the data has not changed. It also records the ERA5 grid cell and its distance from the
+    site (2–14 km).
+    - It stays with the responses, **git-ignored**, because its request URLs contain BDG2's
+      site coordinates, and BDG2 data is not redistributed (D014).
+    - The first T007d commit (`a624b5d`) did commit it under `data/manifests/`. The follow-up
+      commit removed it, and the coordinates remain in that one historical commit. They are
+      public values from BDG2's own metadata, and published history is not rewritten.
+    - A forced re-fetch on 2026-10-24 returned identical content for all 15 sites.
   - **Columns:** every column states its provenance by name.
     - `ghi_w_m2_era5`, `direct_horizontal_w_m2_era5`, `diffuse_horizontal_w_m2_era5`,
       `dni_w_m2_era5` and `cloud_cover_pct_era5` are modelled grid-cell values.
@@ -537,20 +543,33 @@ default.
     - Nothing is gap-filled across sources, and the 4 sites without coordinates have humidity
       only.
   - **Time convention, checked on the data.** Open-Meteo labels radiation with the end of the
-    hour it averages, so radiation is relabelled to the start of its hour, as readings are.
-    `prepare` fails unless two checks pass at every site:
+    hour it averages, so radiation is relabelled to the start of its hour, as readings are. Both
+    checks run over the whole period **and in every calendar quarter** with enough data, so a
+    mislabel in part of the period cannot hide in a two-year median. `prepare` writes nothing
+    unless every site passes:
 
-    | Check | Result at all 15 sites (2026-10-24) |
-    |---|---|
-    | Radiation-weighted centre of each solar day vs solar noon (NOAA equation of time) | **−8.6 to +2.0 min** (548–731 days per site). Taking labels as interval starts would give +51 to +62 min |
-    | ERA5 temperature vs BDG2 observed temperature | Best lag **0 h** at every site, r = 0.954–0.997. This also re-confirms the BDG2 weather clocks (D016) |
+    | Check | Rule | Result at all 15 sites (2026-10-24) |
+    |---|---|---|
+    | Radiation-weighted centre of the solar days vs solar noon (NOAA equation of time) | Median within **30 min**, per site and per quarter. That is half of the one-hour error being caught; the 15 min first tried was too tight for quarterly medians | Per-site medians **−8.6 to +2.0 min** (548–731 days); quarterly medians down to −15.6 min in convective Florida summers. Labels taken as interval starts would give +51 to +62 min |
+    | ERA5 temperature phase vs BDG2 observed temperature, interpolated to fractions of an hour | Each quarter within **0.5 h** of the site's median phase, and that median within **1 h** of zero | Site medians **−0.50 to +0.30 h**; quarters within 0.33 h of their site's median. A station's daily cycle can run about half an hour from the ERA5 cell's. This also re-confirms the BDG2 weather clocks (D016) |
+
+    **Limit:** at a site whose natural phase is near ±0.5 h, a whole-period one-hour error in
+    BDG2's weather clock would still pass the temperature rule. That case is covered by the D016
+    weather-clock audit; the solar check, anchored to astronomy, covers ERA5's own timing.
+    All 8 quarters were checked at every site, and none failed.
 
   - **Humidity:** the Magnus formula over water, with the Alduchov & Eskridge (1996)
     coefficients 17.625 and 243.04 °C. A dew point up to 0.5 °C above the air temperature is
     treated as rounding and capped at 100%; more than that is treated as an error and left
     missing. Neither case occurs in BDG2 (0 and 0).
-  - **Result:** 334,020 rows, ERA5 for 15 sites and humidity for 19. The outputs were
-    byte-identical on a second run, and a second `fetch` only verified the recorded files.
+  - **Result:**
+    - 334,020 rows: ERA5 for 15 sites, humidity values for 19.
+    - **ERA5 has no gaps** at the located sites. Its only missing values are each site's
+      final hour (15), whose mean would need the next day's label.
+    - Of 331,166 BDG2 observations, 328 lack a temperature or dew point, so their humidity is
+      missing.
+    - The outputs were byte-identical on a second run, and a second `fetch` only verified the
+      recorded files.
   - **Attribution, carried in every manifest and report:**
     - "Weather data by Open-Meteo.com", with a link (Zippenfenig 2023,
       [doi:10.5281/zenodo.7970649](https://doi.org/10.5281/zenodo.7970649)).

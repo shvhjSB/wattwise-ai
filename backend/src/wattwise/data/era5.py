@@ -10,10 +10,12 @@ hour:
 
 Open-Meteo labels radiation with the end of the hour it averages. Readings are labelled with the
 start of their hour (D012), so radiation is relabelled one hour earlier. Instantaneous values
-(cloud cover) keep their time. Both conventions are checked on the data, and `prepare` fails if
-either check fails:
-- the radiation-weighted centre of each solar day must fall at solar noon
-- ERA5 temperature must line up with BDG2's observed temperature at lag 0
+(cloud cover) keep their time. Both conventions are checked on the data, over the whole period and
+in every calendar quarter with enough data, and `prepare` writes nothing if a check fails:
+- the median radiation-weighted centre of the solar days must lie within 30 min of solar noon
+  (half of the one-hour error the check exists to catch)
+- the temperature phase of ERA5 against BDG2's observed temperature must be stable across
+  quarters (each within 0.5 h of the site's median) and within 1 h of zero
 
 Nothing is gap-filled across sources, and sites without coordinates get no ERA5 data.
 
@@ -28,6 +30,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import math
 import os
@@ -61,7 +64,8 @@ START_DATE: Final = "2015-12-31"
 END_DATE: Final = "2018-01-01"
 PROCESSING_VERSION: Final = "1"
 DEFAULT_DESTINATION: Final = Path("../data/raw/era5")
-DEFAULT_MANIFEST: Final = Path("../data/manifests/era5.json")
+#: Kept with the responses, git-ignored: it holds BDG2 site coordinates (no redistribution, D014).
+DEFAULT_MANIFEST: Final = DEFAULT_DESTINATION / "manifest.json"
 DEFAULT_OUTPUT: Final = Path("../data/processed/era5")
 #: Open-Meteo's licence asks for its credit and link and a note of changes. The ERA5 citation
 #: and the Copernicus acknowledgement (with its disclaimer) are the CDS's own texts.
@@ -87,8 +91,21 @@ MAGNUS_B: Final = 243.04  # degC
 DEW_POINT_EXCESS_MAX: Final = 0.5  # degC
 #: Alignment checks: solar days with less radiation than this are too cloudy to locate noon.
 MIN_DAY_RADIATION: Final = 1000.0  # sum of hourly mean W/m2 over the day, i.e. Wh/m2
-CENTROID_TOLERANCE_MIN: Final = 15.0
+#: Half of the one-hour error the check exists to catch. Quarterly medians carry real cloud biases
+#: (up to 16 min in convective Florida summers), so 15 min, tried first, was too tight.
+CENTROID_TOLERANCE_MIN: Final = 30.0
 TEMPERATURE_LAGS: Final = range(-3, 4)
+MIN_LAG_PAIRS: Final = 48  # overlapping hours needed to measure a lag
+#: A station's daily temperature cycle can run up to ~0.5 h from the ERA5 cell's (real data: site
+#: medians -0.50 to +0.30 h, quarters within 0.33 h of their site's median). A quarter more than
+#: PHASE_CONSISTENCY_H from its site's median phase, or a site beyond PHASE_MAX_H, is misaligned.
+PHASE_CONSISTENCY_H: Final = 0.5
+PHASE_MAX_H: Final = 1.0
+#: The checks also run per calendar quarter; a quarter with less data than this is skipped.
+QUARTER_MIN_SOLAR_DAYS: Final = 20
+QUARTER_MIN_TEMPERATURE_HOURS: Final = 24 * 30
+#: The final requested hour: its radiation mean would need the next day's label (by design).
+LAST_HOUR: Final = pd.Timestamp(f"{END_DATE}T23:00:00Z")
 
 
 @dataclass(frozen=True)
@@ -129,7 +146,7 @@ class Response:
     values: Mapping[str, FloatArray]
     latitude: float  # the ERA5 grid cell Open-Meteo used
     longitude: float
-    elevation_m: float
+    elevation_m: float  # Open-Meteo's terrain elevation for the requested point, not the cell
 
 
 @dataclass(frozen=True)
@@ -141,7 +158,8 @@ class Enrichment:
 
     @property
     def aligned(self) -> bool:
-        return all(bool(c["aligned"]) for c in self.checks.values())
+        """True only if at least one site was checked and every site passed."""
+        return bool(self.checks) and all(bool(c["aligned"]) for c in self.checks.values())
 
 
 # ---------------------------------------------------------------------------
@@ -194,10 +212,11 @@ def fetch(
     pause: float = REQUEST_PAUSE_S,
     now: datetime | None = None,
 ) -> dict[str, str]:
-    """Fetch each site's response (or verify a recorded copy), then update the manifest.
+    """Fetch each site's response (or verify a recorded copy), recording each one in the manifest
+    as soon as it is saved, so a failure part-way never orphans the files already fetched.
 
-    Returns site -> status: "verified", "downloaded", or "changed" (a re-fetch whose content
-    differs from the recorded one)."""
+    Returns site -> status: "verified", "downloaded", or "changed" (a re-fetch of the same
+    request whose content differs from the recorded one)."""
     files: dict[str, Any] = dict(_read_manifest(manifest).get("files", {}))
     stamp = (now or datetime.now(UTC)).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     statuses: dict[str, str] = {}
@@ -218,11 +237,19 @@ def fetch(
             time.sleep(pause)
         requested += 1
         payload = _get(url, opener)
-        response = parse_response(payload)  # validate before saving
+        try:
+            response = parse_response(payload)  # validate before saving
+        except (ValueError, KeyError, TypeError) as exc:
+            raise AcquisitionError(
+                f"{site.site_id}: Open-Meteo returned an invalid response ({exc}). Nothing was "
+                "saved for this site."
+            ) from exc
         _write_atomic(path, payload)
         content = content_sha256(payload)
-        changed = known.get("content_sha256") not in (None, content)
-        files[site.site_id] = {
+        same_request = known.get("url") == url
+        changed = same_request and known.get("content_sha256") not in (None, content)
+        previous = {"previous_content_sha256": known.get("content_sha256")} if changed else {}
+        files[site.site_id] = previous | {
             "url": url,
             "local_path": path.name,
             "bytes": len(payload),
@@ -232,10 +259,11 @@ def fetch(
             "site_longitude": site.longitude,
             "grid_latitude": response.latitude,
             "grid_longitude": response.longitude,
-            "grid_elevation_m": response.elevation_m,
+            "dem_elevation_m": response.elevation_m,
             "grid_distance_km": round(_distance_km(site, response), 1),
             "fetched_at": stamp,
         }
+        _write_manifest(manifest, files)  # record each file as soon as it is saved
         statuses[site.site_id] = "changed" if changed else "downloaded"
     _write_manifest(manifest, files)
     return statuses
@@ -288,12 +316,23 @@ def _get(url: str, opener: Opener | None) -> bytes:
         with (opener or open_url)(url, 120.0) as handle:
             return handle.read()
     except urllib.error.HTTPError as exc:
-        hint = "the free API's rate limit was reached; try again later" if exc.code == 429 else ""
-        raise AcquisitionError(f"Open-Meteo answered HTTP {exc.code} for {url}. {hint}") from exc
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        hint = "The free API's rate limit was reached; try again later. " if exc.code == 429 else ""
         raise AcquisitionError(
-            f"Could not reach Open-Meteo ({exc}). Check the connection."
+            f"Open-Meteo answered HTTP {exc.code} for {url}. {hint}{_error_reason(exc)}"
         ) from exc
+    except (urllib.error.URLError, http.client.HTTPException, TimeoutError, OSError) as exc:
+        raise AcquisitionError(
+            f"Could not read from Open-Meteo ({exc!r}). Check the connection and try again."
+        ) from exc
+
+
+def _error_reason(exc: urllib.error.HTTPError) -> str:
+    """Open-Meteo explains errors in a JSON body ({"error": true, "reason": ...})."""
+    try:
+        reason = json.loads(exc.read()).get("reason")
+    except (ValueError, AttributeError, OSError):
+        return ""
+    return f"Reason: {reason}" if reason else ""
 
 
 def _write_atomic(path: Path, payload: bytes) -> None:
@@ -400,16 +439,97 @@ def solar_noon_offsets(radiation: pd.Series, longitude: float) -> pd.Series:
     return (centre - 12.0) * 60.0
 
 
-def best_lag(reference: pd.Series, other: pd.Series) -> tuple[int, float, float]:
+def best_lag(
+    reference: pd.Series, other: pd.Series
+) -> tuple[int | None, float | None, float | None]:
     """The lag in hours (other shifted by k) that best correlates with the reference, the best
-    correlation and the correlation at lag 0."""
-    scores = {}
+    correlation and the correlation at lag 0. All None when no lag has MIN_LAG_PAIRS overlapping
+    hours with some variation: nothing was measured, so nothing is reported."""
+    scores = lag_scores(reference, other)
+    if not scores:
+        return None, None, None
+    best = max(scores, key=lambda k: scores[k])
+    return best, round(scores[best], 4), round(scores[0], 4) if 0 in scores else None
+
+
+def lag_scores(reference: pd.Series, other: pd.Series) -> dict[int, float]:
+    """Correlation of the reference with `other` shifted by k hours, for each measurable k."""
+    scores: dict[int, float] = {}
     for k in TEMPERATURE_LAGS:
         shifted = other.reindex(pd.DatetimeIndex(reference.index) + pd.Timedelta(hours=k))
         pair = pd.DataFrame({"a": reference.to_numpy(), "b": shifted.to_numpy()}).dropna()
-        scores[k] = float(np.corrcoef(pair["a"], pair["b"])[0, 1]) if len(pair) > 2 else np.nan
-    best = max(scores, key=lambda k: -np.inf if np.isnan(scores[k]) else scores[k])
-    return best, round(scores[best], 4), round(scores[0], 4)
+        if len(pair) >= MIN_LAG_PAIRS and pair["a"].std() > 0 and pair["b"].std() > 0:
+            scores[k] = float(np.corrcoef(pair["a"], pair["b"])[0, 1])
+    return scores
+
+
+def phase_hours(reference: pd.Series, other: pd.Series) -> float | None:
+    """The fractional lag at which `other` best matches the reference: the vertex of a parabola
+    through the correlations at the best whole-hour lag and its two neighbours. Hourly data can
+    then resolve half-hour phase differences that a whole-hour argmax turns into ties."""
+    scores = lag_scores(reference, other)
+    if not scores:
+        return None
+    best = max(scores, key=lambda k: scores[k])
+    if best - 1 not in scores or best + 1 not in scores:
+        return float(best)
+    left, centre, right = scores[best - 1], scores[best], scores[best + 1]
+    curvature = left - 2 * centre + right
+    return float(best) if curvature >= 0 else best + 0.5 * (left - right) / curvature
+
+
+def _quarters(index: pd.Index) -> pd.PeriodIndex:
+    return pd.DatetimeIndex(index).tz_convert("UTC").tz_localize(None).to_period("Q")
+
+
+def quarterly_checks(
+    offsets: pd.Series, observed: pd.Series, era5_temperature: pd.Series
+) -> tuple[float | None, list[dict[str, object]]]:
+    """Both alignment checks per calendar quarter, so a mislabel in part of the period cannot hide
+    in a whole-period median. Returns the site's median quarterly temperature phase and the
+    quarters; a quarter's check is skipped (and says so) without enough data.
+
+    A quarter passes if its median solar-noon offset is within CENTROID_TOLERANCE_MIN and its
+    temperature phase is within PHASE_CONSISTENCY_H of the site's median phase."""
+    observed = observed.dropna()
+    offset_quarters, observed_quarters = _quarters(offsets.index), _quarters(observed.index)
+    measured = []
+    for period in sorted(set(offset_quarters) | set(observed_quarters)):
+        days = offsets[offset_quarters == period]
+        hours = observed[observed_quarters == period]
+        offset = float(days.median()) if len(days) >= QUARTER_MIN_SOLAR_DAYS else None
+        phase = (
+            phase_hours(hours, era5_temperature)
+            if len(hours) >= QUARTER_MIN_TEMPERATURE_HOURS
+            else None
+        )
+        measured.append((str(period), len(days), offset, len(hours), phase))
+    phases = [p for *_, p in measured if p is not None]
+    # Without a measurable quarter (a short period), fall back to the whole period's phase.
+    site_phase = float(np.median(phases)) if phases else phase_hours(observed, era5_temperature)
+    results: list[dict[str, object]] = []
+    for quarter, days_count, offset, hours_count, phase in measured:
+        solar_ok = offset is None or abs(offset) <= CENTROID_TOLERANCE_MIN
+        phase_ok = phase is None or (
+            site_phase is not None and abs(phase - site_phase) <= PHASE_CONSISTENCY_H
+        )
+        results.append(
+            {
+                "quarter": quarter,
+                "solar_days": days_count,
+                "noon_offset_min": _rounded(offset),
+                "temperature_hours": hours_count,
+                "temperature_phase_h": _rounded(phase, 2),
+                "checked": offset is not None or phase is not None,
+                "passed": solar_ok and phase_ok,
+            }
+        )
+    return site_phase, results
+
+
+def _rounded(value: float | None, digits: int = 1) -> float | None:
+    """A rounded number for the manifest, or None (JSON null) for a missing or NaN value."""
+    return None if value is None or math.isnan(value) else round(value, digits)
 
 
 # ---------------------------------------------------------------------------
@@ -448,24 +568,34 @@ def enrich(
         offsets = solar_noon_offsets(radiation, site.longitude)
         unshifted = solar_noon_offsets(as_labelled, site.longitude)
         observed = weather[weather["site_id"] == site.site_id].set_index("timestamp")
+        temperature = observed["air_temperature_c"]
         era5_temperature = pd.Series(response.values["temperature_2m"], index=response.times)
-        lag, best, at_zero = best_lag(observed["air_temperature_c"], era5_temperature)
-        centre = float(offsets.median()) if len(offsets) else math.nan
+        lag, best, at_zero = best_lag(temperature, era5_temperature)
+        centre = float(offsets.median()) if len(offsets) else None
+        site_phase, quarters = quarterly_checks(offsets, temperature, era5_temperature)
+        whole_period = (
+            centre is not None
+            and abs(centre) <= CENTROID_TOLERANCE_MIN
+            and site_phase is not None
+            and abs(site_phase) <= PHASE_MAX_H
+        )
         checks[site.site_id] = {
             "grid_latitude": response.latitude,
             "grid_longitude": response.longitude,
             "grid_distance_km": round(_distance_km(site, response), 1),
             "solar_days": len(offsets),
-            "solar_noon_offset_min": round(centre, 1),
-            "solar_noon_offset_min_if_labels_were_interval_starts": round(
-                float(unshifted.median()), 1
-            )
-            if len(unshifted)
-            else None,
-            "temperature_best_lag_h": lag,
+            "solar_noon_offset_min": _rounded(centre),
+            "solar_noon_offset_min_if_labels_were_interval_starts": _rounded(
+                float(unshifted.median()) if len(unshifted) else None
+            ),
+            "temperature_phase_h": _rounded(site_phase, 2),  # median over quarters
+            "temperature_best_whole_hour_lag_h": lag,
             "temperature_correlation_best": best,
             "temperature_correlation_lag0": at_zero,
-            "aligned": bool(abs(centre) <= CENTROID_TOLERANCE_MIN and lag == 0),
+            "quarters_checked": sum(bool(q["checked"]) for q in quarters),
+            "quarters_failed": [q["quarter"] for q in quarters if not q["passed"]],
+            "quarters": quarters,
+            "aligned": bool(whole_period and all(q["passed"] for q in quarters)),
         }
         parts.append(table)
 
@@ -480,22 +610,41 @@ def enrich(
             HUMIDITY_COLUMN: np.round(rh, 2),
         }
     )
+    era5_columns = [c for c in OUTPUT_COLUMNS[2:] if c != HUMIDITY_COLUMN]
     era5 = (
         pd.concat(parts, ignore_index=True)
         if parts
-        else pd.DataFrame(columns=["site_id", "timestamp"])
+        else pd.DataFrame(
+            {"site_id": pd.Series(dtype="str"), "timestamp": pd.Series(dtype="datetime64[us, UTC]")}
+            | {c: pd.Series(dtype="float64") for c in era5_columns}
+        )
     )
     table = era5.merge(humidity, on=["site_id", "timestamp"], how="outer")
     table = table[list(OUTPUT_COLUMNS)].sort_values(["site_id", "timestamp"], kind="stable")
     table = table.reset_index(drop=True)
+    located = table["site_id"].isin([s.site_id for s in sites]).to_numpy()
+    missing_inputs = int(
+        (weather["air_temperature_c"].isna() | weather["dew_temperature_c"].isna()).sum()
+    )
     stats: dict[str, object] = {
         "rows": len(table),
         "sites_with_era5": len(parts),
-        "sites_with_humidity": int(humidity["site_id"].nunique()),
+        "sites_with_humidity_values": int(
+            table.loc[table[HUMIDITY_COLUMN].notna(), "site_id"].nunique()
+        ),
         "period_utc": [_iso(table["timestamp"].min()), _iso(table["timestamp"].max())]
         if len(table)
         else None,
-        "missing_by_column": {c: int(table[c].isna().sum()) for c in OUTPUT_COLUMNS[2:]},
+        # Counted only where each source is meant to have a value.
+        "era5_missing_at_located_sites": {
+            c: int(table.loc[located, c].isna().sum()) for c in era5_columns
+        },
+        "era5_final_hours_without_radiation_by_design": int(
+            (located & (table["timestamp"] == LAST_HOUR).to_numpy()).sum()
+        ),
+        "rows_without_era5_no_coordinates": int((~located).sum()),
+        "humidity_observations": len(weather),
+        "humidity_missing_temperature_or_dew_point": missing_inputs,
         "humidity_set_missing_dew_point_above_temperature": invalid,
         "humidity_capped_at_100": capped,
     }
@@ -529,7 +678,7 @@ def write(
         "outputs": {name: {"sha256": digest} for name, digest in digests.items()},
     }
     (output_dir / "manifest.json").write_bytes(
-        (json.dumps(manifest, indent=2) + "\n").encode("utf-8")
+        (json.dumps(manifest, indent=2, allow_nan=False) + "\n").encode("utf-8")
     )
     digests["manifest.json"] = sha256_of(output_dir / "manifest.json")
     return digests
@@ -568,24 +717,33 @@ def to_markdown(enrichment: Enrichment) -> str:
         "`relative_humidity_pct_derived` is computed from BDG2's observed temperature and dew "
         "point. Nothing is gap-filled across sources.",
         "",
-        f"- Rows: {s['rows']:,}; sites with ERA5: {s['sites_with_era5']}; sites with humidity: "
-        f"{s['sites_with_humidity']}",
-        f"- Humidity set missing (dew point above temperature): "
-        f"{s['humidity_set_missing_dew_point_above_temperature']:,}; capped at 100%: "
-        f"{s['humidity_capped_at_100']:,}",
-        f"- Alignment: {'passed' if enrichment.aligned else '**FAILED**'} (solar-noon centre "
-        f"within {CENTROID_TOLERANCE_MIN:g} min and ERA5 temperature at lag 0)",
+        f"- Rows: {s['rows']:,}; sites with ERA5: {s['sites_with_era5']}; sites with humidity "
+        f"values: {s['sites_with_humidity_values']}",
+        f"- Humidity: {s['humidity_observations']:,} observations; "
+        f"{s['humidity_missing_temperature_or_dew_point']:,} lack temperature or dew point; "
+        f"{s['humidity_set_missing_dew_point_above_temperature']:,} set missing (dew point "
+        f"above temperature); {s['humidity_capped_at_100']:,} capped at 100%",
+        f"- Alignment: {'passed' if enrichment.aligned else '**FAILED**'}. Over the whole "
+        f"period and in every calendar quarter with enough data, the median radiation-weighted "
+        f"centre of the solar days must lie within {CENTROID_TOLERANCE_MIN:g} min of solar noon. "
+        f"Each quarter's temperature phase (ERA5 vs observed) must lie within "
+        f"{PHASE_CONSISTENCY_H:g} h of the site's median phase, which must lie within "
+        f"{PHASE_MAX_H:g} h of zero.",
         "",
-        "| Site | Grid cell | Distance (km) | Solar days | Noon offset (min) | Offset if labels "
-        "were starts (min) | Temperature best lag (h) | Correlation at lag 0 | Aligned |",
-        "|---|---|---|---|---|---|---|---|---|",
+        "| Site | Grid cell | Distance (km) | Solar days | Median noon offset (min) | If labels "
+        "were starts (min) | Temperature phase (h) | Correlation at lag 0 | Quarters checked "
+        "| Quarters failed | Aligned |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for site, c in sorted(enrichment.checks.items()):
+        failed = c["quarters_failed"]
+        assert isinstance(failed, list)
         lines.append(
             f"| {site} | {c['grid_latitude']}, {c['grid_longitude']} | {c['grid_distance_km']} | "
             f"{c['solar_days']} | {c['solar_noon_offset_min']} | "
             f"{c['solar_noon_offset_min_if_labels_were_interval_starts']} | "
-            f"{c['temperature_best_lag_h']} | {c['temperature_correlation_lag0']} | "
+            f"{c['temperature_phase_h']} | {c['temperature_correlation_lag0']} | "
+            f"{c['quarters_checked']} | {', '.join(failed) or 'none'} | "
             f"{'yes' if c['aligned'] else 'NO'} |"
         )
     return "\n".join(lines) + "\n"
@@ -631,6 +789,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             statuses = fetch(sites, args.dest, args.manifest, force=args.force)
             for site_id, status in statuses.items():
                 print(f"{site_id}: {status}")
+                if status == "changed":
+                    print(
+                        f"warning: {site_id}: the re-fetched data differs from the recorded data "
+                        "(previous content hash kept in the manifest).",
+                        file=sys.stderr,
+                    )
             return 0
         recorded = _read_manifest(args.manifest).get("files", {})
         assert isinstance(recorded, dict)
@@ -638,11 +802,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         for site in sites:
             path = args.dest / f"{site.site_id}.json"
             entry = recorded.get(site.site_id, {})
-            if not path.exists() or (verified and sha256_of(path) != entry.get("sha256")):
+            stale = entry.get("url") != request_url(site)  # recorded for a different request
+            if not path.exists() or stale or (verified and sha256_of(path) != entry.get("sha256")):
                 missing.append(site.site_id)
         if missing:
             raise AcquisitionError(
-                f"Missing or unrecorded ERA5 responses for {missing}: run era5 fetch."
+                f"Missing or unrecorded ERA5 responses for {missing}, or recorded for a different "
+                "request: run era5 fetch (--force to replace)."
             )
         if args.command == "verify":
             print(f"{len(sites)} site responses verified against {args.manifest}")
@@ -659,14 +825,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     weather = site_weather(args.bdg2, timezones, WEATHER_CLOCKS)
     enrichment = enrich(responses, sites, weather, applied)
+    print(to_markdown(enrichment))
+    if not enrichment.aligned:
+        print(
+            f"error: the alignment checks failed; nothing was written to {args.output}.",
+            file=sys.stderr,
+        )
+        return 1
     inputs = {f"era5/{s.site_id}": args.dest / f"{s.site_id}.json" for s in sites}
     inputs |= {"bdg2/metadata": args.bdg2 / metadata_file.local_path}
     inputs |= {"bdg2/weather": args.bdg2 / weather_file.local_path}
-    digests = write(enrichment, inputs, args.output, inputs_verified=verified)
-    print(to_markdown(enrichment))
-    for name, digest in digests.items():
+    for name, digest in write(enrichment, inputs, args.output, inputs_verified=verified).items():
         print(f"{digest}  {name}")
-    return 0 if enrichment.aligned else 1
+    return 0
 
 
 if __name__ == "__main__":

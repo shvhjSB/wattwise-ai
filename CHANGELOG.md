@@ -129,11 +129,14 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     humidity derived from BDG2's observed temperature and dew point (Magnus formula) for all 19.
   - **Provenance:** in the column names (`_era5`, `_derived`). Nothing is gap-filled across
     sources.
-  - **Time convention:** radiation is relabelled to interval starts. Two checks must pass at
-    every site, or `prepare` fails: the radiation's solar-noon centre, and ERA5 temperature
-    against observed temperature at lag 0.
-  - **Manifest:** `data/manifests/era5.json` records each request, its file and content hashes
-    and the grid cell. The responses are git-ignored.
+  - **Time convention:** radiation is relabelled to interval starts. Two checks run over the
+    whole period and in every calendar quarter, and `prepare` writes nothing unless every site
+    passes:
+    - the radiation's solar-noon centre, within 30 min
+    - the ERA5 temperature phase, stable within 0.5 h across quarters and within 1 h of zero
+  - **Manifest:** a git-ignored manifest (`data/raw/era5/manifest.json`) records each request,
+    its file and content hashes, and the grid cell. It is saved after every site, and a
+    response recorded for another request is refused.
 - `bdg2_prepare.site_weather` is public, so the enrichment reuses the observed-weather
   conversion. (T007d)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
@@ -156,6 +159,19 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   sample changed. (T009c)
 
 ### Fixed
+- ERA5 enrichment, after an adversarial review of the first T007d commit. (T007d)
+  - **Alignment gate:** it used a single two-year median, so a one-hour mislabel in a third of
+    the period passed. It now checks every quarter.
+  - **Failed checks:** a failed alignment no longer overwrites good outputs.
+  - **Fetch:** the manifest is saved after each site, and different requests are not reported
+    as "changed".
+  - **Errors:** HTTP errors include Open-Meteo's reason; truncated and invalid responses give
+    clear errors; an empty overlap no longer reports an invented lag, and NaN is refused in JSON.
+  - **Missing-value counts:** only count rows where a source is meant to have a value.
+  - **Elevation:** the field is renamed `dem_elevation_m`; it is the site's terrain height, not
+    the grid cell's.
+  - **Coordinates:** the ERA5 manifest is no longer committed, because it contained BDG2 site
+    coordinates (D014). They remain in commit `a624b5d`, as public BDG2 metadata values.
 - `docs/DATASETS.md` no longer states the T007 hypothesis that all BDG2 sites use local
   standard time. The T009a audit refuted it, and the document now records the evidence and the
   per-site clocks. (T009a)

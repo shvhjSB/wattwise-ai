@@ -54,6 +54,7 @@ from wattwise.data.bdg2 import FILES_BY_KEY as BDG2_FILES
 from wattwise.data.bdg2_audit import WEATHER_CLOCKS
 from wattwise.data.bdg2_prepare import site_weather
 from wattwise.data.bdg2_sites import CORRECTIONS, Correction, apply_corrections
+from wattwise.data.solar import equation_of_time_min
 
 FloatArray = npt.NDArray[np.float64]
 
@@ -392,24 +393,6 @@ def relative_humidity(
     capped = ~invalid & (rh > 100.0)
     rh = np.where(invalid, np.nan, np.minimum(rh, 100.0))
     return rh, int(invalid.sum()), int(capped.sum())
-
-
-def equation_of_time_min(times: pd.DatetimeIndex) -> FloatArray:
-    """Apparent minus mean solar time, in minutes (NOAA General Solar Position Calculations)."""
-    days = np.where(times.is_leap_year, 366.0, 365.0)
-    hours = np.asarray(times.hour + times.minute / 60.0, dtype=float)
-    gamma = 2 * np.pi / days * (np.asarray(times.dayofyear, dtype=float) - 1 + (hours - 12) / 24)
-    return np.asarray(
-        229.18
-        * (
-            0.000075
-            + 0.001868 * np.cos(gamma)
-            - 0.032077 * np.sin(gamma)
-            - 0.014615 * np.cos(2 * gamma)
-            - 0.040849 * np.sin(2 * gamma)
-        ),
-        dtype=float,
-    )
 
 
 def solar_noon_offsets(radiation: pd.Series, longitude: float) -> pd.Series:

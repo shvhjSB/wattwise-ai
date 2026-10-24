@@ -27,7 +27,6 @@ from wattwise.data.era5 import (
     best_lag,
     content_sha256,
     enrich,
-    equation_of_time_min,
     era5_table,
     fetch,
     located_sites,
@@ -39,6 +38,7 @@ from wattwise.data.era5 import (
     solar_noon_offsets,
     write,
 )
+from wattwise.data.solar import equation_of_time_min
 from wattwise.data.time_convention import Clock
 
 UNITS = {v.name: v.unit for v in VARIABLES} | {"time": "iso8601"}
@@ -219,16 +219,6 @@ def test_radiation_is_relabelled_to_the_start_of_its_hour_and_instants_are_not()
     assert table.loc[label - pd.Timedelta(hours=1), "cloud_cover_pct_era5"] == 17.0
     assert np.isnan(table["ghi_w_m2_era5"].iloc[-1]), "the last hour's mean is not in the response"
     assert list(table.index) == list(response.times), "the requested hourly grid is kept"
-
-
-@pytest.mark.parametrize(
-    ("day", "expected"),
-    [("2016-02-11", -14.2), ("2016-04-15", 0.0), ("2016-11-03", 16.4), ("2017-07-26", -6.5)],
-)
-def test_the_equation_of_time_matches_known_values(day: str, expected: float) -> None:
-    value = equation_of_time_min(pd.DatetimeIndex([pd.Timestamp(f"{day}T12:00:00Z")]))[0]
-
-    assert value == pytest.approx(expected, abs=1.0)
 
 
 def test_the_solar_noon_check_finds_correct_labels_and_a_one_hour_error() -> None:

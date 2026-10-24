@@ -1279,3 +1279,67 @@ were still open:
 The fifth (the "only" in the content-hash test name) was judged not real. Real data after the
 fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
 `pytest -W error`: **385 passed**.
+
+---
+
+## 2026-10-24 — T013 Leakage-safe feature engineering
+
+**Done**
+- **`wattwise.ml.features`:** feature set 1, 32 float features in five groups (D025,
+  [FEATURES.md](FEATURES.md)).
+  - **Calendar:** local wall time per building (hour, day of week, weekend, month, day of year,
+    cyclic encodings).
+  - **Holidays:** `holidays` 0.106 with the T009c regions; NaN where the region is unknown.
+  - **Weather:** observed BDG2 values at the interval start, a 24-hour temperature mean
+    (needs 12 observations), 18 °C degree hours, and T007d humidity and ERA5 irradiance and
+    cloud cover. Flags: `weather_observed`, `era5_available`.
+  - **Sun:** elevation at mid-interval, daylight, day length on the local date.
+  - **History:** lags of 1 and 2 weeks, the same-hour mean of 4 weeks, rolling mean, standard
+    deviation and minimum over windows ending H hours before the target (H 1–168, default 168).
+  - **CLI:** writes `features.parquet` and a manifest (version, rules, provenance, hashes,
+    missing shares) to git-ignored `data/processed/features/`.
+- **`wattwise.data.solar`:** NOAA sun position. The equation of time moved here from the ERA5
+  module unchanged; declination, elevation and day length are new.
+- **Dependency:** `uv add "holidays>=0.106,<0.107"`. 0.106 was released 2026-10-06, 18 days
+  ago; 0.107 is too new. It needs `python-dateutil<3`, so dateutil went from 3.0.0 (released
+  2026-10-21, which had not met the two-week rule) to 2.9.0.post0. pandas needs only >=2.8.2.
+- **pvlib not added.** A one-off check in a throwaway environment (`uv run --no-project
+  --isolated --exclude-newer 2026-10-10 --with pvlib`, giving pvlib 0.16.1) compared our
+  equations with pvlib's NREL SPA, hourly over 2016–2017, at six generic points (40N 75W,
+  51.5N 0.1W, 33.4N 111.9W, 33.9S 151.2E, 0N 0E, 65N 25E). Elevation: max |diff| 0.52°, mean
+  0.12–0.28°. Day length: max 5.2 min (latitudes up to 51.5°).
+
+**Real data (BDG2 sample, pipeline version 2, ERA5 enrichment)**
+- **Size and speed:** 350,816 rows × 32 features; 6.6 s in Python, 9.7 s for the CLI.
+- **Determinism:** byte-identical on a re-run (`features.parquet` sha256 `cf2f88e1…`), and
+  identical after shuffling the rows.
+- **Leakage check:** every reading from 2017-07-01 was rewritten. For horizons 1, 24 and
+  168 h, the first changed row was exactly the cutoff plus the horizon, and nothing changed
+  earlier.
+- **Missing:** 25.00% for sun, holiday and ERA5 features, all from Eagle (15% of rows) and
+  Gator (10%), which have no coordinates and no region. Observed weather 0.55–0.76%; humidity
+  0.61%; 24-hour mean 0.10%; history 4.98–6.26%.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 59
+  files.
+- `pytest -W error`: **439 passed**. 54 are new (the 4 equation-of-time cases moved to
+  `test_solar.py`):
+  - **Leakage:**
+    - rewritten readings change nothing before cutoff + H, at H = 1, 24 and 168 h, with the
+      first change exactly at cutoff + H
+    - a reading never changes its own row
+    - later weather changes nothing earlier
+    - conditions do not depend on consumption
+  - **Definitions:** lags, the four-week mean and rolling statistics match a hand calculation;
+    gaps, short windows and the first week give NaN.
+  - **Missing:** missing weather is NaN with flags; ERA5 per site; no tables means all missing;
+    the 24-hour mean needs 12 of 24.
+  - **Calendar and holidays:** local time across the New York spring change and in Phoenix;
+    holidays by local date (US-CA, GB-ENG, IE, CA-ON, US-DC); unknown region NaN; an unknown
+    country is an error.
+  - **Sun:** noon elevation at solstices and equinox; London and the equator day length;
+    polar day and night; missing coordinates.
+  - **Other:** determinism and row order; input checks; group selection; config bounds; the
+    manifest; FEATURES.md in sync; the CLI writes identical outputs and reports what is missing.
+- The frontend was not re-run locally: no frontend file changed. CI runs it.

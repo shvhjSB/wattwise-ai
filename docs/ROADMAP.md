@@ -37,7 +37,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Done |
 | T011 | Evaluation harness and metrics | M4 | T010 | Done |
 | T012 | Seasonal and historical baselines | M4 | T009b, T011 | Done |
-| T013 | Leakage-safe feature engineering | M5 | T009b, T010 | Not started |
+| T013 | Leakage-safe feature engineering | M5 | T009b, T010 | Done |
 | T014 | ML forecaster vs baselines | M5 | T012, T013 | Not started |
 | T015 | Model artifacts, metadata and registry | M5 | T014 | Not started |
 | T016 | Residual-based detector and event grouping | M6 | T012 | Not started |
@@ -362,7 +362,7 @@ convention **differs by site**, which made the convention audit a substantial ta
   - Holidays, only where the site country is known: the `holidays` package (MIT), using the
     T009c site regions.
   - BDG2 site weather, plus the T007d radiation and derived humidity where available.
-  - Sun elevation and daylight from pvlib (BSD-3-Clause).
+  - Sun elevation and daylight, computed with NOAA's equations and checked against pvlib (D025).
   - Lags of at least the forecast horizon, and rolling statistics shifted to exclude the current target.
   - A versioned feature list.
 - **Acceptance:**
@@ -376,6 +376,8 @@ convention **differs by site**, which made the convention audit a substantial ta
   - Candidates: ridge regression, HistGradientBoosting and LightGBM (if installable), all on T013 features.
   - Evaluation on both a future period and unseen buildings, with fixed seeds.
   - A comparison table.
+  - Imputation and scaling fitted on training rows only. Report the feature groups used, with
+    and without the `history` group (D025).
 - **Acceptance:**
   - The comparison comes from real runs.
   - The decision is recorded in DECISIONS.md.

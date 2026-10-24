@@ -18,6 +18,7 @@ dependencies = [
     "numpy>=2.2,<3",
     "tzdata>=2025.2",
     "pyarrow>=26,<27",
+    "holidays>=0.106,<0.107",
 ]
 
 # Development-only tools (PEP 735). Not part of the published package. `uv sync` installs them.

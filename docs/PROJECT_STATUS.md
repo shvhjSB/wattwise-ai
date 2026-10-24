@@ -106,6 +106,18 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Seasonal-naive is the bar** every model must beat
     ([EVALUATION.md](EVALUATION.md#baselines-t012)).
 
+- **Features (T013, D025):** `python -m wattwise.ml.features` builds feature set 1: 32
+  versioned features in five groups (calendar, holidays, weather, sun, consumption history)
+  ([FEATURES.md](FEATURES.md)).
+  - **Leakage:** conditions never describe a later interval. History uses only readings at least
+    the horizon (default one week) before the target. Tests show nothing changes before
+    cutoff + horizon, and history changes from exactly then; the real data agrees.
+  - **Missing data stays explicit:** NaN plus flags, nothing fitted or filled. On the BDG2
+    sample, 25% of rows have no sun, holiday or ERA5 features (Eagle and Gator have no
+    coordinates), observed weather is 0.55–0.76% missing, and history 5–6%.
+  - **Deterministic:** byte-identical outputs, independent of row order; 350,816 rows in about
+    7 s.
+
 No ML model has been trained yet (T014).
 
 ## Completed tasks
@@ -129,6 +141,7 @@ No ML model has been trained yet (T014).
 | T007c | LEAD 1.0 anomaly labels (local, joined to BDG2) | 2026-10-24 |
 | T007d | Weather enrichment (ERA5 radiation, derived humidity) | 2026-10-24 |
 | T012 | Seasonal and historical baselines | 2026-10-24 |
+| T013 | Leakage-safe feature engineering | 2026-10-24 |
 
 ## Current task
 
@@ -136,16 +149,14 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T013 — Leakage-safe feature engineering:** time-aware features that never use future
-information. It covers:
-- Calendar features, plus holidays where the site's region is known (T009c).
-- BDG2 weather, plus ERA5 radiation and derived humidity (T007d).
-- Sun position.
-- Lags of at least the forecast horizon, and rolling statistics shifted to exclude the target.
-- A versioned feature list.
+**T014 — ML forecaster vs baselines:** adopt a model only if it measurably beats seasonal-naive
+(test MAE 8.763 kWh, WAPE 8.6%) on the same split and rows. It covers:
+- Ridge regression, HistGradientBoosting and LightGBM (if installable), on the T013 features.
+- Imputation and scaling fitted on training rows only.
+- Future-period and unseen-building evaluation, with fixed seeds.
+- Results with and without the history features.
 
-The tests must show that changing future targets never changes past features. See
-[ROADMAP.md](ROADMAP.md#t013--leakage-safe-feature-engineering).
+See [ROADMAP.md](ROADMAP.md#t014--ml-forecaster-vs-baselines).
 
 ## Milestone progress
 
@@ -155,7 +166,7 @@ The tests must show that changing future targets never changes past features. Se
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
-| M5 Improved model | T013–T015, T041 | 0 / 4 |
+| M5 Improved model | T013–T015, T041 | 1 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
@@ -199,7 +210,9 @@ pushes only as `shvhjSB` (D006).
 | The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,148 eligible meters (D017) |
 | BDG2 metadata may hold more errors like Fox's and Wolf's | Joins by location or time zone | Corrections are pinned with evidence and refuse changed data; a time-zone correction must pass the zone check (D020) |
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
-| Splits cannot stop features from looking ahead, or repeated use of the test window | T013, T014 | Feature leakage tests in T013; model selection on validation or rolling folds only (D018) |
+| Splits cannot stop features from looking ahead, or repeated use of the test window | T014 | T013 features are proven leakage-safe by tests (D025); model selection on validation or rolling folds only (D018) |
+| Weather features use the observed weather of the target hour | T014 reporting | Results are expected-consumption accuracy, not forecast accuracy; say so with every result (D025) |
+| History features absorb a sustained anomaly after the horizon | T014, T016 | Compare models with and without the `history` group (D025) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

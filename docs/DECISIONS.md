@@ -860,6 +860,47 @@ links to the entry that replaces it.
   - The evaluation dirty flag now also counts new, uncommitted files, so a run with new code is
     not reported as clean. Before this, only changes to tracked files counted.
 
+## D025 — Feature set 1: leakage rules, explicit missing values, computed sun position
+- **Date:** 2026-10-24 · **Task:** T013 · **Status:** Accepted
+- **Decision:** `wattwise.ml.features` builds 32 versioned features in five groups (calendar,
+  holiday, weather, sun, history). The full list is in [FEATURES.md](FEATURES.md).
+  - **Conditions** may describe the target interval or earlier, never a later one. Observed
+    weather at the target hour is allowed, because WattWise models expected consumption under
+    the conditions that occurred. Results with weather features are therefore
+    expected-consumption accuracy, not forecast accuracy.
+  - **History** uses only readings that started at least H hours (1–168, default 168) before
+    the target. Lags and the four-week mean are fixed at one week or more; rolling windows end
+    H before the target.
+  - **Nothing is fitted.** Missing values stay NaN, and flags record availability. Imputation
+    and scaling are fitted on training rows by the model (T014). That makes it safe to compute
+    features once on the whole table and then select split rows.
+  - **Holidays** come only from a known region: `holidays` 0.106, observed days included.
+    Unknown regions give NaN.
+  - **Sun position** uses NOAA's equations in `wattwise.data.solar` (moved there from the ERA5
+    module). They were cross-checked against pvlib 0.16.1: within 0.53° of elevation and
+    5.2 min of day length over 2016–2017 at six points.
+  - **Version:** `FEATURE_SET_VERSION = "1"`. Changing a feature's meaning, or adding or
+    removing one, needs a new version. A test keeps FEATURES.md in sync with the code.
+- **Alternatives considered:**
+  - **pvlib for sun position (planned in T007b):** rejected for now. It would add pvlib, scipy
+    and h5py to the runtime for an accuracy hourly features do not need. It remains the
+    reference for checks, and clear-sky radiation can justify it later.
+  - **Imputing missing weather here:** rejected. An imputer must be fitted on training data, so
+    it belongs to the model, which knows the split.
+  - **Lagged-only weather, a true forecast setting:** rejected for the expected-consumption
+    baseline. It would hide the conditions the baseline must account for. A forecasting product
+    would need forecast weather instead.
+  - **A balance point fitted per building:** deferred. 18 °C is a stated convention, and tree
+    models do not need one.
+- **Consequences:**
+  - T014 trains on these features and must report which groups it used.
+  - Feature set 1 supports hourly data only; other intervals are refused.
+  - The `holidays` dependency needs `python-dateutil<3`. The lock moved python-dateutil from
+    3.0.0 (released 2026-10-21, under the two-week rule) back to 2.9.0.post0.
+  - Unseen-building evaluation: a held-out building's history features use its own readings
+    from before the test window. That is legitimate at forecast time. A strict cold-start claim
+    must drop the `history` group.
+
 
 ---
 

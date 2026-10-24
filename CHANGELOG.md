@@ -146,6 +146,20 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - Both are scored with the T011 harness, overall and on the rows both predict.
   - First results on the BDG2 sample's test quarter: MAE 8.76 kWh and WAPE 8.6% (seasonal)
     against 10.89 kWh and 10.7% (profile). Details in `docs/EVALUATION.md`.
+- Leakage-safe features (`python -m wattwise.ml.features --data ...`), feature set 1, D025.
+  (T013)
+  - **Groups:** 32 float features in calendar (local time), holiday (`holidays` 0.106, known
+    regions only), weather (observed BDG2, derived humidity, ERA5), sun and consumption
+    history.
+  - **Leakage:** conditions never describe a later interval. History uses only readings at
+    least the horizon (1–168 h, default 168) before the target. Tests prove both, including
+    the exact first hour a change can reach.
+  - **Missing data:** NaN with availability flags; nothing is fitted or filled.
+  - **Outputs:** `features.parquet` and a manifest (version, rules, provenance, hashes,
+    missing shares), byte-identical across runs.
+  - `docs/FEATURES.md` lists every feature, and a test keeps it in sync.
+- `wattwise.data.solar`: NOAA sun position (elevation, declination, day length), cross-checked
+  against pvlib's NREL SPA. (T013)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -164,6 +178,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - The BDG2 pipeline is version 2: it applies the corrections first and records them in the
   manifest. With Fox included there are 1,148 eligible meters instead of 1,013, and the seeded
   sample changed. (T009c)
+- The equation of time moved from `wattwise.data.era5` to `wattwise.data.solar`, unchanged.
+  (T013)
+- New runtime dependency `holidays` 0.106 (MIT). It needs `python-dateutil<3`, so the lock
+  moved python-dateutil from 3.0.0 (released 2026-10-21, under the two-week rule) to
+  2.9.0.post0. (T013)
 
 ### Fixed
 - ERA5 checks and tests, after the rest of the review completed. (T007d)

@@ -364,8 +364,8 @@ zone. The coordinates are the evidence, and the check is a test the correction c
 | Electricity prices | US: **EIA-861** state commercial average. UK: **DESNZ Quarterly Energy Prices 3.4.1**. Ireland: **CSO TMEGB04**. Ontario: no adequate retail source, so kWh only | Public domain / OGL v3.0 / CC BY 4.0 | Ready to integrate (T021a) |
 | Solar radiation | **ERA5** reanalysis, from the Copernicus CDS or Open-Meteo (`models=era5`). NASA POWER as a cross-check | CC BY 4.0; Open-Meteo's free tier is non-commercial only | Owner decision on access (T007d) |
 | Humidity | **Derived** from BDG2 temperature and dew point; no new data | — | T007d |
-| Holidays | **`holidays`** Python package | MIT | T013 |
-| Daylight, sun position | **pvlib**, computed | BSD-3-Clause | T013 |
+| Holidays | **`holidays`** Python package (0.106) | MIT | Integrated (T013) |
+| Daylight, sun position | Computed with NOAA's equations; checked against pvlib | — | Integrated (T013, D025) |
 | Sub-metering, HVAC, occupancy | **LBNL Building 59**, then CU-BEMS, then HKUST | CC0 / CC BY 4.0 / CC0 | T040 |
 | Independent buildings | **HKUST campus smart meters**. EnerNOC only if WattWise is non-commercial | CC0 / CC BY-NC 3.0 | T041 |
 | Missing metadata (year built, occupants, …) | **No source.** BDG2 is anonymised, and nothing may be invented | — | Stays missing |
@@ -588,6 +588,9 @@ default.
   campus closures, and **no source of academic calendars** for these anonymised campuses exists.
 - **Daylight:** pvlib 0.16.1 (BSD-3-Clause, double-checked) computes sun position and clear-sky
   radiation from coordinates and UTC time.
+- **Integrated in T013 (D025):** `holidays` 0.106 is pinned under the two-week rule. Sun
+  position and day length use NOAA's equations in `wattwise.data.solar`, which agree with
+  pvlib's NREL SPA within 0.53° and 5.2 min. pvlib is not a dependency.
 
 ### Sub-metered and independent buildings
 

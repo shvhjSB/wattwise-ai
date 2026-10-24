@@ -142,8 +142,10 @@ pipeline version 2). This shows split sizes only. It is not a model result.
 
 ### What splits do not protect against
 
-- **Feature leakage.** Lags, rolling statistics, imputation and scaling must be computed or
-  fitted from training data only. T013 adds leakage tests for features.
+- **Feature leakage.** Lags and rolling statistics must use only past readings, and imputation
+  and scaling must be fitted on training rows only. The T013 features follow the leakage rules
+  in [FEATURES.md](FEATURES.md), which tests prove. They fit nothing, so the model must fit
+  any imputation and scaling.
 - **Repeated looking at the test set.** Choose models and settings on validation or rolling
   folds. Use the test window once per reported result.
 - **Shared context.** Unseen buildings at a seen site share weather and schedules with training

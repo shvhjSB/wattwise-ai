@@ -43,9 +43,14 @@ The application foundation runs end to end locally, and CI checks it automatical
   pinned, and re-checkable with `python -m wattwise.data.bdg2_audit` (D016,
   [DATASETS.md](DATASETS.md)).
 
-The BDG2 data has been downloaded and audited, but not yet converted to the canonical format
-(T009b). No model has been trained, so no
-ML metrics exist yet.
+- **BDG2 preprocessing:** `python -m wattwise.data.bdg2_prepare` converts the download into
+  canonical Parquet tables in git-ignored `data/processed/bdg2/`. It also writes an exclusion
+  log with a reason for every meter not used, a quality report and a manifest. The outputs are
+  byte-identical across runs (D017). The first real run used a seeded sample of 20 of 1,013
+  eligible meters from 9 sites: 350,804 readings, 93.02% coverage
+  ([DATASETS.md](DATASETS.md#preparing-bdg2-for-analysis)).
+
+No model has been trained, so no ML metrics exist yet.
 
 ## Completed tasks
 
@@ -60,6 +65,7 @@ ML metrics exist yet.
 | T007 | BDG2 acquisition tooling and dataset documentation | 2026-10-23 |
 | T008 | Data-quality engine and report | 2026-10-23 |
 | T009a | BDG2 timestamp-convention audit | 2026-10-24 |
+| T009b | BDG2 preprocessing pipeline | 2026-10-24 |
 
 ## Current task
 
@@ -67,14 +73,15 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T009b — BDG2 preprocessing pipeline**: deterministically convert the downloaded BDG2 files
-into the canonical format for a laptop-sized subset. That means:
-- electricity only, with a seeded meter sample and wide-to-long reshaping
-- UTC conversion with the pinned per-site clocks from T009a, excluding undetermined sites
-- a weather join and an exclusion log
-- a T008 quality report, with Parquet output and a manifest
+**T010 — Leakage-safe split utilities**: make temporal leakage structurally hard. That means:
+- a chronological train/validation/test split
+- rolling-origin (expanding window) folds
+- a building-level holdout for unseen buildings
+- a split manifest saved with every evaluation
 
-See [ROADMAP.md](ROADMAP.md#t009b--bdg2-preprocessing-pipeline).
+The tests must show that training always ends before testing begins, that holdout buildings
+never appear in training, and that splits are deterministic. See
+[ROADMAP.md](ROADMAP.md#t010--leakage-safe-split-utilities).
 
 ## Milestone progress
 
@@ -82,7 +89,7 @@ See [ROADMAP.md](ROADMAP.md#t009b--bdg2-preprocessing-pipeline).
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007 | 3 / 3 |
-| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 2 / 4 |
+| M3 Validation and preprocessing | T008, T009a, T009b, T010 | 3 / 4 |
 | M4 Baselines | T011–T012 | 0 / 2 |
 | M5 Improved model | T013–T015 | 0 / 3 |
 | M6 Anomaly detection | T016–T018 | 0 / 3 |
@@ -121,7 +128,9 @@ pushes only as `shvhjSB` (D006).
 | The repository is public | Every commit | Diff review before every commit. No secrets or data |
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
 | 5 of 19 BDG2 sites (522 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Per-building classification for mixed sites is possible later |
-| BDG2 interval start/end cannot be determined from the data | T009b | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016) |
+| BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
+| The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,013 eligible meters (D017) |
+| BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |
 | Pinned action SHAs, uv version and uv checksum do not update themselves | Security updates | Deliberate upgrades under the two-week rule. A uv upgrade changes three places together (D011) |

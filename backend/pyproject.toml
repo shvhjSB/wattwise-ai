@@ -17,6 +17,7 @@ dependencies = [
     "pandas>=3.0.6,<3.1",
     "numpy>=2.2,<3",
     "tzdata>=2025.2",
+    "pyarrow>=26,<27",
 ]
 
 # Development-only tools (PEP 735). Not part of the published package. `uv sync` installs them.

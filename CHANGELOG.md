@@ -65,6 +65,16 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - BDG2 timestamp audit (`python -m wattwise.data.bdg2_audit`), with per-site verdicts pinned
   and re-checkable against the data: 11 wall-clock, 3 standard and 5 undetermined sites for
   electricity, and standard time for weather (D016). (T009a)
+- BDG2 preprocessing pipeline (`python -m wattwise.data.bdg2_prepare`). It does the following:
+  - verifies the inputs against the pinned checksums
+  - keeps electricity only and converts each site to UTC with its pinned clock, dropping and
+    counting unconvertible hours
+  - logs every excluded meter with a reason
+  - draws a seeded sample
+  - writes canonical Parquet tables, a quality report and a manifest whose outputs are
+    byte-identical across runs (D017)
+  Outputs stay in git-ignored `data/processed/`. (T009b)
+- Backend dependency: pyarrow 26 for Parquet. (T009b)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

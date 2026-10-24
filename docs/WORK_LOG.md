@@ -643,3 +643,69 @@ before any pipeline code was written.
   - the audit on mini BDG2-format files recovers the known conventions
   - pin mismatches are reported, and the CLI handles a missing download
   - the pins cover all 19 sites and are documented row by row
+
+**Commit:** `52ac2c5` feat(data): audit BDG2 timestamp conventions per site. CI run
+[40070985539](https://github.com/shvhjSB/wattwise-ai/actions/runs/40070985539) was green.
+
+---
+
+## 2026-10-24 — T009b BDG2 preprocessing pipeline
+
+**Done**
+- **`wattwise.data.bdg2_prepare`** (module CLI). It does the following:
+  - reads the metadata and the chosen electricity variant (cleaned by default, raw on request,
+    with the reason recorded)
+  - logs every non-electric meter flagged in the metadata
+  - converts each site to UTC once with its pinned T009a clock, counting dropped hours
+  - excludes meters with no metadata, an undetermined clock or less than 50% coverage
+  - draws a seeded sample, then reshapes wide to long through `to_canonical`
+- **Tables:** buildings come from the metadata (`sqm` → `floor_area_m2`, `primaryspaceusage` →
+  `primary_use`, latitude, longitude, time zone). Weather for the sampled sites is converted
+  with its own clock, and per-site join coverage is recorded.
+- **Outputs:**
+  - Parquet tables: readings, buildings, weather.
+  - `exclusions.csv`.
+  - The T008 quality report (JSON and Markdown).
+  - `manifest.json`: pinned commit, input and output SHA-256s, options, assumptions,
+    statistics, licence note.
+- **Input checks:** inputs are verified against the pinned checksums first;
+  `--skip-input-verification` is explicit and recorded.
+- **Dependency:** `pyarrow>=26,<27` (26.0.0) for Parquet; `uv.lock` updated.
+- **Docs:** DATASETS.md has a new section, "Preparing BDG2 for analysis", with the first-run
+  results. The resolved notes on raw vs cleaned data and weather alignment were updated. D017
+  records the design.
+
+**Real-data result** (`python -W error -m wattwise.data.bdg2_prepare`, defaults, exit 0, about 12 s)
+- 1,578 electricity meters:
+  - 522 excluded for an undetermined clock and 43 for insufficient data, leaving 1,013 eligible.
+  - The 20 sampled come from 9 sites: 8 wall-clock and Eagle standard.
+  - 1,475 non-electric meters were logged.
+- 350,804 readings, which reconciles with 20 × 17,544 minus 19 wall-clock meters × 4 dropped
+  hours. There are 24,415 missing values, and the period is 2016-01-01T00:00Z to
+  2018-01-01T05:00Z.
+- Weather: 156,569 rows, with 96.1–99.98% join coverage per site.
+- Every Parquet table re-validates against the contract without warnings.
+- Quality:
+  - Coverage is 93.02%, and 18 of 20 meters have warnings: gaps 19, missing values 18,
+    flatlines 12, low coverage 10.
+  - The autumn drop shows as a 2-hour UTC gap.
+  - The flatlines show that BDG2's cleaning removes zero runs but not constant non-zero runs.
+- **Determinism:** a second run to another folder gave identical SHA-256s for all 7 files.
+- **Size:** readings are 1.8 MB as Parquet vs 37 MB as CSV.
+
+**Validation** (Windows)
+- ruff: clean. Format: 41 files. `mypy` (strict): no issues in 40 files.
+- `pytest -W error`: **212 passed**, of which 15 are new. They run on the mini BDG2-format
+  fixture:
+  - standard sites use the fixed winter offset in January and July
+  - wall-clock sites follow daylight saving
+  - 4 unconvertible hours are dropped and counted
+  - weather uses its own clock
+  - every exclusion reason is produced and counted: not electricity, no metadata, undetermined
+    clock, insufficient data, not sampled
+  - the seeded sample is reproducible, and the seed matters
+  - no eligible meters raises an error
+  - byte-identical outputs across runs
+  - the Parquet output satisfies the contracts and reads back unchanged
+  - the manifest content, and the raw variant
+  - the CLI rejects unverified inputs and runs with real site names

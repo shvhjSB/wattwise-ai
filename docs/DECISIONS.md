@@ -487,6 +487,66 @@ links to the entry that replaces it.
 
 ---
 
+## D017 — BDG2 preprocessing pipeline design
+- **Date:** 2026-10-24 · **Task:** T009b · **Status:** Accepted
+- **Decision:** `wattwise.data.bdg2_prepare` converts the pinned BDG2 files into canonical
+  tables. Every step is deterministic, and every dropped meter or hour is counted.
+  - **Variant: cleaned by default, raw optional (`--variant raw`).**
+    - Cleaned data is used for training baselines and synthetic-injection benchmarks, where
+      unlabelled real anomalies would blur the score.
+    - Raw data is used for exploration and for showing the detector on real data. Its
+      anomalies are not ground truth.
+    - The manifest records the variant and the reason for it. Each variant writes to its own
+      output folder.
+  - **Eligibility, checked in this order:**
+    1. An electricity column with a metadata row.
+    2. A determined site clock (D016).
+    3. At least 50% of the convertible hours have a reading (`--min-coverage`).
+    Every other meter is logged with one reason: `not_electricity`, `no_metadata`,
+    `undetermined_clock`, `insufficient_data` or `not_sampled`.
+  - **Sample:** a simple random sample of eligible meters (`--sample-meters`, default 20), drawn
+    with `numpy.random.default_rng(seed)` from the sorted list (default seed 2016). `0` means
+    every eligible meter.
+    - The sample is not stratified by site or use, so it does not represent the population.
+      Later evaluations report which sites they cover.
+  - **UTC conversion:** `to_utc` is applied with the pinned clock, once per site.
+    - Non-existent and repeated wall-clock hours are dropped and counted per site: 4 hours over
+      2016–2017.
+    - In UTC, an autumn drop leaves a 2-hour gap, which the quality report shows as a gap.
+  - **Weather:** a separate canonical table for the sampled sites, converted with its own
+    clock (standard time, D016). It is not merged into readings: buildings carry `site_id`, and
+    the contract keeps the tables separate.
+    - The manifest records, per site, the share of reading hours that have a weather row
+      (join coverage).
+  - **Outputs:** Parquet via pyarrow 26 (readings, buildings, weather), an exclusion log in CSV,
+    a T008 quality report and `manifest.json`. The manifest records the pinned commit, input
+    SHA-256s, whether inputs were verified, the options, assumptions, statistics, output
+    SHA-256s and the licence note (D014).
+    - Inputs are verified against the pinned checksums before reading, unless
+      `--skip-input-verification` is given, which is also recorded.
+    - Output files are byte-identical for identical inputs and options; this is tested.
+- **Alternatives considered:**
+  - **Merging weather into readings:** rejected. It duplicates weather per meter, and it hides
+    missing weather as missing columns instead of reporting it.
+  - **Stratified sampling by site:** deferred. It is not needed for a first baseline, and the
+    plain seeded sample is easy to reproduce and explain.
+  - **Imputing the dropped DST hours:** rejected. Imputing would invent readings; dropping keeps
+    the data honest, and only 4 hours per meter are affected.
+  - **CSV outputs:** rejected for the processed tables. Parquet keeps the dtypes (UTC timestamps)
+    and is much smaller. On the first run, readings were 1.8 MB as Parquet vs 37 MB as CSV, and
+    weather 0.9 MB vs 7.3 MB.
+- **Consequences:**
+  - **First real run** (2026-10-24, cleaned, seed 2016):
+    - 1,013 of 1,578 electricity meters are eligible (522 undetermined clock, 43 insufficient
+      data), and 20 are sampled from 9 sites.
+    - 350,804 readings, 93.02% coverage.
+    - These are observed counts from one seeded sample, not population statistics.
+  - **The cleaned data still has quality warnings.** 12 of 20 sampled meters have flatlines
+    (BDG2's cleaning removes zero runs, not constant non-zero runs). 10 have low coverage.
+    Baselines (T012) must cope with gaps.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

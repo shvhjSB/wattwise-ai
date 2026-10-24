@@ -59,8 +59,11 @@ docs/        roadmap, decisions, status, work log, specifications
 The primary dataset is the [Building Data Genome Project 2](https://github.com/buds-lab/building-data-genome-project-2)
 (Miller et al., 2020, *Scientific Data* 7, 368, <https://doi.org/10.1038/s41597-020-00712-x>).
 Raw data is never committed. Downloading it is an explicit, checksum-verified command
-(`uv run python -m wattwise.data.bdg2 fetch`, about 369 MB). Provenance, licence evidence and the
-data conventions are in [docs/DATASETS.md](docs/DATASETS.md). All data,
+(`uv run python -m wattwise.data.bdg2 fetch`, about 369 MB). A second command,
+`uv run python -m wattwise.data.bdg2_prepare`, converts it to canonical tables in git-ignored
+`data/processed/`. It uses each site's audited timestamp clock and logs every excluded meter
+with a reason. Provenance, licence evidence and the data conventions are in
+[docs/DATASETS.md](docs/DATASETS.md). All data,
 whether from a dataset or an upload, is converted to one canonical shape, described in
 [docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Data quality (gaps, flatlines,
 unit slips and more) is assessed and reported, never silently fixed:

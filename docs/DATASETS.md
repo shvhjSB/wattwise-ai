@@ -171,10 +171,55 @@ checked on the downloaded files.
 - **Raw vs cleaned:** in the cleaned files "outliers have been removed using the Twitter
   AnomalyDetection R library …, zero readings longer than 24 continuous hours are removed, and
   zero readings in electricity meters are removed". Cleaned data is better suited to training
-  baselines. Raw data keeps the real anomalies, but they are unlabelled. Both are downloaded;
-  T009 and T012 decide which to use for what, and record why.
+  baselines. Raw data keeps the real anomalies, but they are unlabelled. Both are downloaded.
+  The preprocessing pipeline uses cleaned data by default and raw data on request, and records
+  the reason in its manifest (D017).
 - **Weather alignment:** the 2020-06-24 correction suggests that a UTC/local mix-up was fixed.
-  T009 should confirm that weather is local, e.g. that temperature peaks in the local afternoon.
+  The T009a audit confirmed that weather is local standard time at every site (see above).
+
+### Preparing BDG2 for analysis
+
+From `backend/`, after `fetch`:
+
+```bash
+uv run python -m wattwise.data.bdg2_prepare                     # cleaned, 20 meters, seed 2016
+uv run python -m wattwise.data.bdg2_prepare --variant raw       # raw readings instead
+uv run python -m wattwise.data.bdg2_prepare --sample-meters 0   # every eligible meter
+```
+
+The pipeline (`wattwise.data.bdg2_prepare`, D017) does the following:
+1. Verifies the inputs against the pinned checksums. `--skip-input-verification` skips this and
+   records that it did.
+2. Keeps electricity meters only.
+3. Converts each site to UTC with its pinned clock, dropping and counting unconvertible hours.
+4. Excludes meters without metadata, with an undetermined clock, or with readings in fewer than
+   50% of hours (`--min-coverage`).
+5. Draws a seeded random sample.
+
+It writes the following to `data/processed/bdg2/<variant>/` (git-ignored, never committed):
+
+| File | Content |
+|---|---|
+| `readings.parquet`, `buildings.parquet`, `weather.parquet` | Canonical tables ([DATA_CONTRACT.md](DATA_CONTRACT.md)); weather only for the sampled sites |
+| `exclusions.csv` | Every meter not used, with one reason: `not_electricity`, `no_metadata`, `undetermined_clock`, `insufficient_data` or `not_sampled` |
+| `quality_report.json`, `quality_report.md` | The T008 data-quality report ([DATA_QUALITY.md](DATA_QUALITY.md)) |
+| `manifest.json` | Pinned commit, input and output SHA-256s, options, assumptions (variant, interval-start, clocks), statistics, licence note |
+
+Identical inputs and options give byte-identical files.
+
+**First real run** (2026-10-24, defaults: cleaned, 20 meters, seed 2016). These are observed
+counts for one seeded sample; they do not describe all of BDG2.
+
+| | |
+|---|---|
+| Electricity meters | 1,578. Excluded: 522 undetermined clock, 43 insufficient data. 1,013 eligible |
+| Sample | 20 meters from 9 sites (Bull 3, Cockatoo 3, Crow 1, Eagle 1, Gator 1, Hog 4, Lamb 3, Panther 2, Peacock 2) |
+| Readings | 350,804 rows, 2016-01-01T00:00Z to 2018-01-01T05:00Z. 8 sites are wall-clock (4 hours dropped per meter), Eagle is standard |
+| Weather | 156,569 rows. Reading hours with weather: 96.1–99.98% per site |
+| Quality | 93.02% coverage. Warnings for 18 of 20 meters: gaps 19 (including the 2-hour UTC gap at each autumn change), missing values 18, flatlines 12, low coverage 10 |
+| Runtime | About 12 s on the development laptop. A second run gave byte-identical files |
+
+The flatlines show that BDG2's cleaning removes zero runs but not constant non-zero runs.
 
 ### Licence
 

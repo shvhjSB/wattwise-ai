@@ -945,3 +945,59 @@ site's clock-change hours, under its published zone, against the same hour on co
     - corrections applied before conversion (summer noon becomes 19:00 UTC, no dropped hours)
     - corrections recorded in the manifest
     - mismatched corrections stop the pipeline
+
+**Commit:** `a61da1d` feat(data): correct BDG2 site metadata with a falsifiable zone check. CI
+run [40086528467](https://github.com/shvhjSB/wattwise-ai/actions/runs/40086528467) was green
+(284 backend tests). The local Linux replay also passed (284 tests), after the replay's uv binary
+was re-downloaded and checked against the workflow's pinned SHA-256.
+
+---
+
+## 2026-10-24 — T011 Evaluation harness and metrics
+
+**Done**
+- **`wattwise.ml.evaluation`:**
+  - `compute_metrics`: MAE, RMSE, bias and guarded WAPE, plus counts of scored rows and of
+    missing actual values and predictions.
+  - `macro_average`.
+  - `evaluate(split, predictions, forecaster)`. It scores each (fold, role) per meter, per
+    building, overall and as a macro average, and summarises across folds. It refuses:
+    - `train` rows
+    - predictions that do not cover exactly the role's rows (missing or extra)
+    - unknown folds or roles
+    - mixed units
+    - a non-unique readings index
+  - `fingerprint`: the readings' content, independent of order and index.
+  - `code_version`: the package version, plus git commit and dirty flag when run from a checkout.
+  - `to_json`, `to_markdown`, `write_report`.
+- **Tests:** the readings helpers moved to `tests/ml/conftest.py`, shared by the split and
+  evaluation tests.
+- **Docs:** EVALUATION.md has a new section, "Metrics and reports"; D021 records the design.
+
+**Smoke run on the BDG2 sample:**
+- **Setup:** 13 rolling folds with a site holdout.
+- **Speed:** 26 role scores in 2.3 s. The fingerprint of a synthetic 5.3 M-row table took 1.9 s.
+- **Determinism:** reports were byte-identical across two runs.
+- **Missing predictions:** the placeholder predictor (each meter's training mean) cannot
+  predict unseen buildings, and all 3,288 of those rows were reported as missing predictions.
+- **Not a result:** the placeholder's metrics are not reported, because it is not a baseline;
+  T012 delivers the first real baselines.
+
+**Validation** (Windows)
+- ruff: clean. Format: clean. `mypy` (strict): no issues in 49 files.
+- `pytest -W error`: **314 passed**, of which 30 are new:
+  - **Hand-computed metrics:** errors +1, 0, −2, 0 give MAE 0.75, RMSE √1.25, bias −0.25 and
+    WAPE 0.3.
+  - **Missing values:** counted, not scored.
+  - **WAPE guard:** zero totals, a total below the threshold, a total exactly at the threshold,
+    and a custom threshold; negative actual values in the denominator.
+  - **Edge cases:** no scored rows; a shape mismatch.
+  - **Macro vs pooled:** macro MAE 2.0 against pooled 1.33.
+  - **Scoring:** per meter, per building and per role; missing predictions per meter; seen and
+    unseen buildings scored separately; the rolling-fold summary.
+  - **Refusals:** six dishonest-evaluation cases, mixed units and a non-unique index.
+  - **Reports:** provenance fields, byte-identical reports, JSON round-trip, Markdown
+    conventions.
+  - **Fingerprint:** ignores order and index, changes with any value, timestamp or label, and
+    treats signed zeros and NaN consistently.
+  - **Code version:** in and outside a checkout.

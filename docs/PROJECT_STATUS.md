@@ -65,6 +65,14 @@ The application foundation runs end to end locally, and CI checks it automatical
   are tested only in the future window. Every split re-checks itself on the actual rows, raises
   `LeakageError` on any violation, and records a deterministic manifest (D018,
   [EVALUATION.md](EVALUATION.md)).
+- **Evaluation harness (T011, D021):** `wattwise.ml.evaluation` scores any forecaster's
+  predictions on a split.
+  - **Metrics:** MAE, RMSE, bias, and WAPE only when total actual consumption is at least 1 kWh.
+    They are reported per meter, per building, overall and as macro averages.
+  - **Rules:** only evaluation roles are scored, predictions must cover exactly their rows, and
+    missing predictions are counted.
+  - **Reports:** JSON and Markdown, embedding the split manifest, a data fingerprint and the
+    code version. The same inputs give byte-identical reports.
 - **Supplementary data evaluated (T007b, D019):** every gap BDG2 leaves now has a recommended,
   source-verified option, or is stated as unfillable
   ([DATASETS.md](DATASETS.md#supplementary-data-evaluation-t007b)).
@@ -77,7 +85,9 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Other buildings:** Building 59 (sub-metered) and HKUST (independent).
   - **Metadata errors found in BDG2:** two "US/Eastern" sites are in Canada, and Fox and Wolf
     had the errors corrected in T009c.
-  - Nothing has been acquired yet.
+  - **Nothing has been acquired yet.** Only BDG2 is downloaded and preprocessed. The
+    supplementary data is downloaded in T007c (LEAD labels) and T007d (weather), which wait for
+    owner decisions, and later in T021a, T040 and T041.
 
 No model has been trained, so no ML metrics exist yet.
 
@@ -98,6 +108,7 @@ No model has been trained, so no ML metrics exist yet.
 | T010 | Leakage-safe split utilities | 2026-10-24 |
 | T007b | Supplementary dataset evaluation | 2026-10-24 |
 | T009c | BDG2 site metadata corrections | 2026-10-24 |
+| T011 | Evaluation harness and metrics | 2026-10-24 |
 
 ## Current task
 
@@ -105,18 +116,18 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T011 — Evaluation harness and metrics**: one trusted way to score any forecaster. It covers:
-- MAE and RMSE.
-- WAPE, reported only when total actual consumption is meaningfully positive.
-- Per-meter and per-building results, plus macro averages.
-- JSON and Markdown reports that include the split manifest (T010), a data fingerprint and the
-  code version.
+**T012 — Seasonal and historical baselines**: establish the bar every ML model must beat. It
+covers:
+- Seasonal-naive (the same hour in the previous week).
+- An hour-of-week median profile from the training window.
+- Both evaluated on the BDG2 sample with the T011 harness, with results and the exact command in
+  EVALUATION.md.
 
-The metrics are tested against hand-computed values, the WAPE guard is tested, and reports are
-reproducible. See [ROADMAP.md](ROADMAP.md#t011--evaluation-harness-and-metrics).
+Tests must show the baselines use only past or training data. See
+[ROADMAP.md](ROADMAP.md#t012--seasonal-and-historical-baselines).
 
-T007c (LEAD labels) and T007d (weather enrichment) are waiting for owner decisions (see
-DECISIONS.md, Open decisions). They are not blocking T011.
+If the owner decides first, T007c (LEAD labels) or T007d (weather enrichment) can run before
+T012. Both wait for the decisions in DECISIONS.md, under Open decisions.
 
 ## Milestone progress
 
@@ -125,7 +136,7 @@ DECISIONS.md, Open decisions). They are not blocking T011.
 | M1 Foundation | T001–T004 | 4 / 4 |
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 4 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
-| M4 Baselines | T011–T012 | 0 / 2 |
+| M4 Baselines | T011–T012 | 1 / 2 |
 | M5 Improved model | T013–T015, T041 | 0 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |

@@ -1,8 +1,9 @@
 # WattWise AI — Evaluation
 
 How WattWise models are evaluated. This page describes the method. **No model has been trained
-yet, so no metrics are reported.** The evaluation harness (T011) and the baselines (T012) will add
-results here, each with the exact command that produced it.
+yet, so no metrics are reported.** The splits (T010) and the evaluation harness (T011) are in
+place. The baselines (T012) will add the first results here, each with the exact command that
+produced it.
 
 ## Splits (T010)
 
@@ -147,3 +148,65 @@ pipeline version 2). This shows split sizes only. It is not a model result.
   folds. Use the test window once per reported result.
 - **Shared context.** Unseen buildings at a seen site share weather and schedules with training
   buildings; use a site holdout for strict claims.
+
+## Metrics and reports (T011)
+
+Code: [`wattwise.ml.evaluation`](../backend/src/wattwise/ml/evaluation.py). Design decision: D021.
+
+### What is scored
+
+- **Evaluation roles only.** Only rows of `validation`, `test` and `test_unseen` are scored.
+  Scoring `train` rows raises an error, because a training score is not an evaluation.
+- **Exactly the role's rows.**
+  - Predictions must be indexed by exactly the role's rows. A missing or extra row raises an
+    error, so no forecaster can skip the hard rows unnoticed.
+  - A row without a prediction is an explicit NaN and is counted as a missing prediction.
+  - Rows without an actual value are counted and never scored.
+- **One unit.** All scored rows must share one unit (D012).
+- **Separate roles.** Seen buildings (`test`) and unseen buildings (`test_unseen`) are scored and
+  reported separately, never pooled.
+
+### Metrics
+
+The error is **predicted − actual**, in the meters' unit (kWh for electricity).
+
+| Metric | Definition | Notes |
+|---|---|---|
+| MAE | mean \|error\| | |
+| RMSE | √ mean error² | Weights large misses more |
+| Bias | mean error | Negative means under-prediction. An under-predicting baseline would overstate excess energy (T021) |
+| WAPE | Σ\|error\| / Σ\|actual\| | Reported only when Σ\|actual\| ≥ `wape_min_total`, default 1 kWh. Otherwise the report gives the reason |
+
+Each metric is reported at four levels:
+- **Per meter.**
+- **Per building**, pooled over the building's meters.
+- **Overall**, pooled over all rows.
+- **Macro**: the unweighted mean over meters, so small meters count as much as large ones. Macro
+  WAPE averages only the meters whose WAPE is reported, and states how many.
+
+For rolling-origin splits, each role also gets a summary across folds: the mean, minimum and
+maximum MAE, the mean RMSE and the mean WAPE.
+
+### The report
+
+`evaluate(split, predictions, forecaster)` returns a report, and `write_report` writes it as JSON
+and Markdown. Each report records:
+- the forecaster's name and parameters
+- **the code version:** the package version, git commit, and whether tracked files had
+  uncommitted changes
+- **the data:** a SHA-256 fingerprint of the readings' content, independent of row order, plus
+  row and meter counts and the period
+- **the split manifest** (T010), which can re-create the split
+- the thresholds, every score and the fold summaries
+
+The report holds no wall-clock time, and metrics are rounded to 6 decimals, so **the same inputs
+give byte-identical reports** (tested).
+
+**Speed, from a smoke run on 2026-10-24 on the BDG2 sample:**
+- 13 rolling folds × 2 roles were scored in 2.3 s.
+- Fingerprinting 5.3 M rows took 1.9 s.
+
+The smoke run used a placeholder predictor, each meter's training mean. Its metrics are **not**
+reported, because it is not a baseline. It also showed missing predictions being counted: the
+placeholder cannot predict unseen buildings, and all 3,288 of those rows were reported as missing
+predictions.

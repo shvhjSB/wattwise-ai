@@ -105,6 +105,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   copied or merged clock-change hours). It rejected all 18 other sites in a falsification test.
   (T009c)
 - `time_convention.repeated_hours` for the autumn hours that occur twice. (T009c)
+- Evaluation harness (`wattwise.ml.evaluation`), D021. (T011)
+  - Metrics: MAE, RMSE, bias, and WAPE when total actual consumption is at least
+    `wape_min_total` (1 kWh).
+  - Results per meter, per building, overall and as macro averages, plus a summary across folds.
+  - Only evaluation roles are scored, predictions must cover exactly their rows, and missing
+    predictions are counted.
+  - JSON and Markdown reports embed the split manifest, a content fingerprint of the readings
+    and the code version, and are byte-identical for the same inputs.
+- The test helpers for canonical readings moved to `tests/ml/conftest.py`. (T011)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

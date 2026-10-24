@@ -35,7 +35,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T009b | BDG2 preprocessing pipeline | M3 | T008, T009a | Done |
 | T009c | BDG2 site metadata corrections (Fox time zone, Wolf longitude, site regions) | M3 | T009a, T007b | Done |
 | T010 | Leakage-safe split utilities | M3 | T005, T006 | Done |
-| T011 | Evaluation harness and metrics | M4 | T010 | Not started |
+| T011 | Evaluation harness and metrics | M4 | T010 | Done |
 | T012 | Seasonal and historical baselines | M4 | T009b, T011 | Not started |
 | T013 | Leakage-safe feature engineering | M5 | T009b, T010 | Not started |
 | T014 | ML forecaster vs baselines | M5 | T012, T013 | Not started |

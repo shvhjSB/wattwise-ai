@@ -683,6 +683,46 @@ links to the entry that replaces it.
 
 ---
 
+## D021 — Evaluation metrics and report design
+- **Date:** 2026-10-24 · **Task:** T011 · **Status:** Accepted
+- **Decision:** `wattwise.ml.evaluation` is the one way to score a forecaster
+  ([EVALUATION.md](EVALUATION.md#metrics-and-reports-t011)).
+  - **Honest scoring rules:**
+    - Only evaluation roles are scored, never `train`.
+    - Predictions must cover exactly the role's rows. Missing predictions are explicit NaN and
+      counted; missing actual values are counted, never scored.
+    - One unit per scored set, and seen and unseen buildings are reported separately.
+  - **Metrics:**
+    - The error is predicted − actual.
+    - MAE, RMSE, bias (mean error), and WAPE = Σ|error| / Σ|actual|.
+    - WAPE is reported only when Σ|actual| ≥ `wape_min_total` (default 1 kWh, configurable),
+      otherwise the reason is given.
+  - **Levels:**
+    - Per meter, per building (pooled) and overall (pooled).
+    - Macro: the unweighted mean over meters; macro WAPE covers only meters with a reported WAPE.
+    - For multi-fold splits, a summary across folds.
+  - **Provenance:**
+    - The report embeds the split manifest.
+    - It embeds a content fingerprint of the readings: sorted by meter and time, little-endian
+      bytes, one NaN pattern and +0.0 for −0.0, so it ignores row order and index.
+    - It embeds the package version, the git commit and a dirty flag.
+  - **Reproducibility:** no wall-clock time, metrics rounded to 6 decimals, LF line endings.
+- **Alternatives considered:**
+  - **MAPE:** rejected. It is undefined at zero readings and explodes near zero, which is common
+    at night or with meter faults.
+  - **CV(RMSE) (ASHRAE Guideline 14):** deferred. It is useful for comparing buildings, and can
+    be added from the same errors if needed.
+  - **Hashing the data with pandas' object hashing:** rejected. Its stability across pandas
+    versions is not guaranteed.
+  - **A timestamp in the report:** rejected. It breaks byte reproducibility; the git commit and
+    the data fingerprint identify a run.
+- **Consequences:**
+  - T012 baselines are scored by this harness only, and every reported number comes with its
+    report.
+  - Bias is visible before any excess-energy estimate (T021) relies on a baseline.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

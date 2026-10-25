@@ -361,3 +361,104 @@ beat seasonal-naive by 6–20% on test.
   20 meters at 9 sites cannot show whether a model generalises to new campuses.
 - **Limits:** one seeded sample of 20 meters on cleaned data, one split, fixed small grids. Not
   BDG2-wide or real-world performance, and not anomaly-detection results.
+
+## Detector benchmark (T018)
+
+**Synthetic benchmark: injected anomalies on real BDG2 readings.** The anomalies are made up, and
+the consumption around them is real. Real data has its own unlabelled anomalies, so alerts
+outside the injected windows are an **upper bound** on false alerts. These are not results on
+human-labelled anomalies (that is T018b).
+
+```bash
+uv run python -m wattwise.ml.benchmark --data ../data/processed/bdg2/cleaned \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet
+```
+
+**Patterns**, each relative to the meter's level (its median reading in calibration):
+
+| Pattern | Injection | Correct signature |
+|---|---|---|
+| spike | +100% for 2 h | `spike` |
+| sustained | +30% for 3 days | `sustained` |
+| long_sustained | +30% for 14 days | `sustained` |
+| overnight | +30% in local hours 22:00–05:59, on 7 nights | `overnight_excess` |
+| drift | a ramp from 0 to +50% over 7 days | `drift` |
+| flatline | the first reading repeated for 24 h | `flatline` |
+| dropout | zero readings for 30 h | `data_fault` |
+
+**Procedure** (promoted model `20261025T070700Z-4cf91609c9ef`, seed 0):
+1. **Calibration:** the model's validation quarter (Jul–Sep 2017), from uninjected data.
+2. **Tuning:** October 2017, the first third of the test window. There are 12 replicates, each
+   injecting one anomaly per meter, with patterns rotating across meters: 240 injections. Each
+   replicate rebuilds the features, so the model's history sees the injection as it would in
+   reality.
+   - **Settings tried:** for both detectors, 16 settings (z_on 4, 5, 6 or 8; z_off 2 or 3;
+     at least 3 or 6 hours).
+   - **Choice:** the setting with the highest mean recall over patterns, within an alert budget
+     of 0.5 alerts per meter-week outside injections. That budget is a product assumption.
+3. **Evaluation:** Nov 2017 to 1 Jan 2018, 12 fresh replicates (240 injections), scored once for
+   the chosen settings and the T016 default.
+4. **Scoring:** an injection is found when an event of its meter overlaps it. Latency runs from
+   the injection's start to the first overlapping hour. Coverage is the share of injected hours
+   inside events. The signature is that of the event with the largest overlap.
+
+The run takes about 6.5 minutes; a rerun reproduced every number.
+
+**Tuning: best recall within an alert rate** (alerts per meter-week):
+
+| Detector | ≤ 0.2 | ≤ 0.3 | ≤ 0.5 | ≤ 1.0 |
+|---|---|---|---|---|
+| rolling-z | 75% | 75% | 75% | 75% |
+| model | no setting | 52% | 80% | 85% |
+
+**Chosen settings:**
+- Model: open 4, continue 3, at least 6 hours. Recall 80% at 0.50 alerts in tuning, just
+  within the budget.
+- Rolling-z: open 4, continue 2, at least 3 hours. Recall 75% at 0.18 alerts.
+
+**Evaluation (scored once):**
+
+| Detector | Mean recall | Alerts per meter-week (injected runs) | Without injections |
+|---|---|---|---|
+| rolling-z (chosen = T016 default) | 72% | 0.39 | 0.46 |
+| model, chosen | 81% | **0.97** | 0.97 |
+| model, T016 default | 87% | 1.46 | 1.54 |
+
+| Pattern | Injected | Model recall | Rolling-z recall | Model median latency (h) | Model coverage | Signature match (model / rolling-z) |
+|---|---|---|---|---|---|---|
+| spike | 34 | 76% | 56% | 0 | 100% | 85% / 84% |
+| sustained | 34 | 85% | 71% | 0 | 69% | 55% / 38% |
+| long_sustained | 35 | 89% | 86% | 0 | 51% | 77% / 30% |
+| overnight | 35 | 91% | 83% | 13 | 27% | 50% / 59% |
+| drift | 34 | 85% | 76% | 74 | 40% | 3% / 0% |
+| flatline | 34 | 44% | 41% | 7 | 57% | 80% / 71% |
+| dropout | 34 | 97% | 94% | 0 | 97% | 88% / 81% |
+
+**Decision (D030): the model detector is not kept as the default alert source.**
+- **Rule:** keep it only if it has the higher evaluation recall **and stays within the alert
+  budget in tuning and evaluation**. It found more of every pattern, but its alert rate doubled
+  out of sample, to 0.97 against a budget of 0.5. At alert rates both detectors reach, the
+  rolling score had the higher recall (75% against 52% at up to 0.3).
+- **Rule correction:** the rule as first written checked the budget in tuning only, and would
+  have kept the model detector. It was tightened after the evaluation run, because a budget
+  that fails out of sample is not met. Both results are in the report.
+
+**What this shows, and what it does not:**
+- **What tuning bought:** tuning cut the model detector's alerts by a third (1.46 to 0.97)
+  for 6 points of recall. The rest is calibration drift: a summer scale is too narrow for
+  winter (D028).
+- **Weak spots:**
+  - **Drift** is usually found (85%), but late (median 74 hours) and is almost never labelled
+    `drift` (3%). The signature rule needs a long, monotonic event, which detection rarely
+    produces.
+  - **Flatlines** are found 44% of the time. A stuck reading only shows when it departs from
+    the expected load.
+  - **Overnight excess:** events cover only 27% of the injected hours. Each night is a separate
+    short event, and the injection is only "on" at night.
+  - **Long anomalies (14 days):** 89% recall, but 51% coverage. Even with the pre-event
+    reference, part of the period falls below the thresholds.
+- **The default's limit:** the rolling score does not know the weather. A test on a strongly
+  weather-driven synthetic load shows it missing a +60% two-day surge that the model detector
+  finds exactly.
+- **Limits:** 20 meters, one autumn and winter, injected shapes chosen by us, and an assumed
+  budget. Real anomalies may look different. Human labels are T018b.

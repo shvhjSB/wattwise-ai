@@ -1,7 +1,7 @@
 # Anomaly detection
 
 Detector version: **1** · Signatures version: **1** · Modules: `wattwise.ml.detection`,
-`wattwise.ml.signatures` · Decisions: D028, D029 · Tasks: T016, T017
+`wattwise.ml.signatures` · Decisions: D028, D029, D030 · Tasks: T016, T017, T018
 
 The detector turns the gap between observed and expected consumption into **events**. An event is
 a period worth investigating; it is **not confirmed waste**. Its residual sum is a deviation from
@@ -12,11 +12,34 @@ uv run python -m wattwise.ml.detection --data ../data/processed/bdg2/cleaned \
     --enrichment ../data/processed/era5/weather_enrichment.parquet
 ```
 
-It uses the promoted model (MODELS.md). It writes `events.csv`, `scores.parquet` (the score of
-every detection hour), `summary.json` and `report.md` to git-ignored `data/processed/detection/`.
-Repeat runs are byte-identical.
+It runs in the promoted model's test window (MODELS.md). It writes `events.csv`,
+`scores.parquet` (the score of every detection hour), `summary.json` and `report.md` to
+git-ignored `data/processed/detection/`. Repeat runs are byte-identical.
 
-## Scores
+## Two detectors, and the default (T018, D030)
+
+Both detectors use the same event rules and signatures below; only the score differs.
+
+| Detector | Score | Default thresholds | Use |
+|---|---|---|---|
+| `rolling-z` (**default**) | The reading against the mean and standard deviation of the same hour on the previous 14 days (at least 7 needed; past only) | open 4, continue 2, 3 hours; no pre-event reference | Alerts |
+| `model` (`--detector model`) | The model's residual, robustly scaled on its validation quarter (below) | open 4, continue 3, 6 hours (tuned in T018) | Weather-driven loads; investigation |
+
+**Why the simple score is the default.** In the injected-anomaly benchmark (T018), the model
+detector found more of every pattern, but at 2.5 times the alerts.
+- **Budget:** its alert rate doubled from the October tuning window to November–December, to
+  0.97 alerts per meter-week against a budget of 0.5. The rolling score stayed at 0.39.
+- **Matched alert rates:** at alert rates both can reach, the rolling score had the higher
+  recall.
+- **Rule:** the agreed rule keeps a model detector only where it beats the simple baseline,
+  so the rolling score is the default.
+
+**Known limit of the default:** it does not know the weather. On a strongly weather-driven
+load, a same-hour history varies so much that a +60% two-day surge stays below z 2.5. The
+model detector finds that surge exactly, and a test pins both results. The likely fix is the
+model's residuals with a rolling, season-adaptive scale (T019), checked with the same benchmark.
+
+## Scores (model detector)
 
 For each meter and hour, residual = observed − expected, and
 
@@ -45,8 +68,10 @@ Each direction is detected separately: **high** (above expected) and **low** (be
 | `reference_weeks` | 4 | How many weeks back to look for a pre-event reading |
 | `scale_floor_fraction` | 0.01 | The scale floor, as a share of the mean absolute reading |
 
-These are **provisional and untuned**. The injected-anomaly benchmark (T018) evaluates them, and
-the test quarter is not used to choose them.
+These are `DetectorConfig`'s base defaults. Each detector overrides some of them; see the
+table under "Two detectors". T018 tuned the thresholds on injected anomalies in October 2017
+only, never on the evaluation months. The rolling score keeps 4, 2 and 3 hours; the model
+detector uses 4, 3 and 6 hours.
 
 Each event records:
 - **Extent:** start, end (exclusive) and duration in hours
@@ -95,7 +120,21 @@ this order. Meter problems come first, so they are never presented as consumptio
 - **Baseline:** rules run on the hours exactly as the detector saw them, including the pre-event
   baseline of long events.
 
-## Results on the BDG2 sample (2026-10-25)
+## Results on the BDG2 sample with the default detector (T018)
+
+Detection window 2017-10-01 to 2018-01-02 (UTC), rolling z-score, about 13 s.
+
+- **Volume:** 100 events (65 high, 35 low), covering 916 hours: 2.1% of the 43,545 scored hours,
+  or 0.38 events per meter-week.
+- **Signatures:** 2 `data_fault`, 8 `flatline`, 38 `spike`, 13 `overnight_excess`,
+  4 `sustained`, 35 `unclassified`.
+- **Model detector for comparison** (`--detector model`, the T018-tuned thresholds): 207 events
+  covering 3,366 hours.
+
+The results below are the T016 first run with the model detector and its untuned thresholds,
+kept for the record.
+
+## Results on the BDG2 sample with the model detector (T016, 2026-10-25)
 
 Promoted model `20261025T070700Z-4cf91609c9ef`. Calibration: 2017-07-01 to 2017-10-01.
 Detection: 2017-10-01 to 2018-01-02 (UTC). About 13 s.
@@ -143,7 +182,9 @@ Detection: 2017-10-01 to 2018-01-02 (UTC). About 13 s.
   of hours have |z| ≥ 4. A normal distribution would give 0.006%.
 - **Seasonal drift:** in the winter detection quarter the share is 7.2%. A scale calibrated in
   summer is too narrow for winter.
-- **Next steps:** threshold tuning against injected anomalies (T018), and calibrated intervals
+- **T018 outcome:** the model detector was tuned, but its alert rate still doubles out of
+  season, so the rolling score became the default (D030).
+- **Next steps (as first written):** threshold tuning against injected anomalies (T018), and calibrated intervals
   with seasonal or rolling calibration (T019). Until then, the event list is a candidate list
   for review, not an alert feed.
 

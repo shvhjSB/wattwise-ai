@@ -1569,3 +1569,78 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - **Docs:** DETECTION.md lists every signature.
   - The first end-to-end run labelled a perfectly constant injected night excess `flatline`,
     which the rule should do. The test now injects a varying excess.
+
+---
+
+## 2026-10-25 — T018 Injected-anomaly benchmark
+
+**Roadmap first.** T018 was split:
+- **T018:** the injected benchmark and tuning.
+- **T018b (new):** LEAD human labels. They cover 2016, inside the model's training period, so
+  they need a model trained on H1 2016 and scored on H2 2016.
+- **Synthetic fixture:** too short (8 weeks) to train, calibrate and detect out-of-sample.
+  Synthetic injections are covered by tests on the 100-day synthetic load instead.
+
+**Done**
+- **`wattwise.ml.benchmark`** (D030):
+  - **Injections:** seven patterns relative to each meter's calibration median: spike, sustained,
+    long sustained, overnight (local), drift, flatline and dropout. `plan` is seeded, places one
+    injection per meter per replicate, rotates patterns, and records anything that does not fit.
+  - **Replicates:** each rebuilds the features, so the model's history sees the injection.
+  - **Scoring:** found if an event of the same meter overlaps; latency, coverage, event count,
+    and the signature of the largest-overlap event; alerts outside injections.
+  - **Tuning and evaluation:** a 16-setting grid per detector in the first third of the test
+    window, chosen by best mean recall within an alert budget. Evaluated once on the rest, plus
+    an uninjected run.
+  - **Reports:** `benchmark.json` and `benchmark.md` in git-ignored `data/processed/benchmark/`.
+- **`wattwise.ml.detection`:**
+  - `rolling_same_hour` (the same hour on the previous 14 days, past only), the `Detector` enum
+    and per-detector defaults.
+  - `detect(z=...)` accepts precomputed scores without a calibration.
+  - The CLI takes `--detector`, defaulting to `rolling-z`, and records the detector and settings.
+
+**Real result (BDG2 sample; promoted model; 12 replicates per window; about 6.5 min)**
+- **Tuning (Oct 2017, 240 injections):**
+  - Model detector chosen: open 4, continue 3, 6 h. Recall 80% at 0.497 alerts per meter-week.
+  - Rolling-z chosen: open 4, continue 2, 3 h. Recall 75% at 0.176.
+  - Below 0.27 alerts the model detector has no setting at all.
+- **Evaluation (Nov–Dec, 240 fresh injections, scored once):**
+  - Model: 81% recall at 0.968 alerts per meter-week (0.971 without injections).
+  - Rolling-z: 72% at 0.388 (0.457).
+  - Model with the T016 defaults: 87% at 1.462.
+- **Per pattern (model / rolling-z recall):** spike 76/56, sustained 85/71, long 89/86,
+  overnight 91/83, drift 85/76, flatline 44/41, dropout 97/94.
+  - Drift is labelled `drift` only 3% / 0% of the time.
+  - Overnight coverage is 27% for the model.
+- **Decision:** the rule as first coded (budget checked in tuning only) said "keep". It was
+  tightened after the evaluation run to require the budget in evaluation too, and both
+  results are reported. Under the corrected rule the model detector is not kept as the
+  default, so the detection command now defaults to `rolling-z`.
+- **Synthetic surge check:** the rolling z-score misses the weather-masked +60% 2-day surge
+  (max z 2.31, against a 95th percentile of 2.11 on that meter). The model detector finds it
+  exactly. A test pins both.
+- **Detection with the new default:** 100 events (65 high, 35 low), 916 hours (2.1% of 43,545
+  scored hours), 0.38 per meter-week. With `--detector model`: 207 events, 3,366 hours.
+- **Determinism:** the benchmark rerun reproduced tuning, choices and evaluation exactly. The
+  detection rerun was byte-identical.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 69
+  files.
+- `pytest -W error`: **538 passed**. 17 are new or changed:
+  - **Benchmark (16):**
+    - plan determinism, window bounds and rotation; skipping
+    - each injection's exact effect (spike, local overnight, drift ramp, flatline and dropout
+      keeping missing readings)
+    - the rolling z-score's formula, its past-only behaviour and the 7-day minimum
+    - `detect` with precomputed scores and its errors
+    - overlap scoring (latency, coverage, two events, signature)
+    - misses and outside alerts; summaries
+    - the budget-constrained choice
+    - windows from the model's split
+    - a full reproducible run
+    - the CLI
+    - the stricter decision rule
+  - **Detection:** the model-path test now asks for the model detector explicitly. New tests
+    cover the default rolling detector (no calibration, and its weather-masked miss) and the
+    CLI's `--detector`.

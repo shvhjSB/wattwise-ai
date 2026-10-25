@@ -16,6 +16,7 @@ from tests.ml.conftest import BUILDINGS, SPLIT, features_of, synthetic
 from wattwise.ml.detection import (
     MAD_TO_SIGMA,
     Detection,
+    Detector,
     DetectorConfig,
     calibrate,
     detect,
@@ -291,7 +292,14 @@ def test_detection_with_the_promoted_model_finds_an_injected_surge(
     readings = pd.read_parquet(folder / "readings.parquet")
     weather = pd.read_parquet(folder / "weather.parquet")
 
-    result = run_detection(readings, BUILDINGS, features_of(readings, weather), root)
+    result = run_detection(
+        readings,
+        BUILDINGS,
+        features_of(readings, weather),
+        root,
+        DetectorConfig(),  # the T016 thresholds
+        detector=Detector.MODEL,
+    )
 
     events = result.detection.events
     start, end = pd.Timestamp("2017-03-27T00:00Z"), pd.Timestamp("2017-03-29T00:00Z")
@@ -304,7 +312,38 @@ def test_detection_with_the_promoted_model_finds_an_injected_surge(
         ["high", start, end, 48]
     ]
     assert result.detection_window[0] == SPLIT.time.test_start  # type: ignore[union-attr]
+    assert result.calibration is not None
     assert set(result.calibration.rows.index) == {"A-electricity", "B-electricity", "C-electricity"}
+
+
+def test_the_default_rolling_z_detector_misses_a_weather_masked_surge(
+    prepared: tuple[Path, Path],
+) -> None:
+    """The known limit of the default detector (D030). This load swings by up to +-50% from day
+    to day with the weather, so the same hour on previous days varies widely: a +60% two-day
+    surge stays below z 2.5. The model-based detector, which accounts for weather, finds it
+    exactly (test above)."""
+    folder, root = prepared
+    readings = pd.read_parquet(folder / "readings.parquet")
+    weather = pd.read_parquet(folder / "weather.parquet")
+
+    result = run_detection(readings, BUILDINGS, features_of(readings, weather), root)
+
+    assert result.detector is Detector.ROLLING_Z and result.calibration is None
+    assert result.config.horizon_hours is None
+    events = result.events
+    start, end = pd.Timestamp("2017-03-27T00:00Z"), pd.Timestamp("2017-03-29T00:00Z")
+    surge = events[
+        (events["meter_id"] == "B-electricity") & (events["start"] < end) & (events["end"] > start)
+    ]
+    assert surge.empty
+    scores = result.detection.scores
+    during = scores[
+        (scores["meter_id"] == "B-electricity")
+        & (scores["timestamp"] >= start)
+        & (scores["timestamp"] < end)
+    ]
+    assert during["z"].max() < 2.5
 
 
 def test_the_command_line_writes_identical_outputs_and_needs_a_model(
@@ -320,7 +359,11 @@ def test_the_command_line_writes_identical_outputs_and_needs_a_model(
         assert (tmp_path / "one" / name).read_bytes() == (tmp_path / "two" / name).read_bytes()
     summary = json.loads((tmp_path / "one" / "summary.json").read_text(encoding="utf-8"))
     assert summary["events"] >= 1 and summary["detector_version"] == "1"
+    assert summary["detector"] == "rolling-z" and summary["calibration_rows"] is None
     assert "not confirmed waste" in summary["interpretation"]
+    assert main([*args, "--output", str(tmp_path / "model"), "--detector", "model"]) == 0
+    model = json.loads((tmp_path / "model" / "summary.json").read_text(encoding="utf-8"))
+    assert model["detector"] == "model" and model["config"]["z_off"] == 3.0
     capsys.readouterr()
 
     assert main(["--data", str(folder), "--root", str(tmp_path / "empty")]) == 1

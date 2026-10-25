@@ -160,6 +160,20 @@ The application foundation runs end to end locally, and CI checks it automatical
     In T016 these were first read as possible holidays.
   - **Unclassified:** 65% of events, mostly 4–23 hours long, reported as such rather than
     forced into a pattern.
+- **Detector benchmark (T018, D030):** `python -m wattwise.ml.benchmark`. Known anomalies of 7
+  patterns are injected into real BDG2 readings: a **synthetic benchmark**, with 240
+  injections to tune and 240 to evaluate once ([EVALUATION.md](EVALUATION.md#detector-benchmark-t018)).
+  - **Model detector:** found more of every pattern (81% mean recall against 72%). But its alert
+    rate doubled out of sample, to 0.97 per meter-week against a budget of 0.5.
+  - **Rolling same-hour z-score:** stayed at 0.39, and had the higher recall at matched alert
+    rates.
+  - **So the rolling z-score is now the default alert source.** The BDG2 test quarter has 100
+    events (2.1% of scored hours) instead of 355. The model detector remains available, and the
+    model still provides expected consumption.
+  - **Known limit of the default:** it does not know the weather, and misses a weather-masked
+    surge the model finds (tested). T019 tests a season-adaptive scale for the model.
+  - **Decision rule:** tightened after the evaluation run; the first version would have kept
+    the model detector. Both are reported.
 
 ## Completed tasks
 
@@ -187,6 +201,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T015 | Model artifacts, metadata and registry | 2026-10-25 |
 | T016 | Residual-based detector and event grouping | 2026-10-25 |
 | T017 | Anomaly signature rules | 2026-10-25 |
+| T018 | Injected-anomaly benchmark | 2026-10-25 |
 
 ## Current task
 
@@ -194,16 +209,13 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T018 — Injected-anomaly benchmark:** measure detection quality honestly. It covers:
-- Injecting known anomalies into held-out BDG2 series and the synthetic fixture.
-- Recall per pattern, detection latency, and the false-alert rate on uninjected windows.
-- Comparison with a rolling z-score baseline.
-- Tuning the provisional detector and signature thresholds on the benchmark, never on the test
-  quarter.
-- Scoring against LEAD's 2016 human labels separately. That needs a model trained outside 2016
-  (D028).
+**T018b — Detector check against LEAD human labels:** score detection against LEAD's 2016 human
+labels on real data. LEAD's year is inside the adopted model's training period, so this needs a
+model trained on the first half of 2016 and scored on the second half, on LEAD's meters. Only
+labels whose readings match BDG2 are trusted (D022). Results are reported separately as "real
+data, human labels without measured agreement", or "not run" with the reason.
 
-See [ROADMAP.md](ROADMAP.md#t018--injected-anomaly-benchmark). T041 (the independent HKUST
+See [ROADMAP.md](ROADMAP.md#t018b--detector-check-against-lead-human-labels). T041 (the independent HKUST
 buildings) also remains in M5.
 
 ## Milestone progress
@@ -215,7 +227,7 @@ buildings) also remains in M5.
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M6 Anomaly detection | T016–T018, T040 | 2 / 4 |
+| M6 Anomaly detection | T016–T018, T018b, T040 | 3 / 5 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
@@ -262,7 +274,8 @@ pushes only as `shvhjSB` (D006).
 | Weather features use the observed weather of the target hour | T014 reporting | Results are expected-consumption accuracy, not forecast accuracy; say so with every result (D025) |
 | History features absorb a sustained anomaly after the horizon | Long events | T016 scores events older than a week against the meter's pre-event week (D028); that reference ignores weather changes since the event began |
 | Some BDG2 meters hold daily totals spread evenly over 24 hours (e.g. Gator_public_Geraldine) | Training, calibration, detection | Labelled `flatline` by T017, never consumption (D029). Masking such days from training and calibration is a candidate improvement |
-| The detector's alert volume is high (355 events, 11.9% of hours, on 20 meters in a quarter) | Operators, T018–T020 | Untuned thresholds, heavy-tailed residuals and a summer-calibrated scale (D028). T018 tunes on injected anomalies; T019 calibrates intervals. Until then, events are a review list |
+| The model detector's alert rate doubles out of season (summer calibration, winter detection) | Alerts | The rolling same-hour z-score is the default alert source (D030); T019 tests a season-adaptive scale |
+| The default rolling z-score does not know the weather | Strongly weather-driven buildings | Documented and tested: it can miss weather-masked anomalies the model finds. `--detector model` is available; T019 aims to combine both (D030) |
 | The adopted model does not generalise to unseen sites on this sample | Uploads of new buildings | Seasonal-naive stays the default for buildings without training data (D026) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |

@@ -214,6 +214,17 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     totals spread over 24 hours in the raw data.
 - The detector also returns every event hour (reading, baseline used, score), so rules run on
   exactly what it saw. (T017)
+- Injected-anomaly benchmark (`python -m wattwise.ml.benchmark --data ...`), D030. (T018)
+  - **Patterns:** seven (spike, sustained, long sustained, overnight, drift, flatline, dropout)
+    injected into real BDG2 readings, one per meter per replicate, with the features rebuilt.
+  - **Procedure:** tuning on October 2017 (240 injections), evaluation once on Nov–Dec (240).
+  - **Measures:** recall, latency, coverage and signature agreement per pattern, and alerts
+    outside injections (an upper bound on false alerts).
+  - **Detectors:** the model detector against a rolling same-hour z-score baseline, with the
+    same event rules.
+  - **Labelling:** reported as a synthetic benchmark in `docs/EVALUATION.md`.
+- A rolling same-hour z-score detector (`detection.rolling_same_hour`), and `--detector
+  rolling-z|model` for the detection command. (T018)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -240,6 +251,12 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - `registry.read_inputs` is public; the detection command reuses it. (T016)
 - `detection.run_detection` takes the buildings table (for local time), and its result carries
   the classified events. (T017)
+- **The detection command's default is now the rolling same-hour z-score** (open 4, continue 2,
+  3 hours), not the model detector. In the T018 benchmark the model detector's alert rate
+  doubled out of sample. `--detector model` keeps it, with the tuned thresholds (open 4,
+  continue 3, 6 hours). On the BDG2 test quarter this gives 100 events instead of 355. (T018)
+- `detect` accepts precomputed scores (`z=`) without a calibration. (T018)
+- T018's LEAD human-label scoring moved to a new task, T018b. (T018)
 - New runtime dependency `holidays` 0.106 (MIT). It needs `python-dateutil<3`, so the lock
   moved python-dateutil from 3.0.0 (released 2026-10-21, under the two-week rule) to
   2.9.0.post0. (T013)

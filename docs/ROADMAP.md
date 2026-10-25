@@ -42,7 +42,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T015 | Model artifacts, metadata and registry | M5 | T014 | Done |
 | T016 | Residual-based detector and event grouping | M6 | T012 | Done |
 | T017 | Anomaly signature rules | M6 | T008, T016 | Done |
-| T018 | Injected-anomaly benchmark | M6 | T016, T017 | Not started |
+| T018 | Injected-anomaly benchmark | M6 | T016, T017 | Done |
+| T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Not started |
 | T019 | Prediction intervals | M7 | T010, T012 | Not started |
 | T020 | Alert explanations | M7 | T017, T019 | Not started |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
@@ -417,18 +418,35 @@ convention **differs by site**, which made the convention audit a substantial ta
 ### T018 — Injected-anomaly benchmark
 - **Objective:** measure detection quality honestly, without inventing labels for real data.
 - **Scope:**
-  - Inject known anomalies into held-out real BDG2 series and into the synthetic fixture.
+  - Inject known anomalies into held-out real BDG2 series: spike, sustained, long sustained,
+    overnight, drift, flatline and dropout. The synthetic fixture (8 weeks) is too short to
+    train, calibrate and detect out-of-sample, so synthetic injections are covered by tests on
+    the 100-day synthetic load.
   - Measure:
     - recall per pattern
     - detection latency
-    - false-alert rate on uninjected windows
-  - Compare against a rolling z-score baseline and, optionally, Isolation Forest.
-  - If T007c is done, also score against LEAD's human labels (BDG2 meters, 2016). These results
-    are reported separately as "real data, human labels without measured agreement".
+    - signature agreement
+    - the alert rate outside injected windows (an upper bound on false alerts, since real data
+      has unlabelled anomalies)
+  - Compare against a rolling same-hour z-score baseline. Isolation Forest is optional and not
+    done.
+  - Tune detector thresholds on injections in the first third of the test window, and evaluate
+    once on fresh injections in the rest.
 - **Acceptance:**
   - The benchmark command is reproducible.
-  - Results are labelled "synthetic benchmark" or "LEAD labels" in `docs/EVALUATION.md`.
+  - Results are labelled "synthetic benchmark" in `docs/EVALUATION.md`.
   - A model-based detector is kept only where it beats the simple baseline.
+
+### T018b — Detector check against LEAD human labels
+- **Objective:** score detection against human labels on real data.
+- **Scope:**
+  - LEAD's labels cover 2016, which is inside the adopted model's training period.
+    Chronological evaluation therefore needs a model trained on the first half of 2016 and
+    scored on the second half.
+  - Use LEAD's meters, prepared from BDG2. Only labels whose readings match BDG2 are trusted
+    (D022).
+- **Acceptance:** results are reported separately as "real data, human labels without measured
+  agreement", or "not run" with the reason.
 
 ## M7 — Explanation and uncertainty
 
@@ -437,6 +455,10 @@ convention **differs by site**, which made the convention audit a substantial ta
 - **Scope:**
   - Split-conformal intervals from a calibration window, optionally stratified by meter or hour-of-day.
   - Empirical coverage measured on the test window.
+  - Seasonal drift (D028, D030): the model's residual scale is too narrow in winter when
+    calibrated in summer. Test a rolling, season-adaptive scale (for intervals and for the model
+    detector), and re-run the T018 benchmark. The model detector becomes the default again only
+    if it then beats the rolling z-score within the alert budget.
 - **Acceptance:**
   - Coverage is reported from real runs.
   - The word "calibrated" is used only when coverage falls within a stated tolerance.

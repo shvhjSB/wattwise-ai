@@ -33,6 +33,7 @@ import sys
 from collections.abc import Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 from typing import Any, Final, Self
 
@@ -58,6 +59,9 @@ DETECTOR_VERSION: Final = "1"
 MAD_TO_SIGMA: Final = 1.4826
 WEEK_HOURS: Final = 168
 DEFAULT_OUTPUT: Final = Path("../data/processed/detection")
+#: The rolling same-hour score: the same hour on the previous ROLLING_DAYS days.
+ROLLING_DAYS: Final = 14
+ROLLING_MIN_DAYS: Final = 7
 EVENT_COLUMNS: Final = (
     "meter_id",
     "building_id",
@@ -100,6 +104,22 @@ class DetectorConfig(BaseModel):
         if not self.z_off < self.z_on <= self.z_spike:
             raise ValueError("Thresholds must satisfy z_off < z_on <= z_spike.")
         return self
+
+
+class Detector(StrEnum):
+    """Where scores come from. The rolling same-hour z-score is the default alert source: in
+    the T018 benchmark the model-based score broke the alert budget out of sample (D030)."""
+
+    ROLLING_Z = "rolling-z"
+    MODEL = "model"
+
+
+#: Thresholds per detector. The rolling z-score has no pre-event reference (no model to
+#: absorb anomalies); the model detector uses the T018-tuned thresholds.
+DETECTOR_DEFAULTS: Final = {
+    Detector.ROLLING_Z: {"horizon_hours": None},
+    Detector.MODEL: {"z_on": 4.0, "z_off": 3.0, "min_hours": 6},
+}
 
 
 @dataclass(frozen=True)
@@ -172,33 +192,59 @@ def calibrate(
 def detect(
     readings: pd.DataFrame,
     expected: pd.Series,
-    calibration: Calibration,
+    calibration: Calibration | None,
     rows: npt.NDArray[np.bool_] | pd.Series,
     config: DetectorConfig | None = None,
+    z: pd.Series | None = None,
 ) -> Detection:
     """Events among the `rows` of `readings` (a boolean mask). Earlier readings of the same
-    meter serve only as pre-event references."""
+    meter serve only as pre-event references.
+
+    `z` optionally gives precomputed scores indexed like `readings`, for example a baseline
+    detector's. Events are then grouped from those scores, and `expected` is only the baseline
+    for residuals. Without a calibration there is no pre-event reference, so `horizon_hours`
+    must be None."""
     config = config or DetectorConfig()
+    if z is None and calibration is None:
+        raise ValueError("Give a calibration, or precomputed scores `z`.")
+    if calibration is None and config.horizon_hours is not None:
+        raise ValueError("The pre-event reference needs a calibration; set horizon_hours=None.")
     mask = np.asarray(rows, dtype=bool)
     frame = readings[["meter_id", "building_id", "timestamp", "value"]].assign(
         expected=expected.reindex(readings.index).to_numpy(dtype=float), detect=mask
     )
+    if z is not None:
+        frame["z"] = z.reindex(readings.index).to_numpy(dtype=float)
     events: list[dict[str, Any]] = []
     scores: list[pd.DataFrame] = []
     for meter, group in frame.groupby("meter_id", sort=True):
-        if not group["detect"].any() or meter not in calibration.scale.index:
+        if not group["detect"].any():
+            continue
+        if z is None and (calibration is None or meter not in calibration.scale.index):
             continue
         hours = pd.date_range(group["timestamp"].min(), group["timestamp"].max(), freq="h")
         grid = group.set_index("timestamp").reindex(hours)
         actual = grid["value"].to_numpy(dtype=float)
         base = grid["expected"].to_numpy(dtype=float)
         active = grid["detect"].eq(True).to_numpy(dtype=bool)
-        z = (actual - base - calibration.center[meter]) / calibration.scale[meter]
+        if z is None:
+            assert calibration is not None
+            score = (actual - base - calibration.center[meter]) / calibration.scale[meter]
+        else:
+            score = grid["z"].to_numpy(dtype=float)
+        reference = (
+            (
+                float(calibration.reference_center.get(meter, np.nan)),
+                float(calibration.reference_scale.get(meter, np.nan)),
+            )
+            if calibration is not None
+            else (np.nan, np.nan)
+        )
         building = str(group["building_id"].iloc[0])
         for sign, direction in ((1.0, "high"), (-1.0, "low")):
             events += _scan(
-                hours, actual, base, sign * z, active, sign, direction, str(meter), building,
-                calibration, config,
+                hours, actual, base, sign * score, active, sign, direction, str(meter), building,
+                reference, config,
             )  # fmt: skip
         detected = group[group["detect"]]
         position = hours.get_indexer(pd.DatetimeIndex(detected["timestamp"]))
@@ -209,7 +255,7 @@ def detect(
                     "timestamp": detected["timestamp"].to_numpy(),
                     "value": detected["value"].to_numpy(dtype=float),
                     "expected": detected["expected"].to_numpy(dtype=float),
-                    "z": z[position],
+                    "z": score[position],
                 }
             )
         )
@@ -232,6 +278,47 @@ def detect(
     return Detection(events=table, scores=score_table, hours=hour_table)
 
 
+def rolling_same_hour(
+    readings: pd.DataFrame,
+    days: int = ROLLING_DAYS,
+    min_days: int = ROLLING_MIN_DAYS,
+    floor_fraction: float = 0.01,
+) -> tuple[pd.Series, pd.Series]:
+    """Each reading's z-score against the same hour on the previous `days` days (past only),
+    and that mean. Both are indexed like `readings`; NaN with fewer than `min_days` days. The
+    standard deviation is at least `floor_fraction` of the mean's magnitude."""
+    z = np.full(len(readings), np.nan)
+    mean_out = np.full(len(readings), np.nan)
+    for _, group in readings.groupby("meter_id", sort=True):
+        hours = pd.date_range(group["timestamp"].min(), group["timestamp"].max(), freq="h")
+        values = group.set_index("timestamp")["value"].reindex(hours).to_numpy(dtype=float)
+        n = len(values)
+        total = np.zeros(n)
+        squares = np.zeros(n)
+        count = np.zeros(n)
+        for d in range(1, days + 1):
+            lag = 24 * d
+            if lag >= n:
+                break
+            past = np.full(n, np.nan)
+            past[lag:] = values[:-lag]
+            seen = ~np.isnan(past)
+            total[seen] += past[seen]
+            squares[seen] += past[seen] ** 2
+            count[seen] += 1
+        enough = count >= min_days
+        mean = np.where(enough, total / np.maximum(count, 1), np.nan)
+        variance = (squares - count * mean**2) / np.maximum(count - 1, 1)
+        std = np.sqrt(np.clip(variance, 0.0, None))
+        std = np.maximum(std, np.maximum(floor_fraction * np.abs(mean), 1e-9))
+        score = (values - mean) / std
+        position = hours.get_indexer(pd.DatetimeIndex(group["timestamp"]))
+        rows = readings.index.get_indexer(group.index)
+        z[rows] = score[position]
+        mean_out[rows] = mean[position]
+    return pd.Series(z, index=readings.index), pd.Series(mean_out, index=readings.index)
+
+
 def _scan(
     hours: pd.DatetimeIndex,
     actual: FloatArray,
@@ -242,17 +329,17 @@ def _scan(
     direction: str,
     meter: str,
     building: str,
-    calibration: Calibration,
+    reference: tuple[float, float],
     config: DetectorConfig,
 ) -> list[dict[str, Any]]:
-    """The hysteresis state machine for one meter and direction."""
+    """The hysteresis state machine for one meter and direction. `reference` is the centre and
+    scale of the meter's pre-event-reference residuals."""
     found: list[dict[str, Any]] = []
     positions = np.flatnonzero(active)
     if positions.size == 0:
         return found
     last_active = int(positions[-1])
-    ref_center = calibration.reference_center.get(meter, np.nan)
-    ref_scale = calibration.reference_scale.get(meter, np.nan)
+    ref_center, ref_scale = reference
     start: int | None = None
     last = 0
     for t in positions.tolist():
@@ -374,7 +461,9 @@ def _close(
 @dataclass(frozen=True)
 class Run:
     model: Loaded
-    calibration: Calibration
+    detector: Detector
+    config: DetectorConfig
+    calibration: Calibration | None  # None for the rolling z-score
     detection: Detection
     events: pd.DataFrame  # detection.events with signatures (T017)
     calibration_window: tuple[datetime, datetime]
@@ -387,24 +476,35 @@ def run_detection(
     features: pd.DataFrame,
     root: Path = DEFAULT_ROOT,
     config: DetectorConfig | None = None,
+    detector: Detector = Detector.ROLLING_Z,
 ) -> Run:
-    """Calibrate on the promoted model's validation window, detect in its test window (both
-    out-of-sample for the model), and classify the events into signatures."""
+    """Detect in the promoted model's test window and classify the events into signatures.
+
+    The model detector calibrates on the model's validation window (out-of-sample for the
+    model); the rolling z-score needs no calibration. The default thresholds depend on the
+    detector (DETECTOR_DEFAULTS)."""
     from wattwise.ml.signatures import classify  # imported here: signatures imports this module
 
-    config = config or DetectorConfig()
+    config = config or DetectorConfig(**DETECTOR_DEFAULTS[detector])  # type: ignore[arg-type]
     loaded = load(features, root=root)
     split = SplitConfig.model_validate(loaded.metadata.training.split_config).time
     if not isinstance(split, Chronological) or split.validation_start is None:
         raise RegistryError("The model's split has no validation window to calibrate on.")
-    expected = loaded.model.predict(readings.drop(columns="value"), readings)
     times = readings["timestamp"]
-    calibration_rows = (times >= split.validation_start) & (times < split.test_start)
-    detection_rows = (times >= split.test_start) & (times < split.test_end)
-    calibration = calibrate(readings, expected, calibration_rows, config)
-    detection = detect(readings, expected, calibration, detection_rows, config)
+    detection_rows = ((times >= split.test_start) & (times < split.test_end)).to_numpy()
+    calibration: Calibration | None = None
+    if detector is Detector.MODEL:
+        expected = loaded.model.predict(readings.drop(columns="value"), readings)
+        calibration_rows = (times >= split.validation_start) & (times < split.test_start)
+        calibration = calibrate(readings, expected, calibration_rows, config)
+        detection = detect(readings, expected, calibration, detection_rows, config)
+    else:
+        z, baseline = rolling_same_hour(readings, floor_fraction=config.scale_floor_fraction)
+        detection = detect(readings, baseline, None, detection_rows, config, z=z)
     return Run(
         model=loaded,
+        detector=detector,
+        config=config,
         calibration=calibration,
         detection=detection,
         events=classify(detection, buildings, config.z_off),
@@ -413,7 +513,7 @@ def run_detection(
     )
 
 
-def summary(run: Run, config: DetectorConfig) -> dict[str, Any]:
+def summary(run: Run) -> dict[str, Any]:
     events = run.events
     per_meter = (
         events.groupby(["meter_id", "direction"]).size().unstack(fill_value=0)
@@ -423,12 +523,15 @@ def summary(run: Run, config: DetectorConfig) -> dict[str, Any]:
     scored = run.detection.scores["z"].notna()
     return {
         "detector_version": DETECTOR_VERSION,
-        "config": config.model_dump(mode="json"),
+        "detector": run.detector.value,
+        "config": run.config.model_dump(mode="json"),
         "model_version": run.model.metadata.version,
         "model": run.model.metadata.model.name,
         "calibration_window_utc": [_iso(t) for t in run.calibration_window],
         "detection_window_utc": [_iso(t) for t in run.detection_window],
-        "calibration_rows": {k: int(v) for k, v in run.calibration.rows.items()},
+        "calibration_rows": {k: int(v) for k, v in run.calibration.rows.items()}
+        if run.calibration is not None
+        else None,
         "detection_rows": len(run.detection.scores),
         "detection_rows_scored": int(scored.sum()),
         "events": len(events),
@@ -457,12 +560,21 @@ def to_markdown(data: dict[str, Any], events: pd.DataFrame) -> str:
         "",
         data["interpretation"],
         "",
-        f"- Model: `{data['model_version']}` ({data['model']})",
-        f"- Calibration window (UTC): {' to '.join(data['calibration_window_utc'])}; detection "
-        f"window: {' to '.join(data['detection_window_utc'])}",
+        f"- Detector: **{data['detector']}**. Model: `{data['model_version']}` ({data['model']})",
+        f"- Detection window (UTC): {' to '.join(data['detection_window_utc'])}"
+        + (
+            f"; calibration window: {' to '.join(data['calibration_window_utc'])}"
+            if data["calibration_rows"] is not None
+            else "; the rolling z-score needs no calibration"
+        ),
         f"- Thresholds: open at |z| >= {c['z_on']}, stay open at >= {c['z_off']}, bridge gaps of "
         f"up to {c['max_gap_hours']} h, keep with >= {c['min_hours']} flagged hours or a spike "
-        f">= {c['z_spike']}; pre-event reference after {c['horizon_hours']} h",
+        f">= {c['z_spike']}; "
+        + (
+            f"pre-event reference after {c['horizon_hours']} h"
+            if c["horizon_hours"] is not None
+            else "no pre-event reference"
+        ),
         f"- Rows scored: {data['detection_rows_scored']:,} of {data['detection_rows']:,}",
         f"- Events: {data['events']} ({data['events_by_direction']['high']} high, "
         f"{data['events_by_direction']['low']} low), {data['event_hours']:,} event hours; "
@@ -487,14 +599,14 @@ def to_markdown(data: dict[str, Any], events: pd.DataFrame) -> str:
     return "\n".join(lines) + "\n"
 
 
-def write(run: Run, config: DetectorConfig, output: Path) -> dict[str, str]:
+def write(run: Run, output: Path) -> dict[str, str]:
     output.mkdir(parents=True, exist_ok=True)
     events = run.events.copy()
     for column in ("start", "end", "peak_time"):
         events[column] = events[column].map(_iso)
     events.to_csv(output / "events.csv", index=False, lineterminator="\n")
     run.detection.scores.to_parquet(output / "scores.parquet", index=False)
-    data = summary(run, config)
+    data = summary(run)
     (output / "summary.json").write_bytes(
         (json.dumps(data, indent=2, allow_nan=False) + "\n").encode("utf-8")
     )
@@ -512,17 +624,23 @@ def _iso(value: Any) -> str:
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="python -m wattwise.ml.detection",
-        description="Detect anomaly events with the promoted model (out-of-sample windows).",
+        description="Detect anomaly events in the promoted model's test window.",
     )
     parser.add_argument("--data", type=Path, required=True, help="prepared canonical tables")
     parser.add_argument("--enrichment", type=Path, help="weather_enrichment.parquet (T007d)")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="model registry")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--detector",
+        type=Detector,
+        choices=list(Detector),
+        default=Detector.ROLLING_Z,
+        help="score source; default %(default)s (D030)",
+    )
     args = parser.parse_args(argv)
-    config = DetectorConfig()
     try:
         readings, buildings, features = read_inputs(args.data, args.enrichment)
-        result = run_detection(readings, buildings, features, args.root, config)
+        result = run_detection(readings, buildings, features, args.root, detector=args.detector)
     except NoModelError as exc:
         print(f"error: {exc} Train and promote one: python -m wattwise.ml.registry train "
               "--promote ...", file=sys.stderr)  # fmt: skip
@@ -530,8 +648,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (RegistryError, FileNotFoundError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
-    digests = write(result, config, args.output)
-    print(to_markdown(summary(result, config), result.events))
+    digests = write(result, args.output)
+    print(to_markdown(summary(result), result.events))
     for name, digest in digests.items():
         print(f"{name}: {digest}")
     return 0

@@ -1023,6 +1023,56 @@ links to the entry that replaces it.
   - Flatline days in BDG2 suggest masking such days from training and calibration later.
   - T020 builds explanations on the evidence.
 
+## D030 — Injected-anomaly benchmark: the rolling same-hour z-score is the default alert source
+- **Date:** 2026-10-25 · **Task:** T018 · **Status:** Accepted; the default switch awaits the
+  owner's confirmation
+- **Decision:** `wattwise.ml.benchmark` (results in
+  [EVALUATION.md](EVALUATION.md#detector-benchmark-t018)).
+  - **Benchmark:** seven anomaly patterns are injected into real BDG2 readings, one per meter per
+    replicate. The features are rebuilt, so the model's history sees each injection. It is
+    labelled a **synthetic benchmark**, and alerts outside injections are an upper bound on
+    false alerts.
+  - **Windows:** calibration on the model's validation quarter; tuning on October 2017
+    (240 injections); evaluation once on Nov–Dec 2017 (240 fresh injections).
+  - **Baseline detector:** the rolling same-hour z-score (14 previous days), with the same
+    event rules and signatures as the model detector.
+  - **Result:**
+    - The model detector found more of every pattern: 81% mean recall against 72%. But its
+      alert rate doubled out of sample: 0.50 in tuning, 0.97 in evaluation, against a budget of
+      0.5. The rolling score stayed at 0.18 and 0.39.
+    - At alert rates both detectors reach in tuning, the rolling score had the higher recall
+      (75% against 52% at up to 0.3).
+  - **Applied:** the detection command's default becomes `rolling-z` (open 4, continue 2,
+    3 hours). `--detector model` uses the tuned thresholds (open 4, continue 3, 6 hours). The
+    model still provides expected consumption for impact estimates (T021).
+- **The decision rule was corrected after the evaluation run, and is now stricter.**
+  - **As first written:** higher evaluation recall, and within the budget in tuning. Under that
+    rule the model detector would have been kept.
+  - **The flaw:** that rule accepted a detector whose alert rate doubles out of sample, and it
+    compared recall at unequal alert rates.
+  - **Corrected rule:** the budget must also hold in evaluation. Both results are in the report.
+- **Alternatives considered:**
+  - **Keep the model detector, since its recall is higher:** rejected under the agreed acceptance
+    rule ("kept only where it beats the simple baseline"). Its recall advantage costs 2.5 times
+    the alerts.
+  - **Tune the model detector further on the evaluation months:** rejected; that would fit the
+    detector to its own evaluation.
+  - **Isolation Forest:** optional in the roadmap and not done; the rolling score already sets
+    a clear bar.
+- **Limits and consequences:**
+  - **The default does not know the weather.** On a strongly weather-driven synthetic load it
+    misses a +60% two-day surge that the model detector finds exactly (tested). Buildings with
+    strong weather dependence may need `--detector model`.
+  - **T019 should test** the model's residuals with a rolling, season-adaptive scale, and
+    re-run this benchmark. That could combine weather-awareness with a stable alert rate.
+  - **Weak patterns for both detectors:** flatlines (about 40% recall), drift labelling (0–3%)
+    and overnight coverage (about 27%).
+  - **Detection output on the BDG2 test quarter:** 100 events (2.1% of scored hours), against
+    355 in T016.
+  - **Human labels:** LEAD scoring moved to T018b.
+  - **Owner decision:** the alert budget (0.5 per meter-week) is an assumption, and the owner
+    can change it.
+
 ---
 
 ## Open decisions (tracked in tasks)

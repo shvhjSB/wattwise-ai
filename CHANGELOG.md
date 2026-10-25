@@ -243,6 +243,16 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     "Calibrated" only within ±2 points overall and per month.
   - **Result:** at nominal 90%, rolling covers 86.7% (relative 85.8%, absolute 83.3%), and is the
     narrowest and most even across meters. None is calibrated; November under-covers.
+- A season-adaptive model detector (`--detector model-adaptive`, `detection.adaptive_scores`),
+  D033. (T019b)
+  - **Score:** the relative residual, centred and scaled daily from the meter's 28 days ending
+    7 days before.
+  - **Benchmark:** the T018 benchmark now compares three detectors and gives a decision for
+    each.
+  - **Result:** recall 69% at 0.71 alerts per meter-week (budget 0.5), so it is not adopted.
+    The rolling z-score stays the default.
+- `intervals.daily_window_statistics`: the shared daily rolling-window helper behind the
+  rolling intervals and the adaptive scores. (T019b)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

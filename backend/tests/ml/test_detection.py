@@ -18,6 +18,7 @@ from wattwise.ml.detection import (
     Detection,
     Detector,
     DetectorConfig,
+    adaptive_scores,
     calibrate,
     detect,
     main,
@@ -364,7 +365,43 @@ def test_the_command_line_writes_identical_outputs_and_needs_a_model(
     assert main([*args, "--output", str(tmp_path / "model"), "--detector", "model"]) == 0
     model = json.loads((tmp_path / "model" / "summary.json").read_text(encoding="utf-8"))
     assert model["detector"] == "model" and model["config"]["z_off"] == 3.0
+    assert (
+        main([*args, "--output", str(tmp_path / "adaptive"), "--detector", "model-adaptive"]) == 0
+    )
+    adaptive = json.loads((tmp_path / "adaptive" / "summary.json").read_text(encoding="utf-8"))
+    assert adaptive["detector"] == "model-adaptive" and adaptive["calibration_rows"] is not None
     capsys.readouterr()
 
     assert main(["--data", str(folder), "--root", str(tmp_path / "empty")]) == 1
     assert "Train and promote one" in capsys.readouterr().err
+
+
+def test_adaptive_scores_use_the_recent_relative_residuals_only() -> None:
+    """Relative residuals of +-1% around a level of 100 give a median of 0 and a MAD of 0.01,
+    so a residual of +5 (5% of the level) scores 5 / 1.4826; the floor keeps the scale >= 1%."""
+    times = pd.date_range("2017-01-02T00:00Z", periods=60 * 24, freq="h").as_unit("us")
+    readings = pd.DataFrame(
+        {
+            "timestamp": times,
+            "meter_id": "m",
+            "building_id": "B",
+            "value": 100.0 + np.where(np.arange(len(times)) % 2 == 0, 1.0, -1.0),
+        }
+    )
+    readings.loc[readings.index[-1], "value"] = 105.0
+    expected = pd.Series(100.0, index=readings.index)
+    level = pd.Series(100.0, index=readings.index)
+    first = pd.Timestamp("2017-01-02T00:00Z")
+
+    z = adaptive_scores(readings, expected, level, first)
+
+    assert z.iloc[-1] == pytest.approx(0.05 / (0.01 * MAD_TO_SIGMA))
+    early = readings["timestamp"] < first + pd.Timedelta(days=14)  # 7-day lag + 7 days of history
+    assert z[early].isna().all() and z[~early].notna().all()
+
+    recent = readings.assign(
+        value=readings["value"].where(readings["timestamp"] < times[-1] - pd.Timedelta(days=7), 1e4)
+    )
+    recent.loc[recent.index[-1], "value"] = 105.0
+    z_recent = adaptive_scores(recent, expected, level, first)
+    assert z_recent.iloc[-1] == pytest.approx(z.iloc[-1]), "the last 7 days are not used"

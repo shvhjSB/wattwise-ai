@@ -30,7 +30,7 @@ import argparse
 import json
 import math
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from datetime import datetime
 from enum import StrEnum
@@ -137,6 +137,47 @@ def fit(
     )
 
 
+def daily_window_statistics(
+    rows: pd.DataFrame,
+    values: npt.ArrayLike,
+    first_value_time: datetime,
+    statistics: Callable[[FloatArray], Sequence[float]],
+    outputs: int,
+    days: int = ROLLING_DAYS,
+    lag_days: int = ROLLING_LAG_DAYS,
+    min_values: int = ROLLING_MIN_SCORES,
+) -> FloatArray:
+    """Per-row statistics of the meter's own recent values, recomputed each UTC day.
+
+    For each meter and day D, `statistics` receives the meter's finite `values` (aligned with
+    `rows`: timestamp, meter_id) in [D - lag_days - days, D - lag_days), counting only rows at
+    or after `first_value_time`. It returns `outputs` numbers, written to every row of that
+    meter and day. With fewer than `min_values` values the row gets NaN. Shape: (outputs, rows).
+    """
+    v = np.asarray(values, dtype=float)
+    times = pd.DatetimeIndex(rows["timestamp"])
+    usable = np.asarray(times >= pd.Timestamp(first_value_time)) & np.isfinite(v)
+    day = times.floor("D")
+    meters = rows["meter_id"].to_numpy()
+    out = np.full((outputs, len(rows)), np.nan)
+    for meter in sorted(set(meters)):
+        mine = meters == meter
+        known_times = times[mine & usable]
+        known = v[mine & usable]
+        order = np.argsort(known_times.asi8)
+        known = known[order]
+        stamps = known_times[order].as_unit("ns").asi8  # nanoseconds, like Timestamp.value
+        for d in sorted(set(day[mine])):
+            end = (d - pd.Timedelta(days=lag_days)).value
+            start = end - pd.Timedelta(days=days).value
+            lo, hi = np.searchsorted(stamps, [start, end])
+            if hi - lo < min_values:
+                continue
+            target = mine & np.asarray(day == d)
+            out[:, target] = np.asarray(statistics(known[lo:hi]), dtype=float)[:, None]
+    return out
+
+
 def rolling_bounds(
     rows: pd.DataFrame,
     predicted: npt.ArrayLike,
@@ -156,28 +197,17 @@ def rolling_bounds(
     p = np.asarray(predicted, dtype=float)
     s = scale(Method.RELATIVE, level)
     score = np.abs(rows["value"].to_numpy(dtype=float) - p) / s
-    times = pd.DatetimeIndex(rows["timestamp"])
-    usable = np.asarray(times >= pd.Timestamp(first_score_time)) & np.isfinite(score)
-    day = times.floor("D")
-    meters = rows["meter_id"].to_numpy()
-    half = np.full(len(rows), np.nan)
-    for meter in sorted(set(meters)):
-        mine = meters == meter
-        known_times = times[mine & usable]
-        known_scores = score[mine & usable]
-        order = np.argsort(known_times.asi8)
-        known_times, known_scores = known_times[order], known_scores[order]
-        stamps = known_times.as_unit("ns").asi8  # nanoseconds, like Timestamp.value
-        for d in sorted(set(day[mine])):
-            end = (d - pd.Timedelta(days=lag_days)).value
-            start = end - pd.Timedelta(days=days).value
-            lo, hi = np.searchsorted(stamps, [start, end])
-            if hi - lo < min_scores:
-                continue
-            q = conformal_quantile(known_scores[lo:hi], alpha)
-            target = mine & np.asarray(day == d)
-            half[target] = q * s[target]
-    return _bounds(p, half)
+    (q,) = daily_window_statistics(
+        rows,
+        score,
+        first_score_time,
+        lambda window: (conformal_quantile(window, alpha),),
+        outputs=1,
+        days=days,
+        lag_days=lag_days,
+        min_values=min_scores,
+    )
+    return _bounds(p, q * s)
 
 
 def coverage(actual: FloatArray, lower: FloatArray, upper: FloatArray) -> tuple[float | None, int]:

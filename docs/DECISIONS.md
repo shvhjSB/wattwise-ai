@@ -1138,6 +1138,35 @@ links to the entry that replaces it.
   - T019b scores the model detector with the same season-adaptive scale.
   - Intervals are about a third of the mean reading wide, so small excesses cannot be claimed.
 
+## D033 — A season-adaptive model detector does not pass the benchmark; rolling-z stays
+- **Date:** 2026-10-25 · **Task:** T019b · **Status:** Accepted
+- **Decision:** add `model-adaptive` (`detection.adaptive_scores`) as an option, and keep the
+  rolling z-score as the default alert source (results in
+  [EVALUATION.md](EVALUATION.md#season-adaptive-model-detector-t019b)).
+  - **Score:** the relative residual (actual − expected) / recent level, centred and scaled by
+    its median and MAD over the meter's 28 days ending 7 days before each day. Only
+    out-of-sample residuals are used.
+  - **Benchmark:** the T018 procedure unchanged, with the D030 rule fixed before the run.
+- **Result:**
+  - **model-adaptive (open 5, continue 3, 3 h):** recall 69% at 0.71 alerts per meter-week in
+    evaluation, against a budget of 0.5. It met the budget in tuning (0.49).
+  - **Comparison:** rolling-z 72% at 0.39; static model 81% at 0.97.
+  - **So:** the adaptive scale reduces the out-of-season alert growth (×1.45 against ×1.9), but
+    not enough, and it costs recall.
+- **Alternatives considered:**
+  - **A shorter lag or window for the scale:** not tried. Choosing them on these results would
+    tune on the evaluation months. A shorter lag also lets anomalies inflate the scale sooner.
+  - **Combining detectors (alert when both agree, or the model ranks rolling-z alerts):**
+    deferred. It is a new detector, and would need its own pre-stated rule.
+  - **Dropping the model detectors:** rejected. They stay as options for strongly
+    weather-driven buildings (D030) and for investigation.
+- **Consequences:**
+  - Alerts come from the rolling z-score. The model provides expected consumption, intervals
+    (T019) and impact estimates (T021).
+  - The shared helper `intervals.daily_window_statistics` serves both the rolling intervals and
+    the adaptive scores.
+  - Two pending owner decisions stay open: the default alert source, and the alert budget.
+
 ---
 
 ## Open decisions (tracked in tasks)

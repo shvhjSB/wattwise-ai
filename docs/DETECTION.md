@@ -24,6 +24,7 @@ Both detectors use the same event rules and signatures below; only the score dif
 |---|---|---|---|
 | `rolling-z` (**default**) | The reading against the mean and standard deviation of the same hour on the previous 14 days (at least 7 needed; past only) | open 4, continue 2, 3 hours; no pre-event reference | Alerts |
 | `model` (`--detector model`) | The model's residual, robustly scaled on its validation quarter (below) | open 4, continue 3, 6 hours (tuned in T018) | Weather-driven loads; investigation |
+| `model-adaptive` (`--detector model-adaptive`) | The model's residual relative to the meter's recent level, centred and scaled daily from the 28 days ending 7 days before (T019b) | open 5, continue 3, 3 hours (tuned in T019b) | Not adopted: over budget out of season, and lower recall than rolling-z (D033) |
 
 **Why the simple score is the default.** In the injected-anomaly benchmark (T018), the model
 detector found more of every pattern, but at 2.5 times the alerts.
@@ -37,7 +38,9 @@ detector found more of every pattern, but at 2.5 times the alerts.
 **Known limit of the default:** it does not know the weather. On a strongly weather-driven
 load, a same-hour history varies so much that a +60% two-day surge stays below z 2.5. The
 model detector finds that surge exactly, and a test pins both results. The likely fix is the
-model's residuals with a rolling, season-adaptive scale (T019), checked with the same benchmark.
+model's residuals with a rolling, season-adaptive scale. T019b tested exactly that
+(`model-adaptive`). It cut the out-of-season alert growth from ×1.9 to ×1.45, but stayed
+over budget and lost recall, so the rolling z-score remains the default (D033).
 
 ## Scores (model detector)
 

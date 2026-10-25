@@ -592,3 +592,57 @@ byte-identical. In the calibration window itself, the fixed methods cover exactl
 - **Not tuned:** the window and lag settings were not chosen on these test months.
 - **Limits:** 20 meters, one autumn and winter. Rolling has 583 test rows without an interval
   (too few recent scores); the fixed methods have 415 (no prediction or scale).
+
+## Season-adaptive model detector (T019b)
+
+**Synthetic benchmark: injected anomalies on real BDG2 readings** (the T018 procedure, with the
+same windows, seeds, grid and budget). The question: does T019's season-adaptive scale make the
+model detector good enough to be the alert source?
+
+- **The `model-adaptive` score:**
+  - The relative residual (actual − expected) / level, where the level is the meter's recent
+    mean (`rolling_mean_168h`, past-only).
+  - It is centred and scaled by its median and 1.4826 × MAD over the meter's 28 days ending
+    7 days before each day. Only out-of-sample residuals count, and the scale is at least 1% of
+    the level.
+- **Long events:** they keep the pre-event reference.
+- **The rule, fixed before the run (D030):** keep a model detector only with higher
+  evaluation recall than the rolling z-score, within the alert budget in tuning and in
+  evaluation.
+
+The run takes about 8 minutes. The rolling z-score and static model results reproduced T018
+exactly.
+
+| Detector (chosen setting) | Tuning recall | Tuning alerts | Evaluation recall | Evaluation alerts | Without injections |
+|---|---|---|---|---|---|
+| rolling-z (open 4, continue 2, 3 h) | 75% | 0.18 | **72%** | **0.39** | 0.46 |
+| model, static scale (open 4, continue 3, 6 h) | 80% | 0.50 | 81% | 0.97 | 0.97 |
+| **model-adaptive** (open 5, continue 3, 3 h) | 69% | 0.49 | 69% | 0.71 | 0.81 |
+
+Alerts are per meter-week outside injections; the budget is 0.5.
+
+| Pattern | rolling-z | model | model-adaptive |
+|---|---|---|---|
+| spike | 56% | 76% | 65% |
+| sustained | 71% | 85% | 74% |
+| long_sustained | 86% | 89% | 83% |
+| overnight | 83% | 91% | 77% |
+| drift | 76% | 85% | 74% |
+| flatline | 41% | 44% | 24% |
+| dropout | 94% | 97% | 85% |
+
+**Best tuning recall within an alert rate:** model-adaptive 50% (≤ 0.3), 69% (≤ 0.5) and 78%
+(≤ 1.0); rolling-z 75% throughout; no model variant gets below 0.29.
+
+**Decision (D033): the rolling z-score stays the default alert source.**
+- **The adaptive scale works only partly.** The static model detector's alert rate grew
+  ×1.9 out of season (0.50 to 0.97); the adaptive one grows ×1.45 (0.49 to 0.71). That is
+  still over budget.
+- **And it loses recall:** 69% against 72% for rolling-z, and lower than the static model on
+  every pattern. A likely reason, as a hypothesis: after its 7-day lag, its 28-day window
+  starts to include the anomaly, which inflates the scale. Long sustained coverage falls to 43%.
+- **On the BDG2 test quarter (`--detector model-adaptive`):** 194 events covering 2,202 hours,
+  against 100 and 916 for rolling-z.
+- **What remains of the model's role:** expected consumption, and the intervals and impact
+  built on it (T019, T021). Unless a later idea passes this same rule, alerts come from the
+  rolling z-score.

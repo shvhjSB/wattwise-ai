@@ -63,6 +63,9 @@ SPLIT: Final = SplitConfig(
         test_end=datetime(2017, 1, 2, tzinfo=UTC),
     )
 )
+#: The detectors this check was defined for (D031). Later detectors are added deliberately, so
+#: the published results stay reproducible.
+CHECKED_DETECTORS: Final = (Detector.ROLLING_Z, Detector.MODEL)
 SEGMENT_LENGTHS: Final = (("1-2 h", 1, 2), ("3-23 h", 3, 23), ("24 h or more", 24, 10**9))
 
 
@@ -265,7 +268,7 @@ def run_check(inputs: Inputs, split: SplitConfig = SPLIT) -> dict[str, Any]:
     weeks = (time.test_end - time.test_start) / pd.Timedelta(weeks=1)
 
     detectors: dict[str, Any] = {}
-    for detector in Detector:
+    for detector in CHECKED_DETECTORS:
         config = DetectorConfig(**DETECTOR_DEFAULTS[detector])  # type: ignore[arg-type]
         if detector is Detector.MODEL:
             expected = trained.model.predict(readings.drop(columns="value"), readings)

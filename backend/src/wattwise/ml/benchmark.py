@@ -47,6 +47,7 @@ from wattwise.ml.detection import (
     Calibration,
     Detector,
     DetectorConfig,
+    adaptive_scores,
     calibrate,
     detect,
     rolling_same_hour,
@@ -121,7 +122,7 @@ GRID: Final = tuple(
 
 
 def detector_config(detector: Detector, settings: Mapping[str, float]) -> DetectorConfig:
-    horizon = {} if detector is Detector.MODEL else {"horizon_hours": None}
+    horizon = {} if detector is not Detector.ROLLING_Z else {"horizon_hours": None}
     return DetectorConfig(**settings, **horizon)  # type: ignore[arg-type]
 
 
@@ -380,6 +381,7 @@ def run_replicates(
     settings: Mapping[Detector, Sequence[Mapping[str, float]]],
     calibration: Calibration,
     levels: Mapping[str, float],
+    first_residual_time: pd.Timestamp,
     seed: int = DEFAULT_SEED,
     with_injections: bool = True,
     log: Callable[[str], None] = print,
@@ -404,13 +406,18 @@ def run_replicates(
         model = load(features, root=root).model
         subset = data[nearby]
         rows = ((subset["timestamp"] >= window[0]) & (subset["timestamp"] < window[1])).to_numpy()
-        expected = model.predict(subset[rows].drop(columns="value"), data)
+        expected = model.predict(subset.drop(columns="value"), data)
         rolling_z, rolling_mean = rolling_same_hour(subset)
+        adaptive_z = adaptive_scores(
+            subset, expected, features["rolling_mean_168h"], first_residual_time
+        )
         for detector, group in settings.items():
             for i, setting in enumerate(group):
                 config = detector_config(detector, setting)
                 if detector is Detector.MODEL:
                     found = detect(subset, expected, calibration, rows, config)
+                elif detector is Detector.MODEL_ADAPTIVE:
+                    found = detect(subset, expected, calibration, rows, config, z=adaptive_z)
                 else:
                     found = detect(subset, rolling_mean, None, rows, config, z=rolling_z)
                 events = classify(found, inputs.buildings, config.z_off)
@@ -454,7 +461,17 @@ def run_benchmark(
         with_injections: bool = True,
     ) -> tuple[dict[tuple[Detector, int], Tally], list[dict[str, Any]], float]:
         return run_replicates(
-            inputs, root, window, ids, settings, calibration, levels, seed, with_injections, log
+            inputs,
+            root,
+            window,
+            ids,
+            settings,
+            calibration,
+            levels,
+            calibration_window[0],
+            seed,
+            with_injections,
+            log,
         )
 
     log(f"tuning on {_iso(tuning_window[0])} to {_iso(tuning_window[1])}")
@@ -495,16 +512,29 @@ def run_benchmark(
                     clean[(detector, i)].alerts / clean_weeks, 4
                 ),
             }
-    model = evaluation[Detector.MODEL.value]["chosen"]
     rolling = evaluation[Detector.ROLLING_Z.value]["chosen"]
-    better = bool(
-        model["mean_recall"] is not None
-        and rolling["mean_recall"] is not None
-        and model["mean_recall"] > rolling["mean_recall"]
-    )
-    first_rule = better and met_budget[Detector.MODEL.value]
-    within = model["alerts_per_meter_week"] is not None and model["alerts_per_meter_week"] <= budget
-    keep = first_rule and within
+    candidates: dict[str, dict[str, Any]] = {}
+    for detector in Detector:
+        if detector is Detector.ROLLING_Z:
+            continue
+        chosen_result = evaluation[detector.value]["chosen"]
+        better = bool(
+            chosen_result["mean_recall"] is not None
+            and rolling["mean_recall"] is not None
+            and chosen_result["mean_recall"] > rolling["mean_recall"]
+        )
+        within = (
+            chosen_result["alerts_per_meter_week"] is not None
+            and chosen_result["alerts_per_meter_week"] <= budget
+        )
+        candidates[detector.value] = {
+            "keep": better and met_budget[detector.value] and within,
+            "higher_recall_than_rolling_z": better,
+            "within_budget_in_tuning": met_budget[detector.value],
+            "within_budget_on_evaluation": within,
+            "first_rule_result": better and met_budget[detector.value],
+        }
+    keep = candidates[Detector.MODEL.value]["keep"]
     return {
         "label": LABEL,
         "benchmark_version": BENCHMARK_VERSION,
@@ -541,9 +571,12 @@ def run_benchmark(
         "decision": {
             "keep_model_detector": keep,
             "rule": RULE,
-            "first_rule_result": first_rule,
+            "first_rule_result": candidates[Detector.MODEL.value]["first_rule_result"],
             "first_rule": FIRST_RULE,
-            "model_within_budget_on_evaluation": within,
+            "model_within_budget_on_evaluation": candidates[Detector.MODEL.value][
+                "within_budget_on_evaluation"
+            ],
+            "candidates": candidates,
         },
     }
 
@@ -597,23 +630,18 @@ def to_markdown(report: Mapping[str, Any]) -> str:
                 f"| {detector} | {name} | {pct(r['mean_recall'])} | "
                 f"{r['alerts_per_meter_week']} | {r['alerts_per_meter_week_without_injections']} |"
             )
+    detectors = list(report["evaluation"])
     lines += [
         "",
-        "| Pattern | Injected | Model recall | Rolling-z recall | Model median latency (h) | "
-        "Model coverage | Signature match (model / rolling-z) |",
-        "|---|---|---|---|---|---|---|",
+        "Recall per pattern, chosen settings (signature match in brackets):",
+        "",
+        "| Pattern | Injected | " + " | ".join(detectors) + " |",
+        "|---|---|" + "---|" * len(detectors),
     ]
-    model = report["evaluation"]["model"]["chosen"]["patterns"]
-    rolling = report["evaluation"]["rolling-z"]["chosen"]["patterns"]
     for pattern in report["patterns"]:
-        m, r = model.get(pattern, {}), rolling.get(pattern, {})
-        latency = m.get("median_latency_hours")
-        lines.append(
-            f"| {pattern} | {m.get('injections', 0)} | {pct(m.get('recall'))} | "
-            f"{pct(r.get('recall'))} | {'—' if latency is None else f'{latency:g}'} | "
-            f"{pct(m.get('mean_coverage'))} | {pct(m.get('signature_match'))} / "
-            f"{pct(r.get('signature_match'))} |"
-        )
+        found = [report["evaluation"][d]["chosen"]["patterns"].get(pattern, {}) for d in detectors]
+        cells = [f"{pct(f.get('recall'))} ({pct(f.get('signature_match'))})" for f in found]
+        lines.append(f"| {pattern} | {found[0].get('injections', 0)} | " + " | ".join(cells) + " |")
     lines += [
         "",
         "Best tuning recall within an alert rate (alerts per meter-week):",
@@ -624,13 +652,19 @@ def to_markdown(report: Mapping[str, Any]) -> str:
     for detector, best in report["best_tuning_recall_within_alert_rate"].items():
         lines.append(f"| {detector} | " + " | ".join(pct(best[k]) for k in RATE_LABELS) + " |")
     decision = report["decision"]
-    keep = "yes" if decision["keep_model_detector"] else "no"
+    lines += ["", f"Rule: {decision['rule']}", ""]
+    for name, result in decision["candidates"].items():
+        verdict = "yes" if result["keep"] else "no"
+        lines.append(
+            f"- **{name}: keep {verdict}.** Higher recall than rolling-z: "
+            f"{'yes' if result['higher_recall_than_rolling_z'] else 'no'}; within the budget in "
+            f"tuning: {'yes' if result['within_budget_in_tuning'] else 'no'}; in evaluation: "
+            f"{'yes' if result['within_budget_on_evaluation'] else 'no'}."
+        )
     lines += [
         "",
-        f"**Keep the model-based detector: {keep}.** {decision['rule']}",
-        "",
-        f"The first rule ({decision['first_rule']}) would have said "
-        f"{'yes' if decision['first_rule_result'] else 'no'}.",
+        f"For the static model detector, the first rule ({decision['first_rule']}) would have "
+        f"said {'yes' if decision['first_rule_result'] else 'no'}.",
     ]
     return "\n".join(lines) + "\n"
 

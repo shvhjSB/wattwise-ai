@@ -1756,3 +1756,43 @@ detector with the season-adaptive scale.
   - the minimum number of scores
   - exact assessment counts, the interval score and months
   - a run on the promoted model; the CLI
+
+---
+
+## 2026-10-25 — T019b Season-adaptive model detector, re-benchmarked
+
+**Done**
+- **`detection.adaptive_scores` and `--detector model-adaptive`:** the relative residual
+  (actual − expected) / recent level, centred and scaled by its median and 1.4826 × MAD over the
+  meter's 28 days ending 7 days before each day. Only out-of-sample residuals count, and the
+  scale floor is 1%. Long events keep the pre-event reference.
+- **`intervals.daily_window_statistics`:** a shared daily rolling-window helper. T019's
+  `rolling_bounds` now uses it, and its tests pass unchanged.
+- **Benchmark:** three detectors, with a decision per candidate against the rolling z-score.
+  The Markdown shows recall and signature match per pattern for each.
+- **LEAD check:** pinned to the two detectors it was defined for (`CHECKED_DETECTORS`). A rerun
+  confirmed its outputs are unchanged.
+
+**Real result (T018 procedure unchanged; about 8 min)**
+- **Reproduced:** rolling-z and the static model detector matched T018 exactly (tuning, choice
+  and evaluation).
+- **model-adaptive:**
+  - **Tuning:** chosen open 5, continue 3, 3 h. Recall 69% at 0.49 alerts per meter-week.
+  - **Evaluation:** 69% at 0.71 (0.81 without injections), against a budget of 0.5. Recall
+    falls below rolling-z (72%).
+  - **Per pattern:** spike 65, sustained 74, long 83 (coverage 43%), overnight 77, drift 74,
+    flatline 24, dropout 85.
+- **Decision (D033):** not adopted; the rolling z-score stays the default.
+  - The out-of-season alert growth falls from ×1.9 (static) to ×1.45.
+  - Hypothesis for the recall loss: the scale window absorbs anomalies after its 7-day lag.
+- **On the BDG2 test quarter:** 194 events and 2,202 hours (rolling-z: 100 and 916; static
+  model: 207 and 3,366). The default detection outputs are unchanged.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 73
+  files.
+- `pytest -W error`: **556 passed**. New: adaptive scores (exact value, the 14-day warm-up,
+  the 7-day lag ignored), the CLI with `--detector model-adaptive`, and per-candidate decisions.
+  Two benchmark assertions were updated to expect three detectors.
+- On the first full run, one LEAD-check test failed: its loop picked up the new detector.
+  Fixed by pinning its detectors.

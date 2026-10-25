@@ -298,7 +298,10 @@ def test_a_benchmark_run_is_complete_and_reproducible(registry: tuple[Inputs, Pa
 
     assert json.dumps(first, default=str) == json.dumps(second, default=str)
     assert first["label"].startswith("synthetic benchmark")
-    assert set(first["tuning"]) == {"model", "rolling-z"} and len(first["tuning"]["model"]) == 2
+    assert (
+        set(first["tuning"]) == {"model", "model-adaptive", "rolling-z"}
+        and len(first["tuning"]["model"]) == 2
+    )
     assert set(first["evaluation"]["model"]) == {"chosen", "t016_default"}
     skipped = {s["pattern"] for s in first["skipped_injections"]["tuning"]}
     assert "long_sustained" in skipped, "14 days cannot fit a 160-hour tuning window"
@@ -346,4 +349,28 @@ def test_the_decision_needs_the_budget_to_hold_out_of_sample(
     assert tight["decision"]["keep_model_detector"] is False
     assert tight["decision"]["model_within_budget_on_evaluation"] is False
     best = loose["best_tuning_recall_within_alert_rate"]
-    assert set(best) == {"model", "rolling-z"} and set(best["model"]) == {"0.2", "0.3", "0.5", "1"}
+    assert set(best) == {"model", "model-adaptive", "rolling-z"} and set(best["model"]) == {
+        "0.2",
+        "0.3",
+        "0.5",
+        "1",
+    }
+
+
+def test_every_model_detector_gets_its_own_decision_against_the_rolling_z_score(
+    registry: tuple[Inputs, Path],
+) -> None:
+    inputs, root = registry
+    grid = [{"z_on": 4.0, "z_off": 2.0, "min_hours": 3}]
+
+    report = run_benchmark(inputs, root, replicates=1, budget=1e-9, grid=grid, log=lambda _: None)
+
+    candidates = report["decision"]["candidates"]
+    assert set(candidates) == {"model", "model-adaptive"}
+    for result in candidates.values():
+        assert result["keep"] == (
+            result["higher_recall_than_rolling_z"]
+            and result["within_budget_in_tuning"]
+            and result["within_budget_on_evaluation"]
+        )
+        assert result["keep"] is False  # nothing meets a zero budget

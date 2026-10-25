@@ -112,6 +112,7 @@ class Detector(StrEnum):
 
     ROLLING_Z = "rolling-z"
     MODEL = "model"
+    MODEL_ADAPTIVE = "model-adaptive"
 
 
 #: Thresholds per detector. The rolling z-score has no pre-event reference (no model to
@@ -119,6 +120,7 @@ class Detector(StrEnum):
 DETECTOR_DEFAULTS: Final = {
     Detector.ROLLING_Z: {"horizon_hours": None},
     Detector.MODEL: {"z_on": 4.0, "z_off": 3.0, "min_hours": 6},
+    Detector.MODEL_ADAPTIVE: {"z_on": 5.0, "z_off": 3.0, "min_hours": 3},  # T019b-tuned
 }
 
 
@@ -319,6 +321,40 @@ def rolling_same_hour(
     return pd.Series(z, index=readings.index), pd.Series(mean_out, index=readings.index)
 
 
+def adaptive_scores(
+    readings: pd.DataFrame,
+    expected: pd.Series,
+    level: pd.Series,
+    first_residual_time: datetime,
+    floor_fraction: float = 0.01,
+) -> pd.Series:
+    """Season-adaptive scores for the model's residuals (T019b, D033).
+
+    The relative residual (actual - expected) / level is centred and scaled by its median and
+    1.4826 * MAD over the meter's 28 days ending 7 days before each day (T019's rolling window),
+    counting only residuals from `first_residual_time` on, where they are out-of-sample. `level`
+    is the meter's recent mean (`rolling_mean_168h`, past-only). The scale is at least
+    `floor_fraction` (a share of the level). Indexed like `readings`; NaN without enough
+    history."""
+    from wattwise.ml.intervals import daily_window_statistics  # avoids a module cycle at import
+
+    lvl = level.reindex(readings.index).to_numpy(dtype=float)
+    lvl = np.where(lvl > 0, lvl, np.nan)
+    relative = (
+        readings["value"].to_numpy(dtype=float)
+        - expected.reindex(readings.index).to_numpy(dtype=float)
+    ) / lvl
+
+    def robust(window: FloatArray) -> tuple[float, float]:
+        center = float(np.median(window))
+        return center, max(float(np.median(np.abs(window - center))) * MAD_TO_SIGMA, floor_fraction)
+
+    center, spread = daily_window_statistics(
+        readings, relative, first_residual_time, robust, outputs=2
+    )
+    return pd.Series((relative - center) / spread, index=readings.index)
+
+
 def _scan(
     hours: pd.DatetimeIndex,
     actual: FloatArray,
@@ -498,6 +534,18 @@ def run_detection(
         calibration_rows = (times >= split.validation_start) & (times < split.test_start)
         calibration = calibrate(readings, expected, calibration_rows, config)
         detection = detect(readings, expected, calibration, detection_rows, config)
+    elif detector is Detector.MODEL_ADAPTIVE:
+        expected = loaded.model.predict(readings.drop(columns="value"), readings)
+        calibration_rows = (times >= split.validation_start) & (times < split.test_start)
+        calibration = calibrate(readings, expected, calibration_rows, config)  # long events
+        z = adaptive_scores(
+            readings,
+            expected,
+            features["rolling_mean_168h"],
+            split.validation_start,
+            config.scale_floor_fraction,
+        )
+        detection = detect(readings, expected, calibration, detection_rows, config, z=z)
     else:
         z, baseline = rolling_same_hour(readings, floor_fraction=config.scale_floor_fraction)
         detection = detect(readings, baseline, None, detection_rows, config, z=z)

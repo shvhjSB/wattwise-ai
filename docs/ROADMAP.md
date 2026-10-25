@@ -45,7 +45,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T018 | Injected-anomaly benchmark | M6 | T016, T017 | Done |
 | T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Done |
 | T019 | Prediction intervals | M7 | T010, T012 | Done |
-| T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Not started |
+| T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Done |
 | T020 | Alert explanations | M7 | T017, T019 | Not started |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |

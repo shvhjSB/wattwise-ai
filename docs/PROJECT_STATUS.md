@@ -191,6 +191,14 @@ The application foundation runs end to end locally, and CI checks it automatical
     and the most even across meters (worst meter 76%, against 45–56%).
   - **None is "calibrated":** November, the first winter month, under-covers for every method.
     Intervals are about a third of the mean reading wide.
+- **Season-adaptive model detector (T019b, D033):** the model's residuals are scaled by the
+  meter's recent level and a rolling robust spread, then re-run through the T018 benchmark
+  under the same pre-stated rule.
+  - **Partial improvement:** out-of-season alert growth falls from ×1.9 to ×1.45.
+  - **Still not adopted:** 0.71 alerts per meter-week in evaluation (budget 0.5), and recall
+    69% against 72% for the rolling z-score.
+  - **The rolling z-score stays the alert source.** The model serves expected consumption,
+    intervals and impact.
 
 ## Completed tasks
 
@@ -221,6 +229,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T018 | Injected-anomaly benchmark | 2026-10-25 |
 | T018b | Detector check against LEAD human labels | 2026-10-25 |
 | T019 | Prediction intervals | 2026-10-25 |
+| T019b | Season-adaptive model detector, re-benchmarked | 2026-10-25 |
 
 ## Current task
 
@@ -228,13 +237,13 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T019b — Season-adaptive model detector, re-benchmarked:** score the model's residuals with
-T019's rolling, level-scaled scale instead of the static summer MAD, and re-run the T018
-benchmark with the same windows, seeds and budget. The model detector becomes the default again
-only if it beats the rolling z-score within the alert budget, in tuning and in evaluation
-(D030).
+**T020 — Alert explanations:** every alert carries the evidence an operator needs.
+- **Evidence bundle:** actual, expected, the T019 interval, residual, persistence, time range,
+  the T017 signature and the top contributing features.
+- **SHAP** for tree models, as an optional dependency with a safe fallback.
+- **Wording templates** that phrase causes as hypotheses, guarded by tests.
 
-See [ROADMAP.md](ROADMAP.md#t019b--season-adaptive-model-detector-re-benchmarked). Open in M6: T040 (Building 59);
+See [ROADMAP.md](ROADMAP.md#t020--alert-explanations). Open in M6: T040 (Building 59);
 in M5: T041 (HKUST). T041 (the independent HKUST
 buildings) also remains in M5.
 
@@ -248,7 +257,7 @@ buildings) also remains in M5.
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
-| M7 Explainability and uncertainty | T019, T019b, T020 | 1 / 3 |
+| M7 Explainability and uncertainty | T019, T019b, T020 | 2 / 3 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |

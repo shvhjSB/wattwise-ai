@@ -43,7 +43,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T016 | Residual-based detector and event grouping | M6 | T012 | Done |
 | T017 | Anomaly signature rules | M6 | T008, T016 | Done |
 | T018 | Injected-anomaly benchmark | M6 | T016, T017 | Done |
-| T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Not started |
+| T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Done |
 | T019 | Prediction intervals | M7 | T010, T012 | Not started |
 | T020 | Alert explanations | M7 | T017, T019 | Not started |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |

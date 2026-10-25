@@ -462,3 +462,74 @@ The run takes about 6.5 minutes; a rerun reproduced every number.
   finds exactly.
 - **Limits:** 20 meters, one autumn and winter, injected shapes chosen by us, and an assumed
   budget. Real anomalies may look different. Human labels are T018b.
+
+## Detector check against LEAD labels (T018b)
+
+**Real data, human labels without measured agreement (LEAD 1.0).** LEAD's annotators marked
+anomalous hours on BDG2 meters in 2016. How often annotators agree has never been measured, so
+a label is one person's judgement, not ground truth. Only labels whose LEAD reading equals
+BDG2's raw reading are scored (D022). LEAD data stays local and is never committed; only these
+aggregate figures are published.
+
+```bash
+uv run python -m wattwise.data.bdg2_prepare --variant raw --sample-meters 0
+uv run python -m wattwise.ml.lead_check --data ../data/processed/bdg2/raw \
+    --labels ../data/processed/lead/labels.parquet \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet
+```
+
+**Procedure (chronological; nothing is tuned on the labels):**
+- **Readings:** BDG2's **raw** variant, which is what LEAD labelled, for LEAD's 173 meters.
+- **A separate model:** LEAD's year is inside the adopted model's training period. So this
+  check trains the adopted settings (LightGBM, all features) on **January–May 2016**,
+  calibrates the model detector on **June**, and detects from **July to the end of 2016**.
+- **Detectors:** both, with their standard settings (D030).
+- **Scoring:**
+  - **Hours:** precision and recall of hours inside events, against labelled anomaly hours.
+  - **Segments:** a run of consecutive labelled hours counts as found if any event overlaps it.
+  - **Events:** an event is true if it overlaps a labelled anomaly hour, and false if its
+    labelled hours are all normal. Events with only untrusted or unlabelled hours are left
+    unjudged.
+
+**Labels in the detection window:**
+- 728,575 label rows on 173 meters, of which 10,989 are untrusted.
+- 2,089 trusted anomaly segments, with a median of 1 hour. 1,465 last 1–2 hours, 536 last
+  3–23 hours, and 88 last a day or more.
+- The chance precision (the anomaly share of trusted hours) is 1.5%.
+
+**Results (2026-10-25, about 3 minutes; a rerun reproduced them byte for byte):**
+
+| Detector | Hour precision | Hour recall | Hour F1 | Segment recall | Event precision | Events per meter-week |
+|---|---|---|---|---|---|---|
+| rolling-z (default) | **11.5%** | 13.8% | **12.6%** | 18.9% | **22.7%** | 0.43 |
+| model | 4.5% | 20.9% | 7.4% | 21.2% | 7.1% | 1.35 |
+
+| Detector | Segments of 1–2 h | 3–23 h | 24 h or more |
+|---|---|---|---|
+| rolling-z | 13.0% | 31.9% | 36.4% |
+| model | 16.0% | 31.9% | 43.2% |
+
+**What this shows, and what it does not:**
+- **Little agreement with these labels.**
+  - Both detectors find about a fifth of the labelled segments.
+  - Most of their events do not touch a labelled hour: 77% of the rolling score's judged
+    events, 93% of the model's.
+  - Their precision is still well above chance: 7.7 times for the rolling score, 3 times for
+    the model.
+- **The labels are mostly very short:** 70% of segments last 1–2 hours. The detectors require
+  persistence (3 or 6 hours) unless a deviation is extreme, by design (D028). They find a
+  third or more of the longer segments. Whether short labels are actionable for operators is
+  an open question, not a finding.
+- **This check's model is weak, so its detector results do not describe the adopted model.**
+  Trained on five winter and spring months, it forecasts July–December 2016 *worse* than
+  seasonal-naive: MAE 22.08 against 19.57 kWh on 747,207 common rows. The adopted model (D026)
+  had a full year of training and beat seasonal-naive by 14.6%.
+- **The rolling z-score is the better detector against these labels:** about twice the hour
+  precision and three times the event precision, at a third of the alerts. That agrees with
+  the T018 decision (D030).
+- **Limits:**
+  - one annotation effort with unmeasured agreement
+  - 2016 only
+  - labels trusted only where the readings match
+  - the alert-rate and persistence choices were made in T016–T018 without these labels, and
+    they shape the result

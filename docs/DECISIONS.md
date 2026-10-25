@@ -1073,6 +1073,39 @@ links to the entry that replaces it.
   - **Owner decision:** the alert budget (0.5 per meter-week) is an assumption, and the owner
     can change it.
 
+## D031 — LEAD human-label check: a chronological model, trusted labels only, reported apart
+- **Date:** 2026-10-25 · **Task:** T018b · **Status:** Accepted
+- **Decision:** `wattwise.ml.lead_check` (results in
+  [EVALUATION.md](EVALUATION.md#detector-check-against-lead-labels-t018b)).
+  - **Readings:** BDG2's raw variant for LEAD's 173 meters. LEAD labelled raw readings, and
+    cleaned readings may have removed what was labelled.
+  - **A separate model:** trained January–May 2016, calibrated in June, detecting
+    July–December. Testing the adopted model on 2016 would test it on its own training data.
+  - **Trusted labels only:** those whose LEAD reading matches BDG2's raw reading (D022).
+    Events touching only untrusted or unlabelled hours are unjudged, not counted as false.
+  - **No tuning:** the detectors run with their T018 settings.
+  - **Reported apart**, as "real data, human labels without measured agreement".
+- **Alternatives considered:**
+  - **Scoring the adopted model on 2016:** rejected; it is in-sample and would flatter it.
+  - **Training on 2017 and detecting 2016:** rejected; the test window would be earlier than
+    training, against the chronological rule.
+  - **Tuning thresholds on LEAD:** rejected. Labels with unmeasured agreement should check a
+    detector, not shape it. Tuning would also leave no independent check.
+  - **Using the cleaned variant:** rejected, as above.
+- **Result:**
+  - **Rolling z-score:** hour precision 11.5% against a 1.5% chance rate; 18.9% of labelled
+    segments found; event precision 22.7%.
+  - **Model detector:** 4.5%, 21.2% and 7.1%. But this check's model forecasts worse than
+    seasonal-naive (MAE 22.08 against 19.57), so it does not represent the adopted model.
+  - 70% of labelled segments last 1–2 hours, which the persistence rules mostly ignore.
+- **Consequences:**
+  - The low agreement is a finding to keep in view, not a tuning target. Whether operators
+    want 1–2-hour alerts is a product question.
+  - It supports the T018 default (D030): the rolling score is the more precise detector here
+    too.
+  - The raw BDG2 variant (1,171 eligible meters, 20.5 million readings) is prepared locally
+    and git-ignored.
+
 ---
 
 ## Open decisions (tracked in tasks)

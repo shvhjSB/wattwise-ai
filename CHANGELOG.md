@@ -225,6 +225,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - **Labelling:** reported as a synthetic benchmark in `docs/EVALUATION.md`.
 - A rolling same-hour z-score detector (`detection.rolling_same_hour`), and `--detector
   rolling-z|model` for the detection command. (T018)
+- Detector check against LEAD 1.0 human labels (`python -m wattwise.ml.lead_check`), D031.
+  (T018b)
+  - **Setup:** raw BDG2 readings for LEAD's 173 meters; a model trained Jan–May 2016 and
+    calibrated in June; detection Jul–Dec 2016.
+  - **Scoring:** trusted labels only, at the hour, segment and event level, against the chance
+    rate.
+  - **Result:** reported as "real data, human labels without measured agreement". The rolling
+    z-score has hour precision 11.5% against 1.5% chance, segment recall 18.9% and event
+    precision 22.7%. The outputs are local and git-ignored.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

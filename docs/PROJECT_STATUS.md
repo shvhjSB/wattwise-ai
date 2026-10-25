@@ -174,6 +174,15 @@ The application foundation runs end to end locally, and CI checks it automatical
     surge the model finds (tested). T019 tests a season-adaptive scale for the model.
   - **Decision rule:** tightened after the evaluation run; the first version would have kept
     the model detector. Both are reported.
+- **LEAD human-label check (T018b, D031):** **real data, human labels without measured
+  agreement.** Trusted labels only, on 173 meters, July–December 2016, with a model trained on
+  January–May.
+  - **Rolling z-score:** hour precision 11.5% (chance 1.5%); 18.9% of labelled segments found;
+    event precision 22.7%.
+  - **Model detector:** 4.5%, 21.2% and 7.1%. This check's model was weaker than
+    seasonal-naive, so it does not represent the adopted model.
+  - **Little agreement overall:** 70% of the labels last 1–2 hours, which the persistence rules
+    mostly ignore. Nothing was tuned on the labels.
 
 ## Completed tasks
 
@@ -202,6 +211,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T016 | Residual-based detector and event grouping | 2026-10-25 |
 | T017 | Anomaly signature rules | 2026-10-25 |
 | T018 | Injected-anomaly benchmark | 2026-10-25 |
+| T018b | Detector check against LEAD human labels | 2026-10-25 |
 
 ## Current task
 
@@ -209,13 +219,15 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T018b — Detector check against LEAD human labels:** score detection against LEAD's 2016 human
-labels on real data. LEAD's year is inside the adopted model's training period, so this needs a
-model trained on the first half of 2016 and scored on the second half, on LEAD's meters. Only
-labels whose readings match BDG2 are trusted (D022). Results are reported separately as "real
-data, human labels without measured agreement", or "not run" with the reason.
+**T019 — Prediction intervals:** uncertainty intervals that are tested, not assumed.
+- **Intervals:** split-conformal, from a calibration window, with empirical coverage measured on
+  the test window. "Calibrated" may be used only within a stated tolerance.
+- **Seasonal drift (D028, D030):** test a rolling, season-adaptive scale, for intervals and for
+  the model detector, and re-run the T018 benchmark. The model detector becomes the default
+  again only if it then beats the rolling z-score within the alert budget.
 
-See [ROADMAP.md](ROADMAP.md#t018b--detector-check-against-lead-human-labels). T041 (the independent HKUST
+See [ROADMAP.md](ROADMAP.md#t019--prediction-intervals). Open in M6: T040 (Building 59);
+in M5: T041 (HKUST). T041 (the independent HKUST
 buildings) also remains in M5.
 
 ## Milestone progress
@@ -227,7 +239,7 @@ buildings) also remains in M5.
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M6 Anomaly detection | T016–T018, T018b, T040 | 3 / 5 |
+| M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
@@ -264,7 +276,7 @@ pushes only as `shvhjSB` (D006).
 | BDG2 licence: four sources state MIT, CC BY 4.0 or CC BY-SA | T038 (public display) | Handled conservatively (D014): attribution, no redistribution of raw or derived data. Public display of BDG2-derived results is an owner decision at T038 |
 | 4 of 19 BDG2 sites (385 buildings, including Rat with 305) have an undetermined electricity clock and are excluded | T009b and later | Excluded rather than guessed (D016). Fox was a metadata error, corrected with a falsifiable check (D020). Per-building classification for mixed sites such as Rat is possible later |
 | LEAD 1.0 has no licence on GitHub, and the Kaggle rules forbid redistribution | T018 | Owner decision (D022): local evaluation only, never committed or redistributed, cited. Data lives only in git-ignored folders (tested) |
-| LEAD's readings differ from BDG2's at 46% of labelled anomalies | T018 | Trust a label only where the readings match (per-row flag); report the others separately (D022) |
+| LEAD's readings differ from BDG2's at 46% of labelled anomalies | T018b (done) | Trust a label only where the readings match (per-row flag); report the others separately (D022) |
 | Supplementary sources differ by country and year; 4 BDG2 sites have no location | T021a, T007d | Per-site sourced tables; unlocated sites get "not configured", never a guess (D019) |
 | BDG2 interval start/end cannot be determined from the data | T009b and later | Interval-start assumed explicitly: at most a 1-hour labelling uncertainty (D016). Recorded in every manifest |
 | The default BDG2 sample is 20 meters from 9 sites, not stratified | T012 and later | Results are reported for the sampled sites only. `--sample-meters 0` uses all 1,148 eligible meters (D017) |

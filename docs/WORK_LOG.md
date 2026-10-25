@@ -1644,3 +1644,54 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - **Detection:** the model-path test now asks for the model detector explicitly. New tests
     cover the default rolling detector (no calibration, and its weather-masked miss) and the
     CLI's `--detector`.
+
+---
+
+## 2026-10-25 — T018b Detector check against LEAD human labels
+
+**Done**
+- **Raw BDG2 for every eligible meter:** `bdg2_prepare --variant raw --sample-meters 0` gives
+  1,171 eligible meters and 20,540,488 readings, in 103 s, git-ignored. LEAD labelled raw
+  readings. This is an existing command; nothing in the pipeline changed.
+- **`wattwise.ml.lead_check`** (D031):
+  - **Setup:** LEAD's 173 meters; the adopted model settings trained on Jan–May 2016;
+    calibration in June; both detectors with their T018 settings; detection Jul–Dec 2016.
+  - **Context:** the check model is compared with seasonal-naive.
+  - **Scoring:** trusted labels only, at three levels:
+    - **hours:** precision, recall and F1, against the chance rate
+    - **segments:** runs of labelled hours, by length
+    - **events:** true, false or unjudged
+  - **CLI:** writes `lead_check.json` and `lead_check.md` to git-ignored
+    `data/processed/evaluation/lead_check/`.
+
+**Real result (about 3 min; rerun byte-identical)**
+- **Data:** 1,522,723 raw readings. 728,575 label rows in the detection window (10,989
+  untrusted). 717,586 trusted hours, of which 10,484 are anomalies (chance 1.5%). 2,089 trusted
+  segments, median 1 h (1,465 last 1–2 h).
+- **Check model:** 561,210 training rows. Test MAE 22.07, against 19.72 for seasonal-naive
+  (22.08 against 19.57 on 747,207 common rows): **worse** than seasonal-naive. Five months of
+  winter and spring do not carry over to the second half of the year.
+- **Rolling-z** (1,970 events, 0.43 per meter-week):
+  - hour precision 11.5%, recall 13.8%, F1 12.6%
+  - segment recall 18.9% (13.0% / 31.9% / 36.4% by length)
+  - events: 344 true, 1,174 false, 452 unjudged; precision 22.7%
+- **Model** (6,174 events, 1.35 per meter-week):
+  - hour precision 4.5%, recall 20.9%, F1 7.4%
+  - segment recall 21.2% (16.0% / 31.9% / 43.2%)
+  - event precision 7.1%
+- **Reading:** little agreement with these labels, but well above chance. Most labels are 1–2 h,
+  which the persistence rules mostly ignore. Nothing was tuned on them. The rolling score is
+  the more precise detector here too (D030).
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 71
+  files.
+- `pytest -W error`: **544 passed**, 6 new:
+  - flagged hours per meter
+  - segments by run and meter
+  - exact hour, segment and event counts on crafted trusted and untrusted labels (including
+    unjudged events)
+  - the no-event case
+  - a synthetic end-to-end check: the model detector finds the labelled surge, and the rolling
+    score misses it (D030)
+  - the CLI without data

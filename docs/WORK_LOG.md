@@ -1522,3 +1522,50 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - **With the promoted model:** a 2-day injected surge is found as exactly one event, matching
     the injected window.
   - **CLI:** byte-identical outputs, and a clear error without a model.
+
+---
+
+## 2026-10-25 — T017 Anomaly signature rules
+
+**Done**
+- **`wattwise.ml.signatures`** (D029):
+  - Six rules, each returning matched plus its measurements: `data_fault`, `flatline`, `spike`,
+    `overnight_excess`, `drift`, `sustained`; otherwise `unclassified`.
+  - **Primary signature:** the first match, with meter problems first.
+  - **Evidence:** every rule's measurements and thresholds as JSON, with NaN written as null.
+  - **Configuration:** `SignatureConfig`. Flatline and zero-run lengths come from T008's
+    `QualityThresholds`; night hours are 22:00–05:59 local.
+  - **Descriptions:** name patterns only, and a test checks them for causal words.
+- **Detector:** `Detection.hours` gives every event hour (reading, baseline used, score), so the
+  rules see exactly what the detector saw, including the pre-event baseline.
+  `run_detection` takes the buildings table and returns classified events. The CLI writes
+  signatures to `events.csv`, `summary.json` and `report.md`.
+
+**Real data (BDG2 test quarter, same 355 events)**
+- **Primary signatures:** `data_fault` 4, `flatline` 12, `spike` 80, `overnight_excess` 9,
+  `drift` 0, `sustained` 19, `unclassified` 231.
+- **All matches:** spike 82, sustained 32, overnight excess 22, flatline 13, data fault 4.
+- **`data_fault`:** all 4 are implausible deviations (peak z 52–407; Bull ×3 and Lamb).
+- **Correction to T016:** Gator_public_Geraldine's whole-day lows (1 Oct, 10 Nov, 12 Dec) have
+  one value for every hour in BDG2's **raw** file too (3.3333 and 8.3333 kWh, which are 80/24
+  and 200/24). That is consistent with daily totals spread evenly over the day, not holidays.
+- **Determinism:** a rerun gave byte-identical outputs (4 of 4 files).
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 67
+  files.
+- `pytest -W error`: **521 passed**, 16 new:
+  - Every rule has positive and negative cases:
+    - **data fault:** negatives; a zero run of 24 against 23; 60% against 40% missing; z 60
+      against 49
+    - **flatline:** 10 h, 5 h, a 6-of-20 h share, and zeros
+    - **spike:** 3 h against 4 h
+    - **overnight:** night, day, and low
+    - **drift:** rising, constant, too short, and a deepening low
+    - **sustained:** full, half-flagged, and 20 h
+  - **Precedence and labels:** precedence; unclassified; evidence JSON with nulls.
+  - **Shared settings:** thresholds shared with the quality engine; no causal words.
+  - **End to end:** detector events in New York local time (overnight, then spike).
+  - **Docs:** DETECTION.md lists every signature.
+  - The first end-to-end run labelled a perfectly constant injected night excess `flatline`,
+    which the rule should do. The test now injects a varying excess.

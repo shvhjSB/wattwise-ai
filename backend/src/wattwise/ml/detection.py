@@ -31,7 +31,7 @@ import argparse
 import json
 import sys
 from collections.abc import Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Final, Self
@@ -74,6 +74,7 @@ EVENT_COLUMNS: Final = (
     "residual_sum",
     "ongoing",
 )
+HOUR_COLUMNS: Final = ("event", "timestamp", "value", "baseline", "score")
 
 
 class DetectorConfig(BaseModel):
@@ -117,6 +118,10 @@ class Calibration:
 class Detection:
     events: pd.DataFrame  # EVENT_COLUMNS, sorted by meter, start, direction
     scores: pd.DataFrame  # meter_id, timestamp, value, expected, z (detection rows)
+    #: Every hour of every event: event (row of `events`), timestamp, value, the baseline the
+    #: detector used (expected, or the pre-event reference), and the score in the event's
+    #: direction. Missing hours have NaN values.
+    hours: pd.DataFrame = field(default_factory=lambda: pd.DataFrame(columns=HOUR_COLUMNS))
 
 
 def _robust(values: pd.Series, floor: float) -> tuple[float, float]:
@@ -208,15 +213,23 @@ def detect(
                 }
             )
         )
-    table = pd.DataFrame(events, columns=list(EVENT_COLUMNS))
-    if len(table):
-        table = table.sort_values(["meter_id", "start", "direction"], kind="stable")
+    events.sort(key=lambda e: (e["meter_id"], e["start"], e["direction"]))
+    table = pd.DataFrame([{k: e[k] for k in EVENT_COLUMNS} for e in events], columns=EVENT_COLUMNS)
+    hour_parts = [
+        pd.DataFrame(e["_hours"], columns=HOUR_COLUMNS[1:]).assign(event=i)
+        for i, e in enumerate(events)
+    ]
+    hour_table = (
+        pd.concat(hour_parts, ignore_index=True)[list(HOUR_COLUMNS)]
+        if hour_parts
+        else pd.DataFrame(columns=HOUR_COLUMNS)
+    )
     score_table = (
         pd.concat(scores, ignore_index=True)
         if scores
         else pd.DataFrame(columns=["meter_id", "timestamp", "value", "expected", "z"])
     )
-    return Detection(events=table.reset_index(drop=True), scores=score_table)
+    return Detection(events=table, scores=score_table, hours=hour_table)
 
 
 def _scan(
@@ -314,12 +327,14 @@ def _close(
     flagged = missing = reference_hours = 0
     total = 0.0
     peak_value, peak_at, peak_residual = -np.inf, start, np.nan
+    recorded: list[tuple[pd.Timestamp, float, float, float]] = []
     for t in range(start, last + 1):
         uses_reference = _uses_reference(t, start, config)
         value = _event_score(t, start, actual, score, sign, ref_center, ref_scale, config)
         baseline = (
             _reference(t, start, actual, config.reference_weeks) if uses_reference else base[t]
         )
+        recorded.append((hours[t], float(actual[t]), float(baseline), value))
         if np.isnan(value):
             missing += 1
             continue
@@ -346,6 +361,7 @@ def _close(
             "peak_residual": round(float(peak_residual), 3),
             "residual_sum": round(total, 3),
             "ongoing": ongoing,
+            "_hours": recorded,
         }
     ]
 
@@ -360,18 +376,22 @@ class Run:
     model: Loaded
     calibration: Calibration
     detection: Detection
+    events: pd.DataFrame  # detection.events with signatures (T017)
     calibration_window: tuple[datetime, datetime]
     detection_window: tuple[datetime, datetime]
 
 
 def run_detection(
     readings: pd.DataFrame,
+    buildings: pd.DataFrame,
     features: pd.DataFrame,
     root: Path = DEFAULT_ROOT,
     config: DetectorConfig | None = None,
 ) -> Run:
-    """Calibrate on the promoted model's validation window and detect in its test window (both
-    out-of-sample for the model)."""
+    """Calibrate on the promoted model's validation window, detect in its test window (both
+    out-of-sample for the model), and classify the events into signatures."""
+    from wattwise.ml.signatures import classify  # imported here: signatures imports this module
+
     config = config or DetectorConfig()
     loaded = load(features, root=root)
     split = SplitConfig.model_validate(loaded.metadata.training.split_config).time
@@ -387,13 +407,14 @@ def run_detection(
         model=loaded,
         calibration=calibration,
         detection=detection,
+        events=classify(detection, buildings, config.z_off),
         calibration_window=(split.validation_start, split.test_start),
         detection_window=(split.test_start, split.test_end),
     )
 
 
 def summary(run: Run, config: DetectorConfig) -> dict[str, Any]:
-    events = run.detection.events
+    events = run.events
     per_meter = (
         events.groupby(["meter_id", "direction"]).size().unstack(fill_value=0)
         if len(events)
@@ -416,6 +437,11 @@ def summary(run: Run, config: DetectorConfig) -> dict[str, Any]:
         "events_using_pre_event_reference": int((events["reference_hours"] > 0).sum())
         if len(events)
         else 0,
+        "events_by_signature": {
+            str(k): int(v) for k, v in events["signature"].value_counts().sort_index().items()
+        }
+        if len(events)
+        else {},
         "events_per_meter": {
             str(m): {str(d): int(n) for d, n in row.items()} for m, row in per_meter.iterrows()
         },
@@ -442,14 +468,19 @@ def to_markdown(data: dict[str, Any], events: pd.DataFrame) -> str:
         f"{data['events_by_direction']['low']} low), {data['event_hours']:,} event hours; "
         f"{data['events_using_pre_event_reference']} used the pre-event reference",
         "",
-        "| Meter | Direction | Start (UTC) | Hours | Flagged | Peak z | Residual sum | Ongoing |",
-        "|---|---|---|---|---|---|---|---|",
+        "- Signatures (primary): "
+        + (", ".join(f"{k} {v}" for k, v in data["events_by_signature"].items()) or "none"),
+        "",
+        "| Meter | Direction | Signature | Start (UTC) | Hours | Flagged | Peak z | Residual sum "
+        "| Ongoing |",
+        "|---|---|---|---|---|---|---|---|---|",
     ]
     top = events.sort_values("duration_hours", ascending=False, kind="stable").head(25)
     for e in top.itertuples():
         lines.append(
-            f"| {e.meter_id} | {e.direction} | {_iso(e.start)} | {e.duration_hours} | "
-            f"{e.flagged_hours} | {e.peak_z} | {e.residual_sum} | {'yes' if e.ongoing else 'no'} |"
+            f"| {e.meter_id} | {e.direction} | {e.signature} | {_iso(e.start)} | "
+            f"{e.duration_hours} | {e.flagged_hours} | {e.peak_z} | {e.residual_sum} | "
+            f"{'yes' if e.ongoing else 'no'} |"
         )
     if len(events) > len(top):
         lines.append(f"\nThe {len(top)} longest of {len(events)} events; all are in events.csv.")
@@ -458,7 +489,7 @@ def to_markdown(data: dict[str, Any], events: pd.DataFrame) -> str:
 
 def write(run: Run, config: DetectorConfig, output: Path) -> dict[str, str]:
     output.mkdir(parents=True, exist_ok=True)
-    events = run.detection.events.copy()
+    events = run.events.copy()
     for column in ("start", "end", "peak_time"):
         events[column] = events[column].map(_iso)
     events.to_csv(output / "events.csv", index=False, lineterminator="\n")
@@ -467,7 +498,7 @@ def write(run: Run, config: DetectorConfig, output: Path) -> dict[str, str]:
     (output / "summary.json").write_bytes(
         (json.dumps(data, indent=2, allow_nan=False) + "\n").encode("utf-8")
     )
-    (output / "report.md").write_bytes(to_markdown(data, run.detection.events).encode("utf-8"))
+    (output / "report.md").write_bytes(to_markdown(data, run.events).encode("utf-8"))
     return {
         name: sha256_of(output / name)
         for name in ("events.csv", "scores.parquet", "summary.json", "report.md")
@@ -490,8 +521,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parser.parse_args(argv)
     config = DetectorConfig()
     try:
-        readings, _, features = read_inputs(args.data, args.enrichment)
-        result = run_detection(readings, features, args.root, config)
+        readings, buildings, features = read_inputs(args.data, args.enrichment)
+        result = run_detection(readings, buildings, features, args.root, config)
     except NoModelError as exc:
         print(f"error: {exc} Train and promote one: python -m wattwise.ml.registry train "
               "--promote ...", file=sys.stderr)  # fmt: skip
@@ -500,7 +531,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     digests = write(result, config, args.output)
-    print(to_markdown(summary(result, config), result.detection.events))
+    print(to_markdown(summary(result, config), result.events))
     for name, digest in digests.items():
         print(f"{name}: {digest}")
     return 0

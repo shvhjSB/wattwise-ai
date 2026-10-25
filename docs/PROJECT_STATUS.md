@@ -151,6 +151,15 @@ The application foundation runs end to end locally, and CI checks it automatical
     calibration hours at |z| ≥ 4) and summer-to-winter drift (7.2% in the detection quarter).
     Thresholds are untuned until T018, so the list is for review, not an alert feed. Events are
     anomalies to investigate, not confirmed waste.
+- **Signatures (T017, D029):** each event gets transparent pattern labels with their evidence.
+  - **Labels:** data fault, flatline (stuck or not truly hourly meter), spike, overnight excess,
+    drift, sustained, or unclassified.
+  - **Precedence:** meter problems come first, so they are never shown as consumption.
+  - **BDG2 test quarter:** 16 of 355 events are meter problems. Gator's whole-day "lows" are
+    days where the raw data repeats one value every hour, a daily total spread over 24 hours.
+    In T016 these were first read as possible holidays.
+  - **Unclassified:** 65% of events, mostly 4–23 hours long, reported as such rather than
+    forced into a pattern.
 
 ## Completed tasks
 
@@ -177,6 +186,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T014 | ML forecaster vs baselines | 2026-10-25 |
 | T015 | Model artifacts, metadata and registry | 2026-10-25 |
 | T016 | Residual-based detector and event grouping | 2026-10-25 |
+| T017 | Anomaly signature rules | 2026-10-25 |
 
 ## Current task
 
@@ -184,12 +194,16 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T017 — Anomaly signature rules:** classify the T016 events into transparent, explainable
-patterns, using configurable and documented thresholds. The patterns are spike, sustained
-elevated use, overnight or base-load excess, gradual drift, flatlined or stuck meter, and
-data-quality fault. Each rule is tested on crafted series, with positive and negative cases.
+**T018 — Injected-anomaly benchmark:** measure detection quality honestly. It covers:
+- Injecting known anomalies into held-out BDG2 series and the synthetic fixture.
+- Recall per pattern, detection latency, and the false-alert rate on uninjected windows.
+- Comparison with a rolling z-score baseline.
+- Tuning the provisional detector and signature thresholds on the benchmark, never on the test
+  quarter.
+- Scoring against LEAD's 2016 human labels separately. That needs a model trained outside 2016
+  (D028).
 
-See [ROADMAP.md](ROADMAP.md#t017--anomaly-signature-rules). T041 (the independent HKUST
+See [ROADMAP.md](ROADMAP.md#t018--injected-anomaly-benchmark). T041 (the independent HKUST
 buildings) also remains in M5.
 
 ## Milestone progress
@@ -201,7 +215,7 @@ buildings) also remains in M5.
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M6 Anomaly detection | T016–T018, T040 | 1 / 4 |
+| M6 Anomaly detection | T016–T018, T040 | 2 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
@@ -247,6 +261,7 @@ pushes only as `shvhjSB` (D006).
 | Splits cannot stop features from looking ahead, or repeated use of the test window | T014 | T013 features are proven leakage-safe by tests (D025); model selection on validation or rolling folds only (D018) |
 | Weather features use the observed weather of the target hour | T014 reporting | Results are expected-consumption accuracy, not forecast accuracy; say so with every result (D025) |
 | History features absorb a sustained anomaly after the horizon | Long events | T016 scores events older than a week against the meter's pre-event week (D028); that reference ignores weather changes since the event began |
+| Some BDG2 meters hold daily totals spread evenly over 24 hours (e.g. Gator_public_Geraldine) | Training, calibration, detection | Labelled `flatline` by T017, never consumption (D029). Masking such days from training and calibration is a candidate improvement |
 | The detector's alert volume is high (355 events, 11.9% of hours, on 20 meters in a quarter) | Operators, T018–T020 | Untuned thresholds, heavy-tailed residuals and a summer-calibrated scale (D028). T018 tunes on injected anomalies; T019 calibrates intervals. Until then, events are a review list |
 | The adopted model does not generalise to unseen sites on this sample | Uploads of new buildings | Seasonal-naive stays the default for buildings without training data (D026) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |

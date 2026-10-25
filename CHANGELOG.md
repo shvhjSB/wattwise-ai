@@ -202,6 +202,18 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     `data/processed/detection/`. `docs/DETECTION.md` documents the method and the first results:
     355 events on the BDG2 sample's test quarter, with untuned thresholds and a stated
     calibration issue.
+- Anomaly signature rules (`wattwise.ml.signatures`), run by the detection command, D029.
+  (T017)
+  - **Rules:** `data_fault`, `flatline`, `spike`, `overnight_excess`, `drift`, `sustained`,
+    else `unclassified`.
+  - **Precedence:** meter problems first. All matches and every rule's measurements are kept as
+    JSON evidence in `events.csv`.
+  - **Thresholds:** configurable; flatline and zero-run lengths are shared with the T008
+    quality engine.
+  - **Real result:** 16 of 355 events are meter problems. Gator's whole-day lows are daily
+    totals spread over 24 hours in the raw data.
+- The detector also returns every event hour (reading, baseline used, score), so rules run on
+  exactly what it saw. (T017)
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -226,11 +238,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   registry tests. `baselines.utc_argument` (formerly private) parses the date options of both
   commands. `FeatureModel.usable` gives the rows with a usable scale. (T015)
 - `registry.read_inputs` is public; the detection command reuses it. (T016)
+- `detection.run_detection` takes the buildings table (for local time), and its result carries
+  the classified events. (T017)
 - New runtime dependency `holidays` 0.106 (MIT). It needs `python-dateutil<3`, so the lock
   moved python-dateutil from 3.0.0 (released 2026-10-21, under the two-week rule) to
   2.9.0.post0. (T013)
 
 ### Fixed
+- The T016 reading of Gator's whole-day low events as possible holidays was wrong. The raw data
+  repeats one value every hour on those days, and they are now labelled `flatline`. (T017)
 - ERA5 checks and tests, after the rest of the review completed. (T007d)
   - **Phase limit:** tightened from 1 h to 0.75 h; a uniform one-hour clock error at a site
     with natural phase 0 had sat exactly on the limit.

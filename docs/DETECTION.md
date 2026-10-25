@@ -1,6 +1,7 @@
 # Anomaly detection
 
-Detector version: **1** · Module: `wattwise.ml.detection` · Decision: D028 · Task: T016
+Detector version: **1** · Signatures version: **1** · Modules: `wattwise.ml.detection`,
+`wattwise.ml.signatures` · Decisions: D028, D029 · Tasks: T016, T017
 
 The detector turns the gap between observed and expected consumption into **events**. An event is
 a period worth investigating; it is **not confirmed waste**. Its residual sum is a deviation from
@@ -70,6 +71,30 @@ window). Tests show the effect directly: a 3-week step the model absorbs after a
 The reference ignores weather changes since the event began. That is the price of a baseline
 the anomaly cannot contaminate.
 
+## Signatures (T017)
+
+Every event gets the signatures whose rules match, with the **evidence**: the measured values
+next to the thresholds, as JSON in `events.csv`. The **primary** signature is the first match in
+this order. Meter problems come first, so they are never presented as consumption:
+
+| Signature | Rule (defaults) | Meaning |
+|---|---|---|
+| `data_fault` | Any negative reading; a run of at least 24 zero readings; at least 50% of hours missing; or a peak score of at least 50 | The readings look like a metering or data problem. Check the meter first |
+| `flatline` | The same non-zero reading (tolerance 0) for at least 6 hours, covering at least 50% of the event | A stuck or not truly hourly meter. Check the meter first |
+| `spike` | At most 3 hours | A short deviation |
+| `overnight_excess` | A high event with at least 70% of its excess in local hours 22:00–05:59 | Excess at base-load time |
+| `drift` | At least 72 hours, with the mean deviation rising across the event's thirds by at least 50% of the last third | A growing deviation |
+| `sustained` | At least 24 hours, with at least 60% of hours flagged | A long deviation |
+| `unclassified` | No rule matched | — |
+
+- **Shared thresholds:** the flatline and zero-run lengths are the data-quality engine's (T008),
+  so both describe a stuck meter the same way.
+- **Evaluation:** thresholds are provisional; T018 evaluates them.
+- **Wording:** signatures name patterns, never causes. Their descriptions are tested for causal
+  words, and causes are hypotheses for T020.
+- **Baseline:** rules run on the hours exactly as the detector saw them, including the pre-event
+  baseline of long events.
+
 ## Results on the BDG2 sample (2026-10-25)
 
 Promoted model `20261025T070700Z-4cf91609c9ef`. Calibration: 2017-07-01 to 2017-10-01.
@@ -82,12 +107,36 @@ Detection: 2017-10-01 to 2018-01-02 (UTC). About 13 s.
   - Median duration 8 hours; 32 events last a day or more; 44 are kept as spikes.
   - 3 long events used the pre-event reference: Hog_parking_Marcus (480 h), Lamb_education_Lawrence
     (318 h) and Eagle_lodging_Andy (241 h).
-- **Recognisable examples, as hypotheses to investigate, not verified causes:**
-  - Gator buildings show whole-day low events starting at local midnight, on Sunday 1 October,
-    on Friday 10 November (US Veterans Day observed) and on 30 December. Gator's region is
-    unknown, so the model has no holiday information there (D025).
-  - Lamb_education_Lawrence has a 318-hour low event with a peak score of 407. That looks like a
-    meter or data fault rather than behaviour. Signature rules (T017) separate data faults.
+- **Recognisable examples:**
+  - **Gator's whole-day low events are a data issue.** In T016 these were first read as
+    possible holidays. The T017 signatures label them `flatline`. On those days BDG2's raw file
+    holds one value for every hour: 3.3333 or 8.3333 kWh, which is 80 or 200 kWh divided by 24.
+    That is consistent with a daily total spread evenly over the day, a data-resolution
+    problem rather than behaviour.
+  - Lamb_education_Lawrence has a 318-hour low event with a peak score of 407, labelled
+    `data_fault` (an implausible deviation).
+
+**Signatures** (primary; high and low together):
+
+| Signature | Events | Event hours |
+|---|---|---|
+| `data_fault` | 4 | 324 |
+| `flatline` | 12 | 530 |
+| `spike` | 80 | 175 |
+| `overnight_excess` | 9 | 60 |
+| `drift` | 0 | 0 |
+| `sustained` | 19 | 1,822 |
+| `unclassified` | 231 | 2,236 |
+
+- **Meter problems:** 16 events (854 hours) are data faults or flatlines. They are meter
+  problems to check, not consumption to act on.
+- **All `data_fault` events** are implausible deviations: a peak z of 52–407 at Bull and Lamb
+  meters.
+- **Overnight excess:** 22 events match it in total; 9 have it as their primary signature.
+- **No drift:** no long event's deviation grew steadily.
+- **Unclassified: 65% of events.** Most last 4–23 hours: too long for a spike, too short for
+  `sustained`, and not concentrated at night. They are reported as unclassified rather than
+  forced into a pattern.
 
 **The alert volume is too high for operators, and the reason is measurable.**
 - **Heavy tails:** even inside the calibration window, where the median and MAD come from, 3.0%

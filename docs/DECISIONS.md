@@ -993,6 +993,36 @@ links to the entry that replaces it.
     trained outside 2016.
   - T019 should consider seasonal or rolling calibration.
 
+## D029 — Signature rules: meter problems first, evidence with every label
+- **Date:** 2026-10-25 · **Task:** T017 · **Status:** Accepted
+- **Decision:** `wattwise.ml.signatures`, run by the detection command
+  ([DETECTION.md](DETECTION.md#signatures-t017)).
+  - **Rules:** six transparent rules on each event's hours exactly as the detector saw them
+    (reading, baseline used, score): `data_fault`, `flatline`, `spike`, `overnight_excess`,
+    `drift` and `sustained`. Anything else is `unclassified`.
+  - **Primary signature:** the first match in that order, so a meter problem is never
+    presented as consumption. All matches and every rule's measurements are kept as JSON
+    evidence.
+  - **Shared thresholds:** flatline and zero-run lengths come from the data-quality engine
+    (T008). Night hours are local wall-clock 22:00–05:59 in the building's zone.
+  - **Wording:** descriptions name patterns, not causes, and a test checks them for causal
+    words.
+- **Alternatives considered:**
+  - **A learned classifier:** rejected. There are no pattern labels to train on, and rules can
+    be checked by hand.
+  - **One label per event without evidence:** rejected; an operator could not see why.
+  - **Adding patterns until nothing is unclassified:** rejected. 65% of real events are
+    unclassified, mostly 4–23 hours long; forcing them into a pattern would invent structure.
+- **Result (BDG2 sample, test quarter):**
+  - 16 of 355 events (854 hours) are meter problems: 4 `data_fault`, 12 `flatline`.
+  - Gator's whole-day "lows" are days where the raw source holds one value for every hour
+    (80 or 200 kWh divided by 24). That was first read as possible holidays in T016, and is
+    corrected here.
+- **Consequences:**
+  - T018 measures recall per signature with injected patterns.
+  - Flatline days in BDG2 suggest masking such days from training and calibration later.
+  - T020 builds explanations on the evidence.
+
 ---
 
 ## Open decisions (tracked in tasks)

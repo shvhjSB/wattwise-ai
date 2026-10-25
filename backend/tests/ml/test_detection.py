@@ -291,7 +291,7 @@ def test_detection_with_the_promoted_model_finds_an_injected_surge(
     readings = pd.read_parquet(folder / "readings.parquet")
     weather = pd.read_parquet(folder / "weather.parquet")
 
-    result = run_detection(readings, features_of(readings, weather), root)
+    result = run_detection(readings, BUILDINGS, features_of(readings, weather), root)
 
     events = result.detection.events
     start, end = pd.Timestamp("2017-03-27T00:00Z"), pd.Timestamp("2017-03-29T00:00Z")

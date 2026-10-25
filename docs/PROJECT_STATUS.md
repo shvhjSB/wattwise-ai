@@ -199,6 +199,16 @@ The application foundation runs end to end locally, and CI checks it automatical
     69% against 72% for the rolling z-score.
   - **The rolling z-score stays the alert source.** The model serves expected consumption,
     intervals and impact.
+- **Alert explanations (T020, D034):** every event gets an evidence bundle and a
+  plain-language explanation.
+  - **Contents:** the detector's comparison, the model's expectation with its rolling 90%
+    interval and measured coverage, whether the model agrees, the signature evidence, the top
+    influences (LightGBM TreeSHAP in kWh, labelled as associations, not causes) and a check to
+    make.
+  - **Wording guard:** no causal, certain or "waste" wording, enforced by tests and by the
+    command.
+  - **BDG2 test quarter:** all 100 events are explained. In 20 of them the weather-aware model
+    finds every hour normal, and the explanation says so.
 
 ## Completed tasks
 
@@ -230,6 +240,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T018b | Detector check against LEAD human labels | 2026-10-25 |
 | T019 | Prediction intervals | 2026-10-25 |
 | T019b | Season-adaptive model detector, re-benchmarked | 2026-10-25 |
+| T020 | Alert explanations | 2026-10-25 |
 
 ## Current task
 
@@ -237,15 +248,16 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T020 — Alert explanations:** every alert carries the evidence an operator needs.
-- **Evidence bundle:** actual, expected, the T019 interval, residual, persistence, time range,
-  the T017 signature and the top contributing features.
-- **SHAP** for tree models, as an optional dependency with a safe fallback.
-- **Wording templates** that phrase causes as hypotheses, guarded by tests.
+**T042 — Full-scale data, memory-efficient features and quality masking** (owner request, new
+milestone M5b):
+- Prepare all 1,148 eligible meters instead of the 20-meter sample.
+- Build features in batches as float32, within this machine's 15 GB of RAM.
+- Mask known data faults (flatlines, zero runs, negatives, daily totals spread over 24 hours)
+  out of training and calibration.
+- Record full-scale baselines.
 
-See [ROADMAP.md](ROADMAP.md#t020--alert-explanations). Open in M6: T040 (Building 59);
-in M5: T041 (HKUST). T041 (the independent HKUST
-buildings) also remains in M5.
+Then T043 (the best model at full scale) and T044 (re-running intervals, detectors, the LEAD
+check and explanations at full scale). See [ROADMAP.md](ROADMAP.md#m5b--scale-up-and-model-quality-owner-request-2026-10-25).
 
 ## Milestone progress
 
@@ -256,8 +268,9 @@ buildings) also remains in M5.
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
+| M5b Scale-up and model quality | T042–T044 | 0 / 3 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
-| M7 Explainability and uncertainty | T019, T019b, T020 | 2 / 3 |
+| M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |

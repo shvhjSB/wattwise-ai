@@ -1796,3 +1796,53 @@ detector with the season-adaptive scale.
   Two benchmark assertions were updated to expect three detectors.
 - On the first full run, one LEAD-check test failed: its loop picked up the new detector.
   Fixed by pinning its detectors.
+
+---
+
+## 2026-10-25 — T020 Alert explanations
+
+**Done**
+- **`FeatureModel.contributions`:** LightGBM's exact TreeSHAP (`pred_contrib`) per hour, scaled
+  to kWh, plus a bias column. They add up to the expected value before clipping (tested), and
+  return None for families without tree contributions.
+- **`wattwise.ml.explanations`** (D034): an evidence bundle per event, covering:
+  - the event, the detector's comparison, the model's expectation
+  - the rolling 90% interval, with its coverage measured in the same detection window
+  - whether the model agrees
+  - the signature evidence, the top 5 influences, and a check by signature and direction
+  
+  `render` produces the plain-language text. A forbidden-phrase guard (causes, certainty,
+  "waste") is enforced in tests and in the CLI. The CLI writes `explanations.json` and
+  `explanations.md`.
+- **No `shap` dependency:** LightGBM computes the same TreeSHAP values natively.
+
+**Real data (BDG2 test quarter, default detector; about 18 s; rerun byte-identical)**
+- **Explained:** all 100 events; 99 with a model expectation and influences. The interval's
+  measured coverage in the window was 86.7%.
+- **Model agreement:** agrees with the detector on 78 events, disagrees on 20 (every hour inside
+  its interval, which the text now states), and is undefined on 2.
+- **Most common top influence:** `same_hour_mean_4w` (66), `day_of_year_local` (13),
+  `is_public_holiday` (8), `lag_168h` (7).
+- **A wording fix during the task:** "for 2017-12-16 11:00 UTC, 72 h" became "for 72 h from
+  2017-12-16 11:00 UTC".
+
+**Owner request mid-task, planned here:** fix the known issues, stop training on the 20-meter
+sample, and get the best model the data supports. New milestone M5b:
+- **T042:** full-scale data, memory-efficient features and quality masking.
+- **T043:** the best model at full scale.
+- **T044:** a downstream re-run at full scale.
+
+The machine has 15.3 GB of RAM, so full-scale features (about 5 GB in float64) must be built in
+batches as float32.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 75
+  files.
+- `pytest -W error`: **564 passed**, 8 new:
+  - every event gets a clean bundle
+  - the surge bundle shows the interval, agreement and influences
+  - contributions add up to the expected value
+  - the fallback without contributions
+  - template wording; the guard's positive cases
+  - text without a model expectation, and with the model in disagreement
+  - a byte-identical CLI, and the CLI without a model

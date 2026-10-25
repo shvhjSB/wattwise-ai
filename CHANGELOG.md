@@ -253,6 +253,14 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     The rolling z-score stays the default.
 - `intervals.daily_window_statistics`: the shared daily rolling-window helper behind the
   rolling intervals and the adaptive scores. (T019b)
+- Alert explanations (`python -m wattwise.ml.explanations`), D034. (T020)
+  - **Bundles:** an evidence bundle and a plain-language explanation for every event, covering
+    the detector's comparison, the model's expectation with its rolling 90% interval and
+    measured coverage, whether the model agrees, persistence, signature evidence, the top
+    influences and a check to make.
+  - **Influences:** `FeatureModel.contributions` gives LightGBM TreeSHAP contributions in kWh
+    (no `shap` dependency), with a safe fallback when they are unavailable.
+  - **Wording guard:** no causes, certainty or "waste", enforced by tests and by the command.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

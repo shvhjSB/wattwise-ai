@@ -1167,6 +1167,34 @@ links to the entry that replaces it.
     the adaptive scores.
   - Two pending owner decisions stay open: the default alert source, and the alert budget.
 
+## D034 — Alert explanations: evidence bundles, LightGBM TreeSHAP, a wording guard
+- **Date:** 2026-10-25 · **Task:** T020 · **Status:** Accepted
+- **Decision:** `wattwise.ml.explanations` ([DETECTION.md](DETECTION.md#explanations-t020)).
+  - **Bundle:** every event gets one, covering:
+    - the detector's comparison
+    - the model's expectation and rolling 90% interval, with that interval's measured coverage
+      in the same window
+    - whether the model agrees
+    - persistence and the signature evidence
+    - the top 5 influences
+    - a check to make
+  - **Influences:** `FeatureModel.contributions`, LightGBM's exact TreeSHAP (`pred_contrib`)
+    scaled to kWh. They add up to the expected value before clipping (tested), and are
+    labelled associations within the model, not causes.
+  - **Wording guard:** a forbidden-phrase list covering causes, certainty and "waste". It is
+    enforced by tests and by the command itself.
+- **Alternatives considered:**
+  - **The `shap` package:** not added. For LightGBM it computes the same TreeSHAP values, and
+    it would pull in a large dependency tree (numba, llvmlite) for no gain. If a scikit-learn
+    model is ever adopted, `shap` or permutation importance can be reconsidered.
+  - **Explaining the anomaly by comparing conditions with a reference week:** deferred. It is
+    useful, but it is a separate analysis with its own pitfalls (confounded conditions).
+  - **Free-text generation:** rejected. Fixed templates can be checked; generated prose cannot.
+- **Consequences:**
+  - The API (T025) can serve the bundle as is.
+  - The 20 events where the model disagrees with the rolling-z detector are flagged for
+    operators, which partly offsets the default detector's weather blindness (D030).
+
 ---
 
 ## Open decisions (tracked in tasks)

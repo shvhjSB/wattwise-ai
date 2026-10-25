@@ -174,6 +174,28 @@ class FeatureModel:
         _, scale = self._design(rows)
         return np.isfinite(scale) & (scale >= MIN_SCALE)
 
+    def contributions(self, rows: pd.DataFrame) -> pd.DataFrame | None:
+        """Each input column's additive contribution to the expected value, in the readings'
+        unit, for the rows with a usable scale, plus a `bias` column (T020).
+
+        LightGBM computes exact TreeSHAP values (`pred_contrib`) for the scaled target; they are
+        multiplied by each row's scale. They add up to the expected value before clipping at
+        zero. None for families without tree contributions. Contributions describe how the
+        model arrives at its expected value: associations, not causes."""
+        if self.family is not Family.LIGHTGBM or self.model is None:
+            return None
+        design, scale = self._design(rows)
+        usable = np.isfinite(scale) & (scale >= MIN_SCALE)
+        if not usable.any():
+            return pd.DataFrame(columns=[*self.columns, "bias"], dtype=float)
+        raw = np.asarray(
+            self.model.predict(self._inputs(design[usable]), pred_contrib=True), dtype=float
+        )
+        frame = pd.DataFrame(
+            raw * scale[usable][:, None], columns=[*self.columns, "bias"], index=rows.index[usable]
+        )
+        return frame
+
     # -- design matrix --------------------------------------------------------------------------
 
     def _design(self, rows: pd.DataFrame) -> tuple[pd.DataFrame, FloatArray]:

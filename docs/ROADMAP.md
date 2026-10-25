@@ -46,7 +46,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Done |
 | T019 | Prediction intervals | M7 | T010, T012 | Done |
 | T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Done |
-| T020 | Alert explanations | M7 | T017, T019 | Not started |
+| T020 | Alert explanations | M7 | T017, T019 | Done |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |
 | T022 | Alert prioritisation | M8 | T020, T021 | Not started |
@@ -69,6 +69,9 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T039 | Final documentation | M12 | T034, T038 | Not started |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
+| T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Not started |
+| T043 | Best model at full scale | M5b | T042, T014 | Not started |
+| T044 | Downstream re-run at full scale (intervals, detectors, LEAD, explanations) | M5b | T043, T019b, T020 | Not started |
 
 ---
 
@@ -396,6 +399,48 @@ convention **differs by site**, which made the convention audit a substantial ta
 - **Acceptance:**
   - Tests for save/load round-trip, atomic replacement and missing-model handling.
   - Artifacts are git-ignored.
+
+## M5b — Scale-up and model quality (owner request, 2026-10-25)
+
+The owner asked to fix the issues found so far, to stop training on a small sample, and to get
+the best model the data supports. Until now every result came from a seeded sample of 20
+meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
+
+### T042 — Full-scale data, memory-efficient features and quality masking
+- **Objective:** make every eligible meter usable for training and evaluation on this machine
+  (15 GB RAM), and keep known data faults out of what models learn from.
+- **Scope:**
+  - Prepare all eligible cleaned meters (`--sample-meters 0`).
+  - Build features in meter batches as float32, written to disk.
+  - A quality mask for training targets and calibration: flatline runs, long zero runs,
+    negative readings, and days that repeat one value every hour (daily totals spread
+    evenly). Detection still sees every reading.
+  - Baselines at full scale.
+- **Acceptance:**
+  - Features for all eligible meters build within the memory budget, and match the in-memory
+    features exactly on a sample (tested).
+  - The masking rules are tested, and their share of rows is reported.
+  - Full-scale baseline metrics are recorded.
+
+### T043 — Best model at full scale
+- **Objective:** the strongest model the data supports, chosen without touching the test window.
+- **Scope:**
+  - A model search on validation only: LightGBM with more trees and early stopping on a
+    validation fold, L2, L1 and Huber losses, tree size, with and without history, and the
+    T042 quality mask.
+  - Seen-building, unseen-building and unseen-site evaluation at scale, with per-site and
+    per-meter breakdowns.
+  - A production refit on train plus validation, saved alongside the evaluated model.
+- **Acceptance:**
+  - Adopted only if it beats seasonal-naive on the same test rows, scored once.
+  - Results labelled; the registry is updated.
+
+### T044 — Downstream re-run at full scale
+- **Objective:** re-check every downstream result with the full-scale model.
+- **Scope:** prediction intervals (coverage), the detector benchmark (all detectors, same rule),
+  the LEAD check (with a full-scale H1-2016 model) and explanations.
+- **Acceptance:** defaults change only under the rules already fixed (D030, D032); every
+  changed number is recorded with the command that produced it.
 
 ## M6 — Anomaly detection and test scenarios
 

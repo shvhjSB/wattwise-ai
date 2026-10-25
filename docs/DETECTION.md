@@ -1,7 +1,8 @@
 # Anomaly detection
 
 Detector version: **1** · Signatures version: **1** · Modules: `wattwise.ml.detection`,
-`wattwise.ml.signatures` · Decisions: D028, D029, D030 · Tasks: T016, T017, T018
+`wattwise.ml.signatures`, `wattwise.ml.explanations` · Decisions: D028–D030, D033, D034 ·
+Tasks: T016–T020
 
 The detector turns the gap between observed and expected consumption into **events**. An event is
 a period worth investigating; it is **not confirmed waste**. Its residual sum is a deviation from
@@ -122,6 +123,39 @@ this order. Meter problems come first, so they are never presented as consumptio
   words, and causes are hypotheses for T020.
 - **Baseline:** rules run on the hours exactly as the detector saw them, including the pre-event
   baseline of long events.
+
+## Explanations (T020)
+
+`python -m wattwise.ml.explanations` runs detection (`--detector`, default `rolling-z`) and writes
+an **evidence bundle** and a plain-language **explanation** for every event to git-ignored
+`data/processed/detection/explanations/` (D034). Repeat runs are byte-identical.
+
+| Part | Content |
+|---|---|
+| Event | Meter, building, direction, start, end, duration, flagged and missing hours, peak time and score |
+| Detector | Its baseline (for rolling-z: the meter's level at the same hour on the previous 14 days), with observed and baseline kWh |
+| Model | Expected kWh under the observed conditions; hours above or below the rolling 90% interval (T019), with the coverage that interval actually reached in the detection window; whether the model agrees |
+| Signature | Primary and all signatures, description and evidence (T017) |
+| Influences | The 5 largest average contributions to the model's expected value, in kWh per hour: LightGBM's exact TreeSHAP (`pred_contrib`), scaled to kWh. Labelled as associations within the model, not causes |
+| Check | What to check, by signature and direction, phrased as a check, never a finding |
+
+**Wording guard.** No explanation may contain "because", "caused", "due to", "the cause", "the
+reason", "proves", "proven", "confirmed", "definitely", "certainly" or "waste". Tests check
+every template and every generated explanation, and the command refuses to write output that
+breaks the rule.
+
+**Without contributions** (a model family without them, or an error), the explanation is still
+written, with a note in place of the influences. A test covers this.
+
+**On the BDG2 test quarter (default detector):**
+- **Coverage:** all 100 events are explained; 99 have a model expectation and influences.
+- **Model agreement:** the rolling 90% interval held for 86.7% of detection hours. In 78 of 98
+  events, the model also put at least one hour outside its interval in the event's direction.
+- **Model disagreement:** in 20 events the model found every hour within its interval, and the
+  explanation says so. Such a deviation may reflect conditions (weather, calendar) that the
+  14-day comparison does not see.
+- **Top influences:** the most common top influence on the expected value is the four-week
+  same-hour mean (66 events), then day of year (13) and public holidays (8).
 
 ## Results on the BDG2 sample with the default detector (T018)
 

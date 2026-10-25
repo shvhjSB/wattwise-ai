@@ -5,9 +5,11 @@
 > **Status: early development.** The backend API skeleton, the frontend shell, the data pipeline,
 > leakage-safe evaluation splits, two simple baselines, leakage-safe features, a first ML model
 > and a versioned model registry are in place. LightGBM beats the seasonal baseline on a
-> 20-meter BDG2 sample for buildings it was trained on, but not yet for unseen buildings. No
-> anomaly detection exists yet. Nothing in this repository should be read as a measured result
-> until it appears in [docs/EVALUATION.md](docs/EVALUATION.md) with the command that produced it.
+> 20-meter BDG2 sample for buildings it was trained on, but not yet for unseen buildings. A
+> first anomaly detector produces candidate events for review; its thresholds are not yet tuned
+> or benchmarked. Nothing in this repository should be read as a measured result until it
+> appears in [docs/EVALUATION.md](docs/EVALUATION.md) or [docs/DETECTION.md](docs/DETECTION.md)
+> with the command that produced it.
 > See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
 
 ## The problem

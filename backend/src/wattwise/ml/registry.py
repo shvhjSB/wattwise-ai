@@ -431,9 +431,10 @@ def reevaluate(
 # ---------------------------------------------------------------------------
 
 
-def _read_inputs(
+def read_inputs(
     data: Path, enrichment: Path | None
 ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Readings, buildings and their feature table from prepared canonical tables."""
     readings = pd.read_parquet(data / "readings.parquet")
     buildings = pd.read_parquet(data / "buildings.parquet")
     weather = (
@@ -476,7 +477,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             metadata = promote(args.version, root)
             print(f"current model: {metadata.version} ({metadata.model.name})")
             return 0
-        readings, buildings, features = _read_inputs(args.data, args.enrichment)
+        readings, buildings, features = read_inputs(args.data, args.enrichment)
         if args.command == "train":
             config = SplitConfig(
                 time=Chronological(

@@ -1466,3 +1466,59 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - **CLI:** list, evaluate without a model, train and promote, evaluate reproduced, evaluate on
     changed data, bad promote.
   - **Ignore rule:** artifacts are git-ignored.
+
+---
+
+## 2026-10-25 — T016 Residual-based detector and event grouping
+
+**Done**
+- **`wattwise.ml.detection`** (D028, [DETECTION.md](DETECTION.md)):
+  - **`calibrate`:** per meter, the median and 1.4826 × MAD of model residuals, and of
+    reference (one-week-earlier) residuals, on calibration rows only. Floor: 1% of the mean
+    absolute reading.
+  - **`detect`:** a hysteresis state machine per meter and direction. It opens at z ≥ 4,
+    continues at ≥ 2, bridges gaps of up to 2 h (low scores or missing hours), and keeps an
+    event with at least 3 flagged hours or a z ≥ 8 spike. After 168 h it scores against the
+    meter's reading at the same hour in the last week before the event.
+  - **Event fields:** start, end (exclusive), duration, flagged, missing and reference hours,
+    peak time, z and residual, residual sum, and whether it is ongoing.
+  - **`run_detection` and CLI:** loads the promoted model, calibrates on its validation window,
+    and detects in its test window. Writes `events.csv`, `scores.parquet`, `summary.json` and
+    `report.md`, and refuses clearly when no model is promoted.
+- `registry.read_inputs` is public.
+
+**Real data (BDG2 sample; promoted model `20261025T070700Z-4cf91609c9ef`; about 13 s)**
+- **Coverage:** 43,298 of 44,231 detection hours scored (Oct 2017 to 1 Jan 2018).
+- **Events:** 355 (185 high, 170 low), 5,147 event hours (11.9%). Per meter 2–62 (median 15);
+  19 of 20 meters. Median duration 8 h; 32 events of a day or more; 44 kept as spikes.
+- **Pre-event reference:** used by 3 long events (Hog_parking_Marcus 480 h,
+  Lamb_education_Lawrence 318 h, Eagle_lodging_Andy 241 h).
+- **Plausible patterns (hypotheses):**
+  - Gator whole-day low events on 1 Oct, 10 Nov (Veterans Day observed) and 30 Dec, where the
+    region is unknown, so there are no holiday features.
+  - Lamb's 318 h drop with a peak z of 407 (likely a meter or data fault).
+- **Calibration check:**
+  - |z| ≥ 4 in 2.98% of calibration hours (heavy tails), and 7.18% of detection hours
+    (seasonal drift).
+  - Thresholds are deliberately not tuned on the test quarter; T018 and T019 address this.
+- **Determinism:** a second run gave byte-identical outputs (4 of 4 files).
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 65
+  files.
+- `pytest -W error`: **505 passed**. 19 are new, mostly on residuals with exactly known
+  scores:
+  - **Calibration:** only its rows count, and the scale floor applies.
+  - **Thresholds:** nothing below `z_on`; persistence versus spikes.
+  - **Hysteresis:** an event continues between the two thresholds.
+  - **Merging:** gaps of 2 h merge and 3 h split; also with `max_gap_hours=0`.
+  - **Missing hours:** bridged and counted.
+  - **Directions:** high and low are separate.
+  - **Event fields:** extent, peak and residual sum; an event at the window end is ongoing.
+  - **Long events:** a 3-week step the model absorbs after a week stays one 504 h event with
+    the reference, and is cut at 168 h without it.
+  - **Configuration and order:** invalid thresholds; row-order independence; no scores without
+    calibration.
+  - **With the promoted model:** a 2-day injected surge is found as exactly one event, matching
+    the injected window.
+  - **CLI:** byte-identical outputs, and a clear error without a model.

@@ -40,7 +40,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T013 | Leakage-safe feature engineering | M5 | T009b, T010 | Done |
 | T014 | ML forecaster vs baselines | M5 | T012, T013 | Done |
 | T015 | Model artifacts, metadata and registry | M5 | T014 | Done |
-| T016 | Residual-based detector and event grouping | M6 | T012 | Not started |
+| T016 | Residual-based detector and event grouping | M6 | T012 | Done |
 | T017 | Anomaly signature rules | M6 | T008, T016 | Not started |
 | T018 | Injected-anomaly benchmark | M6 | T016, T017 | Not started |
 | T019 | Prediction intervals | M7 | T010, T012 | Not started |

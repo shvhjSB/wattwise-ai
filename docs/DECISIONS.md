@@ -959,6 +959,40 @@ links to the entry that replaces it.
   - A feature-set change needs new artifacts: old ones are refused, not misread.
   - `baselines.utc_argument` is public, so the registry command shares its date parsing.
 
+## D028 — Residual detector: robust out-of-sample scores, hysteresis, pre-event reference
+- **Date:** 2026-10-25 · **Task:** T016 · **Status:** Accepted
+- **Decision:** `wattwise.ml.detection` ([DETECTION.md](DETECTION.md)).
+  - **Score:** the residual minus the meter's median, over 1.4826 × MAD. Both come from a
+    window the model did not train on (its validation quarter), with a floor of 1% of the
+    mean absolute reading. Detection runs only after that window.
+  - **Events:** high and low separately. Open at z ≥ 4, continue at z ≥ 2, bridge gaps of up
+    to 2 hours, keep with 3 or more flagged hours or one z ≥ 8. These are provisional, untuned
+    defaults.
+  - **Long events:** after 168 hours, score against the meter's reading from the last week
+    before the event, with its own calibration. The model's history features would otherwise
+    absorb the anomaly (D025, D026).
+  - **Language:** events are anomalies to investigate; residual sums are not verified excess.
+- **Alternatives considered:**
+  - **Standard deviation instead of MAD:** rejected; anomalies in the calibration window would
+    inflate it.
+  - **Calibrating on training residuals:** rejected; they are in-sample and too small.
+  - **Masking event hours and rebuilding history features:** rejected. The model needs a usable
+    weekly scale (D026): 84 readings in the week ending 168 hours earlier. So with the event
+    masked, predictions stop about 251 hours (10 days) into it, and the lags are blank from
+    168 hours on.
+  - **Switching to a no-history model during events:** rejected; those models lose clearly to
+    seasonal-naive (D026).
+  - **Tuning thresholds on the BDG2 test quarter:** rejected; that would fit the detector to
+    its own evaluation. T018 tunes them on injected anomalies.
+- **Result:** 355 events (11.9% of scored hours) on 20 meters in Oct–Dec 2017. 3.0% of
+  calibration hours and 7.2% of detection hours have |z| ≥ 4: heavy tails plus seasonal drift.
+  The event list is a review list, not an operator feed, until T018 and T019.
+- **Consequences:**
+  - T017 classifies these events into signatures, including data faults.
+  - T018 must tune thresholds and measure false alarms. For LEAD labels (2016) it needs a model
+    trained outside 2016.
+  - T019 should consider seasonal or rolling calibration.
+
 ---
 
 ## Open decisions (tracked in tasks)

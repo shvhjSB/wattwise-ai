@@ -139,6 +139,18 @@ The application foundation runs end to end locally, and CI checks it automatical
     rollback. Without a promoted model, loading raises a clear "no model" error.
   - **Promoted now:** the D026 LightGBM model. Its recorded metrics (test MAE 7.490) were
     reproduced exactly by re-evaluating it from disk.
+- **Anomaly detection (T016, D028):** `python -m wattwise.ml.detection` turns
+  observed-minus-expected residuals into events ([DETECTION.md](DETECTION.md)).
+  - **Method:** robust scores (median and MAD from the model's validation quarter). Hysteresis
+    (open at 4, continue at 2), gap bridging, and persistence or a spike to keep an event.
+  - **Long events:** after a week, they are scored against the meter's own pre-event week, so
+    a sustained anomaly the model starts to absorb stays one event (tested).
+  - **BDG2 sample, Oct–Dec 2017:** 355 events covering 11.9% of scored hours; byte-identical on
+    a re-run.
+  - **Too many alerts for operators, for measurable reasons:** heavy-tailed residuals (3.0% of
+    calibration hours at |z| ≥ 4) and summer-to-winter drift (7.2% in the detection quarter).
+    Thresholds are untuned until T018, so the list is for review, not an alert feed. Events are
+    anomalies to investigate, not confirmed waste.
 
 ## Completed tasks
 
@@ -164,6 +176,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T013 | Leakage-safe feature engineering | 2026-10-24 |
 | T014 | ML forecaster vs baselines | 2026-10-25 |
 | T015 | Model artifacts, metadata and registry | 2026-10-25 |
+| T016 | Residual-based detector and event grouping | 2026-10-25 |
 
 ## Current task
 
@@ -171,16 +184,13 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T016 — Residual-based detector and event grouping:** turn observed-minus-expected residuals
-into stable anomaly events. It covers:
-- Residuals from the promoted model, normalised by a robust scale (MAD).
-- Thresholds with persistence and hysteresis.
-- Events with start, end, peak, magnitude and duration; one long event gives one alert.
-- Handling the known issue that history features absorb a sustained anomaly after a week
-  (D025, D026).
+**T017 — Anomaly signature rules:** classify the T016 events into transparent, explainable
+patterns, using configurable and documented thresholds. The patterns are spike, sustained
+elevated use, overnight or base-load excess, gradual drift, flatlined or stuck meter, and
+data-quality fault. Each rule is tested on crafted series, with positive and negative cases.
 
-See [ROADMAP.md](ROADMAP.md#t016--residual-based-detector-and-event-grouping). T041 (the
-independent HKUST buildings) also remains in M5.
+See [ROADMAP.md](ROADMAP.md#t017--anomaly-signature-rules). T041 (the independent HKUST
+buildings) also remains in M5.
 
 ## Milestone progress
 
@@ -191,7 +201,7 @@ independent HKUST buildings) also remains in M5.
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
+| M6 Anomaly detection | T016–T018, T040 | 1 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
@@ -236,7 +246,8 @@ pushes only as `shvhjSB` (D006).
 | BDG2 "cleaned" data still has flatlines (12 of 20 sampled meters) and gaps | T012, T016 | Shown in the quality report; baselines and detectors must handle gaps and flag flatlines as data issues, not waste |
 | Splits cannot stop features from looking ahead, or repeated use of the test window | T014 | T013 features are proven leakage-safe by tests (D025); model selection on validation or rolling folds only (D018) |
 | Weather features use the observed weather of the target hour | T014 reporting | Results are expected-consumption accuracy, not forecast accuracy; say so with every result (D025) |
-| History features absorb a sustained anomaly after the horizon | T016 | Compared in T014: no-history models lose to seasonal-naive, so the adopted model uses history. T016 must score residuals before an anomaly reaches the history window, or exclude flagged periods (D026) |
+| History features absorb a sustained anomaly after the horizon | Long events | T016 scores events older than a week against the meter's pre-event week (D028); that reference ignores weather changes since the event began |
+| The detector's alert volume is high (355 events, 11.9% of hours, on 20 meters in a quarter) | Operators, T018–T020 | Untuned thresholds, heavy-tailed residuals and a summer-calibrated scale (D028). T018 tunes on injected anomalies; T019 calibrates intervals. Until then, events are a review list |
 | The adopted model does not generalise to unseen sites on this sample | Uploads of new buildings | Seasonal-naive stays the default for buildings without training data (D026) |
 | GitHub LFS bandwidth for future re-downloads | Re-fetching BDG2 | Verified local copies are never re-downloaded; HTTP 403/429 messages explain quota limits |
 | ESLint pinned to 9 and TypeScript to 6 by plugin compatibility | Future upgrades | Upgrade triggers recorded in D008 |

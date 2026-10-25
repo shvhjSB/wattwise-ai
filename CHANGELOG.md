@@ -189,6 +189,19 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - **Reproducible:** `evaluate` re-scores an artifact on its recorded split and must reproduce
     its recorded metrics exactly; it did for the promoted D026 model.
   - `docs/MODELS.md` documents the layout, metadata and commands.
+- Residual-based anomaly detection (`python -m wattwise.ml.detection --data ...`), D028.
+  (T016)
+  - **Scores:** robust z-scores per meter (median and MAD from the promoted model's validation
+    quarter, with a scale floor). Detection runs only on later rows.
+  - **Events:** high and low, with hysteresis (open at 4, continue at 2), gap bridging, and
+    persistence or a spike to keep an event. Each records start, end, duration, flagged,
+    missing and reference hours, peak, residual sum and whether it is ongoing.
+  - **Long events:** after a week, scored against the meter's own pre-event week, so a sustained
+    anomaly the model absorbs stays one event.
+  - **Outputs:** `events.csv`, `scores.parquet`, `summary.json` and `report.md` in git-ignored
+    `data/processed/detection/`. `docs/DETECTION.md` documents the method and the first results:
+    355 events on the BDG2 sample's test quarter, with untuned thresholds and a stated
+    calibration issue.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -212,6 +225,7 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - The synthetic model-test load moved to `tests/ml/conftest.py`, to be shared by the model and
   registry tests. `baselines.utc_argument` (formerly private) parses the date options of both
   commands. `FeatureModel.usable` gives the rows with a usable scale. (T015)
+- `registry.read_inputs` is public; the detection command reuses it. (T016)
 - New runtime dependency `holidays` 0.106 (MIT). It needs `python-dateutil<3`, so the lock
   moved python-dateutil from 3.0.0 (released 2026-10-21, under the two-week rule) to
   2.9.0.post0. (T013)

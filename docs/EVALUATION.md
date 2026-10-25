@@ -646,3 +646,51 @@ Alerts are per meter-week outside injections; the budget is 0.5.
 - **What remains of the model's role:** expected consumption, and the intervals and impact
   built on it (T019, T021). Unless a later idea passes this same rule, alerts come from the
   rolling z-score.
+
+## Full scale (T042)
+
+Every result above came from a seeded sample of 20 meters at 9 sites. T042 makes all eligible
+meters usable on this machine (15 GB RAM, 16 cores), and records the baselines at full scale
+(D035).
+
+```bash
+uv run python -m wattwise.data.bdg2_prepare --sample-meters 0 --output ../data/processed/bdg2/cleaned-all
+uv run python -m wattwise.ml.scale features --data ../data/processed/bdg2/cleaned-all \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet
+uv run python -m wattwise.ml.scale baselines --data ../data/processed/bdg2/cleaned-all
+```
+
+- **Data:** 1,148 eligible meters at 15 sites, 20,137,056 hourly readings (1,187,658 missing),
+  prepared in 93 s.
+- **Feature store:**
+  - Features are built in batches of 100 meters and written as float32 parquet parts with
+    hashes. That takes 517 s, with a peak working set of 6.1 GB.
+  - On the 20 sample meters, all 350,816 rows and all 32 features equal the in-memory
+    computation exactly. A test checks the same on synthetic data.
+- **Quality mask** (training targets and calibration only; detection sees every reading):
+  - No negative readings and no 24-hour zero runs remain in BDG2's cleaned data.
+  - What remains is long runs of identical readings. Runs of 6–23 hours hold 180k readings,
+    and many are steady loads on coarse meters (resolution 0.1 to 6 kWh). Runs of 24 hours or
+    more hold 1.79M readings, and 199 meters have more than 10% of their readings in them.
+  - **The mask drops runs of 24 hours or more:** 1,794,952 readings (9.5%) on 376 meters,
+    with 195 meters over 10%.
+- **Performance bug found and fixed:**
+  - The first full-scale baseline run took **5.1 hours**. With 20 million identifiers held as
+    strings, the process peaked at 6.3 GB and the machine paged to disk.
+  - Category identifiers gave **identical reports in 10 minutes** (5.5 GB peak). On 100 meters
+    they cut memory 5.8 times, also with identical reports.
+
+**Baselines at full scale** (the T012 split; kWh per hourly reading):
+
+| Rows scored | Baseline | Validation MAE | Test MAE | Test WAPE | Test macro MAE | Meters |
+|---|---|---|---|---|---|---|
+| all rows | seasonal-naive-1w | 17.89 | **15.72** | **10.8%** | 15.78 | 1,132 |
+| all rows | hour-of-week-median | 28.31 | 21.63 | 14.8% | 21.73 | 1,132 |
+| quality rows | seasonal-naive-1w | 19.31 | 16.74 | 10.3% | 16.44 | 1,021 |
+| quality rows | hour-of-week-median | 29.48 | 22.54 | 13.9% | 22.14 | 1,082 |
+
+- **"Quality rows":** masked readings are treated as missing, for targets and history alike.
+  That is why fewer meters are scored: a seasonal-naive forecast needs last week's reading.
+- **The sample was easier than BDG2 as a whole.** Its seasonal-naive test WAPE was 8.6%,
+  against 10.8% at full scale. **The bar for T043 is seasonal-naive at full scale: test MAE
+  15.72 kWh, WAPE 10.8%.**

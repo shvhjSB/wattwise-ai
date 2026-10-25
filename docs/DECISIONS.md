@@ -1195,6 +1195,37 @@ links to the entry that replaces it.
   - The 20 events where the model disagrees with the rolling-z detector are flagged for
     operators, which partly offsets the default detector's weather blindness (D030).
 
+## D035 — Full scale: a batched float32 store, a 24-hour flatline mask, category identifiers
+- **Date:** 2026-10-25 · **Task:** T042 · **Status:** Accepted
+- **Decision:** `wattwise.ml.scale` ([EVALUATION.md](EVALUATION.md#full-scale-t042)).
+  - **Data:** all 1,148 eligible cleaned meters in `data/processed/bdg2/cleaned-all` (local,
+    git-ignored), next to the 20-meter sample, which earlier results depend on.
+  - **Feature store:** features built per 100 meters, stored as float32 parquet parts with
+    SHA-256 checks and a feature-set version. The store holds features only.
+  - **Quality mask (policy, computed when needed):** negative readings, zero runs of 24 hours
+    or more, and identical non-zero runs of 24 hours or more. It applies to training targets
+    and calibration only.
+  - **Category identifiers** for full-scale runs.
+- **Evidence:**
+  - The store matches the in-memory features exactly on all 350,816 sample rows.
+  - The mask drops 9.5% of readings. 91% of the identical-run readings were in runs of a day
+    or more.
+  - Category identifiers reproduced the 5.1-hour baseline run exactly, in 10 minutes.
+- **Alternatives considered:**
+  - **Masking from 6 hours (T008's flatline length):** rejected for training. On BDG2 many
+    6–23-hour runs are steady loads on coarse meters, and the T017 signature still flags them
+    as events.
+  - **Storing the mask in the feature store:** rejected. A policy change would force a
+    10-minute rebuild.
+  - **float64 in memory:** rejected; about 5 GB for the features alone on a 15 GB machine.
+  - **A larger machine or a cloud run:** not needed now. The full scale fits with batching and
+    categories.
+- **Consequences:**
+  - T043 trains from the store, with the mask on training targets. The bar is seasonal-naive
+    at full scale: test MAE 15.72 kWh, WAPE 10.8%.
+  - Full-scale runs use about 5.5–6.1 GB at peak, so they should run one at a time on this
+    machine.
+
 ---
 
 ## Open decisions (tracked in tasks)

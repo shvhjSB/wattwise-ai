@@ -1810,7 +1810,7 @@ detector with the season-adaptive scale.
   - the rolling 90% interval, with its coverage measured in the same detection window
   - whether the model agrees
   - the signature evidence, the top 5 influences, and a check by signature and direction
-  
+
   `render` produces the plain-language text. A forbidden-phrase guard (causes, certainty,
   "waste") is enforced in tests and in the CLI. The CLI writes `explanations.json` and
   `explanations.md`.
@@ -1846,3 +1846,62 @@ batches as float32.
   - template wording; the guard's positive cases
   - text without a model expectation, and with the model in disagreement
   - a byte-identical CLI, and the CLI without a model
+
+---
+
+## 2026-10-25 — T042 Full-scale data, memory-efficient features and quality masking
+
+**Owner request:** fix the known issues, stop training on a 20-meter sample, and build the best
+model. This is the first of the three M5b tasks.
+
+**Done**
+- **Full preparation:** `bdg2_prepare --sample-meters 0 --output ../data/processed/bdg2/cleaned-all`
+  gives 1,148 meters at 15 sites, 20,137,056 readings (1,187,658 missing), in 93 s. The
+  20-meter sample is kept for the earlier results.
+- **`wattwise.ml.scale`** (D035):
+  - `quality_mask`, using vectorised run lengths
+  - `mask_summary`
+  - `build_store` / `load_store`: float32 parts per 100 meters, SHA-256 and feature-set checks
+  - `full_scale_baselines`, on all rows and on quality rows
+  - a CLI
+- **Mask policy revised after measuring:**
+  - The first build masked from 6 identical hours (T008's length): 10.4% of readings.
+  - The analysis found no negatives and no 24-hour zero runs. Identical runs of 6–23 hours
+    held 180,532 readings, many of them steady loads on coarse meters; runs of 24 hours or
+    more held 1,794,952.
+  - The mask now drops runs of 24 hours or more only: **9.47% of readings, 376 meters, 195
+    over 10%**. It is computed when needed, not stored.
+- **Store rebuilt:** 517 s, peak 6.06 GB, 1,148 meters, 20,137,056 rows.
+- **Real-data check:** for the 20 sample meters, every one of 350,816 rows and 32 features
+  equals the in-memory features exactly (float32).
+- **Performance bug:** the first full-scale baseline run took **18,299 s (5.1 h)**, peaking at
+  6.33 GB with only about 5 GB free, so it paged to disk.
+  - **Profiling:** 100 meters took 15 s, so the work itself scales linearly.
+  - **Fix:** category identifiers, with identical reports on 100 meters and 5.8 times less
+    memory.
+  - **Rerun:** **597 s, peak 5.52 GB, identical summary to the 5.1-hour run.**
+- **Housekeeping:** removed a whitespace-only line that the T020 commit added to this log.
+
+**Full-scale baselines (T012 split)**
+- **All rows:**
+  - seasonal-naive: validation MAE 17.89, test MAE **15.72**, WAPE **10.8%**, macro MAE 15.78
+    (1,132 meters, 2,411,534 rows)
+  - profile: validation 28.31, test 21.63, WAPE 14.8%
+- **Quality rows:**
+  - seasonal-naive: test MAE 16.74, WAPE 10.3% (1,021 meters)
+  - profile: test 22.54, WAPE 13.9%
+- **Reading:** the 20-meter sample was easier than BDG2 as a whole (seasonal-naive test WAPE
+  8.6%). The full-scale bar for T043 is test MAE 15.72 kWh.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 77
+  files.
+- `pytest -W error`: **573 passed**, 9 new:
+  - masking of negatives, 24-hour zero runs and 24-hour identical runs
+  - shorter runs kept
+  - runs do not cross gaps or meters
+  - row order
+  - batched store equals in-memory features
+  - tampered and outdated stores refused
+  - full-scale baselines on all rows and quality rows
+  - the CLI

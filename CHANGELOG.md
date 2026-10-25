@@ -261,6 +261,12 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - **Influences:** `FeatureModel.contributions` gives LightGBM TreeSHAP contributions in kWh
     (no `shap` dependency), with a safe fallback when they are unavailable.
   - **Wording guard:** no causes, certainty or "waste", enforced by tests and by the command.
+- Full-scale tools (`python -m wattwise.ml.scale features|baselines`), D035. (T042)
+  - **Feature store:** float32 parquet parts built per batch of meters, hash-checked. It
+    matches the in-memory features exactly.
+  - **Quality mask** for training and calibration: identical runs of 24 hours or more, zero
+    runs of 24 hours or more, and negatives. It drops 9.5% of BDG2's readings.
+  - **Full-scale baselines** on all 1,148 meters: seasonal-naive test MAE 15.72 kWh, WAPE 10.8%.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -298,6 +304,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   2.9.0.post0. (T013)
 
 ### Fixed
+- Full-scale runs held 20 million identifiers as strings and paged to disk: a baseline run took
+  5.1 hours. Category identifiers give identical results in 10 minutes. (T042)
 - The T016 reading of Gator's whole-day low events as possible holidays was wrong. The raw data
   repeats one value every hour on those days, and they are now labelled `flatline`. (T017)
 - ERA5 checks and tests, after the rest of the review completed. (T007d)

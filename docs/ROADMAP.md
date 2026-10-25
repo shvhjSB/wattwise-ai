@@ -69,7 +69,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T039 | Final documentation | M12 | T034, T038 | Not started |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
-| T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Not started |
+| T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Not started |
 | T044 | Downstream re-run at full scale (intervals, detectors, LEAD, explanations) | M5b | T043, T019b, T020 | Not started |
 
@@ -412,9 +412,9 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Scope:**
   - Prepare all eligible cleaned meters (`--sample-meters 0`).
   - Build features in meter batches as float32, written to disk.
-  - A quality mask for training targets and calibration: flatline runs, long zero runs,
-    negative readings, and days that repeat one value every hour (daily totals spread
-    evenly). Detection still sees every reading.
+  - A quality mask for training targets and calibration: identical runs of 24 hours or
+    more (which covers daily totals spread evenly), long zero runs and negative readings.
+    Detection still sees every reading (D035).
   - Baselines at full scale.
 - **Acceptance:**
   - Features for all eligible meters build within the memory budget, and match the in-memory

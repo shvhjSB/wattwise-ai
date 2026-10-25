@@ -209,6 +209,16 @@ The application foundation runs end to end locally, and CI checks it automatical
     command.
   - **BDG2 test quarter:** all 100 events are explained. In 20 of them the weather-aware model
     finds every hour normal, and the explanation says so.
+- **Full scale (T042, D035):** all 1,148 eligible meters at 15 sites (20.1 million readings) are
+  now usable, not just the 20-meter sample.
+  - **Feature store:** float32, built in batches. It matches the in-memory features exactly on
+    the sample's 350,816 rows.
+  - **Quality mask:** drops 9.5% of readings (runs of a day or more of one repeated value)
+    from training.
+  - **The bar at full scale:** seasonal-naive test MAE 15.72 kWh, WAPE 10.8%. The sample's 8.6%
+    was easier than BDG2 as a whole.
+  - **Performance bug fixed:** a 5.1-hour baseline run (memory paging) now takes 10 minutes,
+    with identical results.
 
 ## Completed tasks
 
@@ -241,6 +251,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T019 | Prediction intervals | 2026-10-25 |
 | T019b | Season-adaptive model detector, re-benchmarked | 2026-10-25 |
 | T020 | Alert explanations | 2026-10-25 |
+| T042 | Full-scale data, memory-efficient features and quality masking | 2026-10-25 |
 
 ## Current task
 
@@ -248,16 +259,17 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T042 — Full-scale data, memory-efficient features and quality masking** (owner request, new
-milestone M5b):
-- Prepare all 1,148 eligible meters instead of the 20-meter sample.
-- Build features in batches as float32, within this machine's 15 GB of RAM.
-- Mask known data faults (flatlines, zero runs, negatives, daily totals spread over 24 hours)
-  out of training and calibration.
-- Record full-scale baselines.
+**T043 — Best model at full scale** (owner request, M5b):
+- **Search on validation only:** LightGBM with early stopping, L2, L1 and Huber losses, tree
+  sizes, with and without history, trained from the T042 store with the quality mask.
+- **Evaluation:** seen buildings, unseen buildings and unseen sites at scale, with per-site
+  breakdowns.
+- **Production refit** on all data before the test window.
+- **Adoption rule:** only if it beats seasonal-naive at full scale (test MAE 15.72 kWh) on the
+  same rows, scored once.
 
-Then T043 (the best model at full scale) and T044 (re-running intervals, detectors, the LEAD
-check and explanations at full scale). See [ROADMAP.md](ROADMAP.md#m5b--scale-up-and-model-quality-owner-request-2026-10-25).
+Then T044: intervals, detectors, the LEAD check and explanations re-run at full scale. See
+[ROADMAP.md](ROADMAP.md#t043--best-model-at-full-scale).
 
 ## Milestone progress
 
@@ -268,7 +280,7 @@ check and explanations at full scale). See [ROADMAP.md](ROADMAP.md#m5b--scale-up
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M5b Scale-up and model quality | T042–T044 | 0 / 3 |
+| M5b Scale-up and model quality | T042–T044 | 1 / 3 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |

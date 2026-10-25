@@ -183,6 +183,14 @@ The application foundation runs end to end locally, and CI checks it automatical
     seasonal-naive, so it does not represent the adopted model.
   - **Little agreement overall:** 70% of the labels last 1–2 hours, which the persistence rules
     mostly ignore. Nothing was tuned on the labels.
+- **Prediction intervals (T019, D032):** split-conformal intervals around expected consumption,
+  with coverage **measured** on the test quarter ([EVALUATION.md](EVALUATION.md#prediction-intervals-t019)).
+  - **The default is rolling recalibration**, scaled by the meter's recent level: nominal 90%,
+    measured 86.7%.
+  - **The others:** fixed relative 85.8%, fixed absolute 83.3%. Rolling is also the narrowest
+    and the most even across meters (worst meter 76%, against 45–56%).
+  - **None is "calibrated":** November, the first winter month, under-covers for every method.
+    Intervals are about a third of the mean reading wide.
 
 ## Completed tasks
 
@@ -212,6 +220,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T017 | Anomaly signature rules | 2026-10-25 |
 | T018 | Injected-anomaly benchmark | 2026-10-25 |
 | T018b | Detector check against LEAD human labels | 2026-10-25 |
+| T019 | Prediction intervals | 2026-10-25 |
 
 ## Current task
 
@@ -219,14 +228,13 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T019 — Prediction intervals:** uncertainty intervals that are tested, not assumed.
-- **Intervals:** split-conformal, from a calibration window, with empirical coverage measured on
-  the test window. "Calibrated" may be used only within a stated tolerance.
-- **Seasonal drift (D028, D030):** test a rolling, season-adaptive scale, for intervals and for
-  the model detector, and re-run the T018 benchmark. The model detector becomes the default
-  again only if it then beats the rolling z-score within the alert budget.
+**T019b — Season-adaptive model detector, re-benchmarked:** score the model's residuals with
+T019's rolling, level-scaled scale instead of the static summer MAD, and re-run the T018
+benchmark with the same windows, seeds and budget. The model detector becomes the default again
+only if it beats the rolling z-score within the alert budget, in tuning and in evaluation
+(D030).
 
-See [ROADMAP.md](ROADMAP.md#t019--prediction-intervals). Open in M6: T040 (Building 59);
+See [ROADMAP.md](ROADMAP.md#t019b--season-adaptive-model-detector-re-benchmarked). Open in M6: T040 (Building 59);
 in M5: T041 (HKUST). T041 (the independent HKUST
 buildings) also remains in M5.
 
@@ -240,7 +248,7 @@ buildings) also remains in M5.
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
-| M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
+| M7 Explainability and uncertainty | T019, T019b, T020 | 1 / 3 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |

@@ -1695,3 +1695,64 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - a synthetic end-to-end check: the model detector finds the labelled surge, and the rolling
     score misses it (D030)
   - the CLI without data
+
+---
+
+## 2026-10-25 — T019 Prediction intervals
+
+**Owner question answered first** ("is model training done, is the project on plan").
+- **Training is done** for the 20-meter sample: LightGBM, −14.6% MAE against seasonal-naive,
+  promoted and reproducible.
+- **Gaps:** the model does not generalise to unseen sites; there were no intervals before this
+  task; the model detector lost to a rolling z-score (D030); agreement with LEAD labels is low
+  (D031); nothing has run at scale.
+- **Plan:** 24 of 48 roadmap tasks done, but the API and UI are still a shell.
+- **Suggested to the owner:** a thin end-to-end slice before the M7/M8 polish, and a scale-up
+  evaluation.
+
+**Roadmap:** T019 was split. T019 covers intervals; T019b (new) re-benchmarks the model
+detector with the season-adaptive scale.
+
+**Done**
+- **`wattwise.ml.intervals`** (D032):
+  - `conformal_quantile`: the finite-sample ⌈(n+1)(1−α)⌉-th order statistic.
+  - `fit` and `Intervals.bounds` for the absolute and relative (level-scaled) methods.
+  - `rolling_bounds`: daily per-meter recalibration from the 28 days ending 7 days before, from
+    out-of-sample scores only.
+  - `assess`: coverage overall, per month (months under 1,000 rows reported but not deciding)
+    and per meter; width, relative width and the Winkler interval score; the "calibrated" rule
+    (±2 points).
+  - A CLI on the promoted model.
+- **Bug found while testing:** `rolling_bounds` compared microsecond `asi8` with nanosecond
+  `Timestamp.value`, so no window matched and the first real run gave no rolling intervals.
+  Fixed, and covered by tests.
+
+**Real result (BDG2 test quarter; promoted model; about 20 s; rerun byte-identical)**
+- **Calibration window:** 80.1, 90.1 and 95.1% for the fixed methods, as constructed.
+- **Test coverage at 80 / 90 / 95% nominal:**
+  - absolute: 72.8 / 83.3 / 89.0%
+  - relative: 75.6 / 85.8 / 91.7%
+  - rolling: 77.2 / 86.7 / 91.7%
+- **By month at 90%:**
+  - absolute: Oct 88.9, Nov 80.4, Dec 80.4
+  - relative: 90.1, 83.8, 83.3
+  - rolling: 90.7, 82.0, 87.3
+- **Worst / best meter at 90%:** absolute 44.7 / 99.5; relative 56.2 / 99.3; rolling 76.4 / 93.2.
+- **Width at 90%:** absolute 34.4 kWh; relative 36.7; rolling 33.0 (32% of the mean reading).
+  Interval scores 64.3 / 60.7 / 59.0.
+- **None is calibrated.** Rolling is adopted as the default, always shown with its measured
+  coverage.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 73
+  files.
+- `pytest -W error`: **554 passed**, 10 new, on synthetic data with known noise:
+  - the order statistic and too-few-scores case
+  - fixed intervals cover 90% when nothing changes
+  - a level doubling breaks absolute but not relative intervals
+  - missing prediction or scale, clipping and unknown meters
+  - rolling recovers after the noise itself doubles, where fixed relative under-covers
+  - rolling ignores everything inside its 7-day lag, but not older scores
+  - the minimum number of scores
+  - exact assessment counts, the interval score and months
+  - a run on the promoted model; the CLI

@@ -234,6 +234,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - **Result:** reported as "real data, human labels without measured agreement". The rolling
     z-score has hour precision 11.5% against 1.5% chance, segment recall 18.9% and event
     precision 22.7%. The outputs are local and git-ignored.
+- Split-conformal prediction intervals with measured coverage (`python -m wattwise.ml.intervals`),
+  D032. (T019)
+  - **Methods:** absolute, relative (scaled by the meter's recent level) and rolling (relative,
+    recalibrated daily from the 28 days ending 7 days before). Finite-sample conformal
+    quantiles come from windows the model did not train on.
+  - **Coverage:** measured overall, per month and per meter, with width and the interval score.
+    "Calibrated" only within ±2 points overall and per month.
+  - **Result:** at nominal 90%, rolling covers 86.7% (relative 85.8%, absolute 83.3%), and is the
+    narrowest and most even across meters. None is calibrated; November under-covers.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

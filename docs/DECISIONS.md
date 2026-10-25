@@ -1106,6 +1106,38 @@ links to the entry that replaces it.
   - The raw BDG2 variant (1,171 eligible meters, 20.5 million readings) is prepared locally
     and git-ignored.
 
+## D032 — Prediction intervals: rolling relative conformal, reported with measured coverage
+- **Date:** 2026-10-25 · **Task:** T019 · **Status:** Accepted
+- **Decision:** `wattwise.ml.intervals` ([EVALUATION.md](EVALUATION.md#prediction-intervals-t019)).
+  - **Default method: rolling.** The interval is predicted ± q × s, where:
+    - s is the meter's mean over the week ending a week earlier (past-only)
+    - q is the per-meter conformal quantile of |residual| / s, recomputed daily from the 28
+      days ending 7 days before
+  - **Wording:** intervals are presented with their **nominal level and measured coverage**,
+    for example "nominal 90%, measured 86.7% on the BDG2 test quarter". They are never called
+    calibrated, because no method met the ±2-point rule.
+  - **Scores** come only from windows the model did not train on.
+- **Evidence:**
+  - **Coverage at nominal 90%:** 86.7% for rolling, against 85.8% (relative) and 83.3%
+    (absolute).
+  - **Width and score:** the narrowest intervals (33.0 kWh) and the best interval score.
+  - **Per-meter evenness:** the worst meter covers 76% for rolling, against 45–56% for the
+    others.
+- **Alternatives considered:**
+  - **Fixed per-meter intervals from the summer calibration quarter:** rejected. They
+    under-cover in winter, unevenly across meters.
+  - **A shorter lag or window:** not tried, so as not to tune on the test months. A shorter lag
+    would react faster, but would let an anomaly widen its own interval sooner.
+  - **Quantile regression or a second model for the scale:** deferred; this is the simplest
+    method that adapts.
+  - **Pooled quantiles across meters (for unseen buildings):** deferred. The model is not
+    adopted for unseen buildings (D026).
+- **Consequences:**
+  - T021 uses rolling intervals for "potential excess above the upper bound". Every figure
+    carries the nominal level and the measured coverage.
+  - T019b scores the model detector with the same season-adaptive scale.
+  - Intervals are about a third of the mean reading wide, so small excesses cannot be claimed.
+
 ---
 
 ## Open decisions (tracked in tasks)

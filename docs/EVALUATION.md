@@ -533,3 +533,62 @@ uv run python -m wattwise.ml.lead_check --data ../data/processed/bdg2/raw \
   - labels trusted only where the readings match
   - the alert-rate and persistence choices were made in T016–T018 without these labels, and
     they shape the result
+
+## Prediction intervals (T019)
+
+`wattwise.ml.intervals` puts split-conformal intervals around the promoted model's expected
+consumption (D032). An interval is predicted ± q × s:
+
+| Method | Scale s | q |
+|---|---|---|
+| absolute | 1 (kWh) | Per meter, from the calibration window |
+| relative | The meter's mean over the week ending a week earlier (`rolling_mean_168h`, past-only) | Per meter, from the calibration window |
+| rolling | As relative | Per meter, **recomputed daily** from the 28 days ending 7 days before the day (past only; the lag keeps an anomaly from widening its own interval at once) |
+
+- **Quantile:** q is the conformal quantile of |actual − predicted| / s: the
+  ⌈(n + 1)(1 − α)⌉-th smallest of n scores, from windows the model did not train on.
+- **"Calibrated":** only when test coverage is within ±2 points of nominal overall, and in every
+  month with at least 1,000 rows.
+- **Lower bounds** are clipped at zero.
+
+```bash
+uv run python -m wattwise.ml.intervals --data ../data/processed/bdg2/cleaned \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet
+```
+
+### Results on the BDG2 sample (2026-10-25)
+
+Promoted model `20261025T070700Z-4cf91609c9ef`. Calibration on the validation quarter
+(Jul–Sep 2017); assessment on the test quarter (Oct 2017 to 1 Jan 2018). About 20 s; a rerun was
+byte-identical. In the calibration window itself, the fixed methods cover exactly as constructed
+(80.1%, 90.1%, 95.1%).
+
+**Test coverage at nominal 90%:**
+
+| Method | Coverage | Oct | Nov | Dec | Meters within ±2 points | Worst / best meter | Mean width | Width / mean reading | Interval score |
+|---|---|---|---|---|---|---|---|---|---|
+| absolute | 83.3% | 88.9% | 80.4% | 80.4% | 5 of 20 | 44.7% / 99.5% | 34.4 kWh | 33.4% | 64.3 |
+| relative | 85.8% | 90.1% | 83.8% | 83.3% | 6 of 20 | 56.2% / 99.3% | 36.7 kWh | 35.7% | 60.7 |
+| **rolling** | **86.7%** | 90.7% | 82.0% | 87.3% | 7 of 20 | **76.4%** / 93.2% | **33.0 kWh** | 32.0% | **59.0** |
+
+| Nominal | absolute | relative | rolling |
+|---|---|---|---|
+| 80% | 72.8% | 75.6% | 77.2% |
+| 90% | 83.3% | 85.8% | 86.7% |
+| 95% | 89.0% | 91.7% | 91.7% |
+
+**What this shows, and what it does not:**
+- **No method is calibrated.** At nominal 90% they reach 83–87%. October, next to the summer
+  calibration window, is close to nominal (89–91%). November, the first winter month, falls
+  to 80–84% for every method.
+- **Scaling with the recent level helps** (+2.5 points over absolute), but most of the gap is
+  not level: the errors themselves grow in winter.
+- **Rolling recalibration is the best of the three:** the highest coverage, the narrowest
+  intervals and the best interval score. Above all, it is far more even across meters (worst
+  meter 76% against 45–56%). Its 7-day lag makes it react a week or more late, which shows in
+  November.
+- **Intervals are wide:** about a third of the mean reading at nominal 90%. This bounds how
+  small an excess T021 can claim with confidence.
+- **Not tuned:** the window and lag settings were not chosen on these test months.
+- **Limits:** 20 meters, one autumn and winter. Rolling has 583 test rows without an interval
+  (too few recent scores); the fixed methods have 415 (no prediction or scale).

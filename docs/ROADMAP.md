@@ -44,7 +44,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T017 | Anomaly signature rules | M6 | T008, T016 | Done |
 | T018 | Injected-anomaly benchmark | M6 | T016, T017 | Done |
 | T018b | Detector check against LEAD human labels | M6 | T007c, T018 | Done |
-| T019 | Prediction intervals | M7 | T010, T012 | Not started |
+| T019 | Prediction intervals | M7 | T010, T012 | Done |
+| T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Not started |
 | T020 | Alert explanations | M7 | T017, T019 | Not started |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |
@@ -456,13 +457,19 @@ convention **differs by site**, which made the convention audit a substantial ta
   - Split-conformal intervals from a calibration window, optionally stratified by meter or hour-of-day.
   - Empirical coverage measured on the test window.
   - Seasonal drift (D028, D030): the model's residual scale is too narrow in winter when
-    calibrated in summer. Test a rolling, season-adaptive scale (for intervals and for the model
-    detector), and re-run the T018 benchmark. The model detector becomes the default again only
-    if it then beats the rolling z-score within the alert budget.
+    calibrated in summer. Compare a static per-meter interval with one that scales with the
+    meter's recent level (past-only), with coverage measured per month.
 - **Acceptance:**
   - Coverage is reported from real runs.
   - The word "calibrated" is used only when coverage falls within a stated tolerance.
   - Tests use synthetic data with known noise.
+
+### T019b — Season-adaptive model detector, re-benchmarked
+- **Objective:** find out whether the model-based detector can become the alert source again.
+- **Scope:** score model residuals with the season-adaptive scale chosen in T019, and re-run the
+  T018 benchmark (same windows, seeds and budget).
+- **Acceptance:** the model detector becomes the default again only if it beats the rolling
+  z-score's recall within the alert budget, in tuning and in evaluation (D030 rule).
 
 ### T020 — Alert explanations
 - **Objective:** every alert carries the evidence an operator needs.

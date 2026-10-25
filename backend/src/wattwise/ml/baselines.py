@@ -213,7 +213,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         ("--test-start", defaults.test_start),
         ("--test-end", defaults.test_end),
     ):
-        parser.add_argument(option, default=value, type=_utc, help="UTC; default %(default)s")
+        parser.add_argument(
+            option, default=value, type=utc_argument, help="UTC; default %(default)s"
+        )
     args = parser.parse_args(argv)
     try:
         readings = pd.read_parquet(args.data / "readings.parquet")
@@ -253,7 +255,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     return 0
 
 
-def _utc(text: str) -> datetime:
+def utc_argument(text: str) -> datetime:
+    """An argparse type: an ISO 8601 time with a time zone, converted to UTC."""
     value = datetime.fromisoformat(text)
     if value.tzinfo is None:
         raise argparse.ArgumentTypeError(f"{text!r}: give a time zone, e.g. 2017-10-01T00:00Z")

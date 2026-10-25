@@ -129,6 +129,16 @@ The application foundation runs end to end locally, and CI checks it automatical
     sustained anomalies remains a known issue for T016.
   - These are expected-consumption results with observed weather, on one 20-meter sample; not
     forecast accuracy, and not anomaly detection.
+- **Model registry (T015, D027):** `python -m wattwise.ml.registry train|evaluate|list|promote`
+  saves models as versioned, git-ignored artifacts in `artifacts/models/`
+  ([MODELS.md](MODELS.md)).
+  - **Safe to load:** LightGBM text plus JSON only, never pickle. Every file is hash-checked,
+    and the artifact and feature-set versions must match.
+  - **Atomic:** versions are written to a staging folder and renamed into place. Promotion
+    replaces a pointer atomically after verifying the version, and old versions stay for
+    rollback. Without a promoted model, loading raises a clear "no model" error.
+  - **Promoted now:** the D026 LightGBM model. Its recorded metrics (test MAE 7.490) were
+    reproduced exactly by re-evaluating it from disk.
 
 ## Completed tasks
 
@@ -153,6 +163,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T012 | Seasonal and historical baselines | 2026-10-24 |
 | T013 | Leakage-safe feature engineering | 2026-10-24 |
 | T014 | ML forecaster vs baselines | 2026-10-25 |
+| T015 | Model artifacts, metadata and registry | 2026-10-25 |
 
 ## Current task
 
@@ -160,14 +171,16 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T015 — Model artifacts, metadata and registry:** save the adopted LightGBM model (D026) as a
-versioned artifact the API can load safely. It covers:
-- `artifacts/models/<version>/`: the model plus its training period, data fingerprint, code
-  version, settings, feature set version, scale rule and metrics.
-- Atomic promotion of a new model, and graceful handling when none exists.
-- Train and evaluate commands, and round-trip tests. Artifacts stay git-ignored.
+**T016 — Residual-based detector and event grouping:** turn observed-minus-expected residuals
+into stable anomaly events. It covers:
+- Residuals from the promoted model, normalised by a robust scale (MAD).
+- Thresholds with persistence and hysteresis.
+- Events with start, end, peak, magnitude and duration; one long event gives one alert.
+- Handling the known issue that history features absorb a sustained anomaly after a week
+  (D025, D026).
 
-See [ROADMAP.md](ROADMAP.md#t015--model-artifacts-metadata-and-registry).
+See [ROADMAP.md](ROADMAP.md#t016--residual-based-detector-and-event-grouping). T041 (the
+independent HKUST buildings) also remains in M5.
 
 ## Milestone progress
 
@@ -177,7 +190,7 @@ See [ROADMAP.md](ROADMAP.md#t015--model-artifacts-metadata-and-registry).
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
-| M5 Improved model | T013–T015, T041 | 2 / 4 |
+| M5 Improved model | T013–T015, T041 | 3 / 4 |
 | M6 Anomaly detection | T016–T018, T040 | 0 / 4 |
 | M7 Explainability and uncertainty | T019–T020 | 0 / 2 |
 | M8 Business impact | T021a, T021, T022 | 0 / 3 |

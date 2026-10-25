@@ -169,6 +169,11 @@ class FeatureModel:
             out[usable] = np.maximum(ratio, 0.0) * scale[usable]
         return pd.Series(out, index=rows.index)
 
+    def usable(self, rows: pd.DataFrame) -> npt.NDArray[np.bool_]:
+        """Rows with a usable scale: the rows the model fits on (with a value) or predicts."""
+        _, scale = self._design(rows)
+        return np.isfinite(scale) & (scale >= MIN_SCALE)
+
     # -- design matrix --------------------------------------------------------------------------
 
     def _design(self, rows: pd.DataFrame) -> tuple[pd.DataFrame, FloatArray]:
@@ -306,7 +311,7 @@ def compare_with_naive(result: BaselineRun, model: str) -> list[Comparison]:
     return out
 
 
-def overall(result: BaselineRun, name: str, role: Role) -> dict[str, object]:
+def overall(result: BaselineRun, name: str, role: Role) -> dict[str, float | int | None]:
     report = next(r for r in result.reports if r.forecaster.name == name)
     score = next(s for s in report.scores if s.role is role)
     o = score.overall

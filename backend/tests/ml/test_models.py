@@ -1,15 +1,15 @@
 """T014 models on a synthetic load (not real performance): weekday occupancy plus heating that
 follows a temperature changing from day to day, which a one-week-old reading cannot know."""
 
-from datetime import UTC, datetime
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 import pytest
 
+from tests.ml.conftest import BUILDINGS, SPLIT, START, VALIDATION_START, features_of, synthetic
 from wattwise.ml.baselines import SeasonalNaive, run
-from wattwise.ml.features import Group, build_features, feature_names
+from wattwise.ml.features import Group, feature_names
 from wattwise.ml.models import (
     MIN_SCALE,
     SEASONAL_NAIVE,
@@ -24,19 +24,8 @@ from wattwise.ml.models import (
     summary,
     to_markdown,
 )
-from wattwise.ml.splits import Chronological, Holdout, Role, SplitConfig, make_split
+from wattwise.ml.splits import Holdout, Role, make_split
 
-START = datetime(2017, 1, 1, tzinfo=UTC)
-VALIDATION_START = datetime(2017, 3, 1, tzinfo=UTC)
-DAYS = 100
-SPLIT = SplitConfig(
-    time=Chronological(
-        train_start=START,
-        validation_start=VALIDATION_START,
-        test_start=datetime(2017, 3, 22, tzinfo=UTC),
-        test_end=datetime(2017, 4, 11, tzinfo=UTC),
-    )
-)
 SMALL_GRID = {
     Family.RIDGE: ({"alpha": 1.0}, {"alpha": 1000.0}),
     Family.HIST_GBM: (
@@ -46,49 +35,6 @@ SMALL_GRID = {
         {"n_estimators": 60, "learning_rate": 0.1, "num_leaves": 15, "min_child_samples": 20},
     ),
 }
-BUILDINGS = pd.DataFrame(
-    {
-        "building_id": ["A", "B", "C"],
-        "site_id": ["S1", "S1", "S2"],
-        "timezone": ["UTC", "UTC", "UTC"],
-        "latitude": [40.0, 40.0, 51.5],
-        "longitude": [-75.0, -75.0, 0.0],
-    }
-)
-
-
-def synthetic(seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
-    rng = np.random.default_rng(seed)
-    times = pd.date_range(START, periods=DAYS * 24, freq="h").as_unit("us")
-    day = np.arange(len(times)) // 24
-    weather, readings = [], []
-    for site in ("S1", "S2"):
-        temperature = rng.uniform(-10, 20, DAYS)[day] + 4 * np.sin(2 * np.pi * times.hour / 24)
-        weather.append(
-            pd.DataFrame({"site_id": site, "timestamp": times, "air_temperature_c": temperature})
-        )
-    temperature_of = {w["site_id"].iloc[0]: w["air_temperature_c"].to_numpy() for w in weather}
-    occupied = (times.dayofweek < 5) & (times.hour >= 8) & (times.hour < 18)
-    for building, site, base in (("A", "S1", 50.0), ("B", "S1", 120.0), ("C", "S2", 15.0)):
-        heating = np.maximum(0.0, 15.0 - temperature_of[site])
-        load = base * (0.5 + 0.5 * occupied + 0.04 * heating) * rng.normal(1.0, 0.02, len(times))
-        readings.append(
-            pd.DataFrame(
-                {
-                    "timestamp": times,
-                    "meter_id": f"{building}-electricity",
-                    "building_id": building,
-                    "meter_type": "electricity",
-                    "unit": "kWh",
-                    "value": load,
-                }
-            )
-        )
-    return pd.concat(readings, ignore_index=True), pd.concat(weather, ignore_index=True)
-
-
-def features_of(readings: pd.DataFrame, weather: pd.DataFrame) -> pd.DataFrame:
-    return build_features(readings, BUILDINGS, weather, regions={})
 
 
 @pytest.fixture(scope="module")

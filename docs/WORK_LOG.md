@@ -1408,3 +1408,61 @@ fix: `prepare` passed (alignment passed), and `verify` passed (15 responses).
   - conditions models give no unseen predictions
   - summary and Markdown
   - the CLI without data
+
+---
+
+## 2026-10-25 — T015 Model artifacts, metadata and registry
+
+**Done**
+- **`wattwise.ml.registry`** (D027, [MODELS.md](MODELS.md)):
+  - **`train`:** fits the D026 model (LightGBM, all features, 200 trees) on the split's training
+    rows and scores validation and test with the T011 harness. The artifact is exactly the
+    evaluated model.
+  - **`save`:** writes `model.txt` (LightGBM text), `state.json` and `metadata.json` to a
+    staging folder, flushes each file, and renames it to `<created_at>-<model hash>`. A failure
+    removes the staging folder. Versions are never overwritten, and only LightGBM can be saved
+    (no pickle).
+  - **`promote`:** verifies, then replaces `CURRENT` with an atomic rename. Old versions stay
+    for rollback.
+  - **`load` and `verify`:** check hashes, strict metadata, artifact and feature-set versions,
+    the feature table's columns, and the version name (no path escapes). Without a promoted
+    model, `load` raises `NoModelError`.
+  - **`reevaluate` and CLI:** `train [--promote]`, `evaluate` (must reproduce the recorded
+    metrics exactly on the same data; reports when the data differ), `list`, `promote`.
+- **Small refactors:**
+  - `FeatureModel.usable` is public.
+  - `baselines._utc` became `utc_argument`.
+  - `models.overall` has a precise return type.
+  - The synthetic model-test load moved to `tests/ml/conftest.py`.
+
+**Real data (BDG2 sample)**
+- **Before training:** `list` gave "no saved models"; `evaluate` exited 1 with "No model has
+  been promoted".
+- **`train --promote`:** about 22 s. Saved `20261025T070227Z-4cf91609c9ef` (720 KB model
+  text), with validation MAE 7.570092 and test MAE 7.490129, equal to T014.
+- **`evaluate`:** "data: same as training"; both metrics reproduced exactly from disk.
+- **`list`:** one version, marked current.
+- `git status` shows nothing from `artifacts/`.
+- This artifact was trained from uncommitted code. After the commit, a retrain is promoted so
+  the current artifact carries a clean code stamp.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff: clean. Format: clean. `mypy` (strict): no issues in 63
+  files.
+- `pytest -W error`: **486 passed**. 19 are new, on the synthetic load:
+  - **Round trips:** predictions are identical after save and load (full and conditions
+    variants), and re-evaluation reproduces the metrics.
+  - **Metadata:** content checked.
+  - **Pickle refusal:** ridge cannot be saved.
+  - **No model:** a missing folder, saved but not promoted, and an empty `CURRENT`.
+  - **Promotion:** promotion and rollback; versions are never overwritten.
+  - **Failed writes:** a failed save (second file) leaves nothing, and a failed promotion
+    (rename) keeps the current model.
+  - **Integrity:** a tampered model cannot be promoted or loaded, and an unknown version is
+    refused.
+  - **Names:** path-escaping names are refused.
+  - **Compatibility:** another feature set, a missing feature column, and invalid metadata are
+    refused.
+  - **CLI:** list, evaluate without a model, train and promote, evaluate reproduced, evaluate on
+    changed data, bad promote.
+  - **Ignore rule:** artifacts are git-ignored.

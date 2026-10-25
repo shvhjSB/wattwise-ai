@@ -931,6 +931,33 @@ links to the entry that replaces it.
   - T016 must account for history absorbing sustained anomalies after a week (D025).
   - Results are expected-consumption accuracy with observed weather, not forecast accuracy.
 
+## D027 — Model artifacts: no pickle, hash-verified, atomic promotion
+- **Date:** 2026-10-25 · **Task:** T015 · **Status:** Accepted
+- **Decision:** `wattwise.ml.registry` ([MODELS.md](MODELS.md)).
+  - **Format:** LightGBM's text model, a JSON state file and JSON metadata. Nothing is pickled,
+    so loading an artifact cannot run code from it.
+  - **Checks on load:** SHA-256 of every file, strict metadata, artifact and feature-set
+    versions, the feature table's columns, and the version name.
+  - **Versions:** `<created_at UTC>-<model hash>`, never overwritten. `CURRENT` names the
+    promoted one, replaced by an atomic rename after verification. Older versions stay for
+    rollback.
+  - **What is saved:** exactly the evaluated model (fitted on the split's training rows), so
+    the recorded metrics are out-of-sample, and `evaluate` must reproduce them exactly.
+  - **No model:** `NoModelError`, for the API to report "no model available".
+- **Alternatives considered:**
+  - **joblib or pickle:** rejected; loading would execute code from the file, and an API should
+    not trust the artifact folder that much.
+  - **skops (safer scikit-learn persistence):** not needed; the adopted model is LightGBM. It
+    can be revisited if a scikit-learn model is ever adopted.
+  - **Refitting on all data before saving:** rejected for now. The refit would have no
+    out-of-sample metrics. A production refit can be added later with its own evaluation
+    window.
+  - **A symlink for the current version:** rejected; symlinks need privileges on Windows. A
+    pointer file replaced atomically works everywhere.
+- **Consequences:**
+  - The API (T024) loads with `load(features)`, and must handle `NoModelError`.
+  - A feature-set change needs new artifacts: old ones are refused, not misread.
+  - `baselines.utc_argument` is public, so the registry command shares its date parsing.
 
 ---
 

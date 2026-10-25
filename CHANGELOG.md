@@ -176,6 +176,19 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - New runtime dependencies scikit-learn 1.9.1 and LightGBM 4.7.0, with scipy 1.18.1, joblib,
   threadpoolctl, narwhals and cloudpickle; every new lock entry is at least two weeks old.
   (T014)
+- Model registry (`python -m wattwise.ml.registry train|evaluate|list|promote`), D027. (T015)
+  - **Artifacts:** versioned folders in git-ignored `artifacts/models/`, holding LightGBM's text
+    model, a JSON state file and metadata. The metadata covers model, settings, features, data
+    fingerprint, training period, split, code and library versions, metrics, `created_at` and
+    file hashes.
+  - **Safety:** never pickled. Files are hash-checked before parsing; incompatible versions and
+    unsafe names are refused.
+  - **Atomic:** a staging folder is renamed into place, and `CURRENT` is replaced by an atomic
+    rename after verification. Old versions stay for rollback, and a missing model gives
+    `NoModelError`.
+  - **Reproducible:** `evaluate` re-scores an artifact on its recorded split and must reproduce
+    its recorded metrics exactly; it did for the promoted D026 model.
+  - `docs/MODELS.md` documents the layout, metadata and commands.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
@@ -196,6 +209,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   sample changed. (T009c)
 - The equation of time moved from `wattwise.data.era5` to `wattwise.data.solar`, unchanged.
   (T013)
+- The synthetic model-test load moved to `tests/ml/conftest.py`, to be shared by the model and
+  registry tests. `baselines.utc_argument` (formerly private) parses the date options of both
+  commands. `FeatureModel.usable` gives the rows with a usable scale. (T015)
 - New runtime dependency `holidays` 0.106 (MIT). It needs `python-dateutil<3`, so the lock
   moved python-dateutil from 3.0.0 (released 2026-10-21, under the two-week rule) to
   2.9.0.post0. (T013)

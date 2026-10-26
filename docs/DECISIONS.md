@@ -1226,6 +1226,60 @@ links to the entry that replaces it.
   - Full-scale runs use about 5.5–6.1 GB at peak, so they should run one at a time on this
     machine.
 
+## D037 — Reference tables: average US factors, the publisher's UK convention, Ontario left open
+
+- **Date:** 2026-10-26 · **Task:** T021a · **Status:** Accepted
+- **Decision:** `wattwise.data.reference` ([DATASETS.md](DATASETS.md#reference-tables-t021a)),
+  backed by committed tables at `data/reference/carbon_factors.csv` and
+  `data/reference/electricity_prices.csv`. Every row carries its source name, URL, retrieval
+  date, licence and the SHA-256 of the file it was read from.
+  - **US carbon factors are average (total output), not non-baseload.** eGRID publishes both;
+    "total output" matches what a building's own consumption actually draws from, while
+    "non-baseload" estimates the marginal effect of a small load change — a different question
+    (resolves the open item from D035).
+  - **UK factors use the publisher's own reporting-year convention**: DESNZ's "2016" factors
+    are used for 2016, "2017" factors for 2017 — no year-shifting.
+  - **Geography codes:** an eGRID subregion (`US-<CODE>`) for the US, found by point-in-polygon
+    on the published eGRID subregion boundaries (ray casting against the KML polygons; verified
+    against a hand-built square before trusting the result on real coordinates). ISO 3166-1
+    alpha-2 for the UK and Ireland (`GB`, `IE`). The mapping from each BDG2 site to its
+    geography lives in `wattwise.data.bdg2_sites.EGRID_SUBREGION`, alongside the existing
+    `SITE_REGIONS`.
+  - **Ontario carbon is deferred, not committed, for 2016/2017.** T007b cited a value (40 g
+    CO2e/kWh for 2016, 20 "preliminary" for 2017) from "ECCC National Inventory Report
+    1990–2017, Table A13-7" (docs/DATASETS.md). The only edition this task could independently
+    download (the current 1990–2024 edition, "Annex 7") publishes Ontario's table with columns
+    1990, 2005, 2010, 2015, 2019, 2020, ... — it skips 2016 and 2017 outright, so it cannot
+    confirm T007b's figure. The older 1990–2017 edition was not found at a stable public URL
+    this session (the official Open Government Portal record exposes only the current edition;
+    older ECCC Data Mart folders render client-side and could not be listed). Rather than commit
+    T007b's number without a checksum of its own source file, or interpolate between 2015 and
+    2019 (not a sourced factor either), Ontario stays out of the committed table until the
+    1990–2017 edition is located and hashed. T021a's scope already specifies no Ontario price
+    source, so pricing is unaffected.
+  - **A source with no edition for the requested year gets its nearest earlier vintage, labelled
+    as such.** eGRID is published roughly every two years (there is no eGRID2017); `carbon_factor`
+    returns the 2016 edition for a 2017 request with `vintage_year=2016` explicit in the result,
+    rather than silently treating it as a fresh 2017 measurement.
+- **Evidence:**
+  - All 9 carbon-factor geographies and 10 price geographies load from the committed tables
+    with 64-character lowercase-hex checksums recorded for every source file.
+  - The 7 locatable US BDG2 sites (Bear, Bull, Cockatoo, Fox, Hog, Panther, Peacock) each land
+    in exactly one eGRID subregion polygon; the lookup script is reproducible from the recorded
+    source checksums.
+- **Alternatives considered:**
+  - **Non-baseload US factors:** rejected (see above).
+  - **Interpolating Ontario's gap:** rejected; not a sourced number (CLAUDE.md's honesty rules).
+  - **Point-in-polygon with a GIS library (shapely/geopandas):** rejected for a one-off, 7-point
+    lookup; a plain ray-casting function against the already-downloaded KML avoided a new
+    dependency.
+- **Consequences:**
+  - T021 (excess energy, cost and carbon estimates) can show kWh-only for Ontario sites and a
+    priced/carbon estimate for the other 9 geographies, each traceable to its source.
+  - Formalising an automated fetch-and-rebuild script (the tables were built once, by hand, from
+    pinned source files in an isolated environment) is deferred; `openpyxl`/`xlrd` are not yet
+    project dependencies.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1238,5 +1292,4 @@ links to the entry that replaces it.
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
-| US carbon rate type and UK factor-year convention | T021a | Recommended: average (total output) factors; the publisher's reporting-year convention |
 

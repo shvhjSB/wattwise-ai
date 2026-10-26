@@ -47,7 +47,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T019 | Prediction intervals | M7 | T010, T012 | Done |
 | T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Done |
 | T020 | Alert explanations | M7 | T017, T019 | Done |
-| T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Not started |
+| T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Done |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |
 | T022 | Alert prioritisation | M8 | T020, T021 | Not started |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Not started |
@@ -550,6 +550,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Values are checked against the source files by a test or a recorded checksum.
   - Sites without location, or without a source, return "not configured".
+- **Done (2026-10-26, D037):** `wattwise.data.reference` and the committed
+  `data/reference/*.csv` tables. US factors are average (total output); UK uses the publisher's
+  own reporting year. **Ontario is deferred, not guessed:** a prior task's cited value could not
+  be re-verified against its own source file this task, so it is not committed
+  ([DATASETS.md](DATASETS.md#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)).
 
 ### T021 — Excess energy, cost and carbon estimates
 - **Objective:** transparent impact estimates with explicit assumptions.

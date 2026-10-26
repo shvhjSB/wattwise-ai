@@ -83,6 +83,23 @@ SITE_REGIONS: Final[Mapping[str, Region | None]] = {
     "Wolf": Region(country="IE"),
 }
 
+#: Each US site's eGRID subregion, for `wattwise.data.reference` (T021a). Found with ray-casting
+#: point-in-polygon on the site's (corrected) coordinates against "eGRID 2016 Subregions.kml"
+#: (EPA eGRID Mapping Files, https://www.epa.gov/energy/egrid-mapping-files): each site falls in
+#: exactly one subregion polygon. None where the site has no coordinates in this project's BDG2
+#: subset (Rat is in the published metadata's US sites but not in the electricity meters used
+#: here, so its coordinates were never looked up) or is outside the US.
+EGRID_SUBREGION: Final[Mapping[str, str | None]] = {
+    "Bear": "CAMX",
+    "Bull": "ERCT",
+    "Cockatoo": "NYUP",
+    "Fox": "AZNM",
+    "Hog": "MROW",
+    "Panther": "FRCC",
+    "Peacock": "RFCE",
+    "Rat": None,
+}
+
 
 def apply_corrections(
     metadata: pd.DataFrame, corrections: Sequence[Correction] = CORRECTIONS

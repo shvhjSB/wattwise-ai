@@ -1905,3 +1905,44 @@ model. This is the first of the three M5b tasks.
   - tampered and outdated stores refused
   - full-scale baselines on all rows and quality rows
   - the CLI
+
+---
+
+## 2026-10-26 — T021a Sourced carbon-factor and price reference tables
+
+Done in parallel, in the background, while T043's full-scale study trained (owner request:
+"till then complete other work also"). No project dependencies were changed and the backend
+venv was not touched, so it could not interfere with the T043 run.
+
+**Done**
+- **`wattwise.data.reference`** (D037): `CarbonFactor` and `ElectricityPrice` dataclasses,
+  loaders for two committed CSV tables, and lookups (`carbon_factor`, `prices`,
+  `site_carbon_factor`, `site_prices`) that resolve a BDG2 site to its geography first.
+- **`data/reference/carbon_factors.csv`** (9 rows) and **`data/reference/electricity_prices.csv`**
+  (10 geographies, every band/tax-basis variant kept, not collapsed to one guessed number). Every
+  row carries its source name, URL, retrieval date, licence and the SHA-256 of the file it was
+  read from.
+- **`bdg2_sites.EGRID_SUBREGION`:** each of the 7 locatable US BDG2 sites mapped to its eGRID
+  subregion by an actual point-in-polygon lookup (ray casting against
+  `eGRID 2016 Subregions.kml`'s published polygons), not inferred from the state name. The
+  ray-casting function was checked against a hand-built square first.
+- **Vintage fallback, made explicit:** eGRID publishes roughly every two years (no eGRID2017);
+  `carbon_factor` returns the nearest earlier vintage and reports it (`vintage_year`) rather than
+  silently treating an old edition as a fresh measurement.
+- **Ontario's gap, investigated and left open rather than papered over:** a prior task (T007b)
+  cited a 2016/2017 Ontario intensity from an older NIR edition ("1990-2017", Table A13-7), but
+  that edition could not be found at a stable public URL this task (the Open Government Portal
+  record exposes only the current 1990-2024 edition, whose Ontario table skips 2016/2017; older
+  ECCC Data Mart folders render client-side and could not be listed). Rather than commit a number
+  without its own file's checksum, or interpolate, Ontario has no committed carbon row for those
+  years. T021a's scope already specifies no Ontario price source.
+- **Bug fixed before it shipped:** the first point-in-polygon attempt returned no matches for any
+  site, including California, despite the bounding box containing the point. The cause was a
+  swapped `(lon, lat)` unpacking order in the test-points loop; a sanity check against a known
+  square, then a bounding-box-candidate trace on the real data, found it.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0 (no dependency changes). ruff: clean. Format: clean. `mypy` (strict):
+  no issues.
+- `pytest -W error`: 20 new tests (geography resolution, vintage fallback, "not configured" for
+  every unconfigured case, the committed tables' schema, checksums and no duplicate rows).

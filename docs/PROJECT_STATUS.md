@@ -219,6 +219,17 @@ The application foundation runs end to end locally, and CI checks it automatical
     was easier than BDG2 as a whole.
   - **Performance bug fixed:** a 5.1-hour baseline run (memory paging) now takes 10 minutes,
     with identical results.
+- **Reference tables (T021a, D037):** real, cited carbon factors and electricity prices, done
+  in parallel while T043 trained in the background.
+  - **9 carbon-factor rows** (7 US eGRID subregions plus GB and IE, 2016/2017 where the source
+    publishes that year) and **10 price geographies** (8 US states, GB, IE), each with its
+    source, URL, retrieval date, licence and the SHA-256 of the file it was read from
+    ([DATASETS.md](DATASETS.md#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)).
+  - **US sites mapped to their eGRID subregion** by an actual point-in-polygon lookup (ray
+    casting against the published subregion boundaries), not a guess.
+  - **Ontario stays "not configured" for 2016/2017:** a prior task cited a value from an older
+    NIR edition, but that edition's own file could not be found and hashed in this task, so it
+    is not committed rather than taken on trust.
 
 ## Completed tasks
 
@@ -252,6 +263,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T019b | Season-adaptive model detector, re-benchmarked | 2026-10-25 |
 | T020 | Alert explanations | 2026-10-25 |
 | T042 | Full-scale data, memory-efficient features and quality masking | 2026-10-25 |
+| T021a | Sourced carbon-factor and price reference tables | 2026-10-26 |
 
 ## Current task
 
@@ -283,7 +295,7 @@ Then T044: intervals, detectors, the LEAD check and explanations re-run at full 
 | M5b Scale-up and model quality | T042–T044 | 1 / 3 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
-| M8 Business impact | T021a, T021, T022 | 0 / 3 |
+| M8 Business impact | T021a, T021, T022 | 1 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |

@@ -360,8 +360,8 @@ zone. The coordinates are the evidence, and the check is a test the correction c
 | Gap | Recommended source | Licence | Status |
 |---|---|---|---|
 | Real anomaly labels | **LEAD 1.0**, public subset (200 buildings, 2016) | **None stated** (see below) | Owner decision on use |
-| Carbon factors | US: **eGRID2016**. UK: **DESNZ conversion factors 2016/2017**. Ireland: **SEAI**. Ontario: **ECCC National Inventory Report** | Public domain / OGL v3.0 / reproduction with acknowledgement / OGL–Canada | Ready to integrate (T021a) |
-| Electricity prices | US: **EIA-861** state commercial average. UK: **DESNZ Quarterly Energy Prices 3.4.1**. Ireland: **CSO TMEGB04**. Ontario: no adequate retail source, so kWh only | Public domain / OGL v3.0 / CC BY 4.0 | Ready to integrate (T021a) |
+| Carbon factors | US: **eGRID2016**. UK: **DESNZ conversion factors 2016/2017**. Ireland: **SEAI**. Ontario: deferred (see below) | Public domain / OGL v3.0 / reproduction with acknowledgement | Integrated (T021a), Ontario deferred |
+| Electricity prices | US: **EIA-861** state commercial average. UK: **DESNZ Quarterly Energy Prices 3.4.1/3.4.2**. Ireland: **CSO TMEGB04**. Ontario: no adequate retail source, so kWh only | Public domain / OGL v3.0 / CC BY 4.0 | Integrated (T021a) |
 | Solar radiation | **ERA5** reanalysis, from the Copernicus CDS or Open-Meteo (`models=era5`). NASA POWER as a cross-check | CC BY 4.0; Open-Meteo's free tier is non-commercial only | Owner decision on access (T007d) |
 | Humidity | **Derived** from BDG2 temperature and dew point; no new data | — | T007d |
 | Holidays | **`holidays`** Python package (0.106) | MIT | Integrated (T013) |
@@ -497,6 +497,61 @@ pricing, and they are labelled as estimates wherever shown.
 The OpenEI Utility Rate Database (CC0, free API key) has historical tariffs, e.g. 2016 PG&E
 commercial rates. But a building's actual tariff is unknown, so state averages are the honest
 default.
+
+### Carbon factors and electricity prices: acquired and integrated (T021a)
+
+`wattwise.data.reference` ([DECISIONS.md](DECISIONS.md#d037--reference-tables-average-us-factors-the-publishers-uk-convention-ontario-left-open))
+loads two committed tables, each row carrying its own source, URL, retrieval date, licence and
+the SHA-256 of the file it was read from:
+
+- [`data/reference/carbon_factors.csv`](../data/reference/carbon_factors.csv) — 9 rows: 7 US
+  eGRID subregions, GB and IE, each for 2016 and 2017 where the source publishes that year.
+- [`data/reference/electricity_prices.csv`](../data/reference/electricity_prices.csv) — 10
+  geographies (8 US states, GB, IE), with every published band and tax basis kept as a separate
+  row rather than one value guessed on the caller's behalf.
+
+**US site to eGRID subregion**, by point-in-polygon on the published subregion boundaries
+(`eGRID 2016 Subregions.kml`, ray casting; verified against a hand-built square before trusting
+real coordinates), now pinned in
+[`bdg2_sites.py`](../backend/src/wattwise/data/bdg2_sites.py) as `EGRID_SUBREGION`:
+
+| Site | Coordinates | eGRID subregion |
+|---|---|---|
+| Bear | 37.871903, -122.260729 | CAMX (WECC California) |
+| Bull | 30.267200, -97.743100 | ERCT (ERCOT All) |
+| Cockatoo | 42.459837, -76.485292 | NYUP (NPCC Upstate NY) |
+| Fox | 33.424425, -111.928140 | AZNM (WECC Southwest) |
+| Hog | 44.978782, -93.255398 | MROW (MRO West) |
+| Panther | 28.517689, -81.379039 | FRCC (FRCC All) |
+| Peacock | 40.350000, -74.700000 | RFCE (RFC East) |
+
+Rat (US-DC, per the geography table above) has no row: it is in the published BDG2 metadata but
+not in this project's electricity meters, so its coordinates were never looked up.
+
+**Ontario stays deferred.** The "40 / 20 (preliminary)" g CO2e/kWh figures in the Carbon factors
+table above, cited from an older NIR edition ("1990–2017", Table A13-7), could not be confirmed
+with a checksum of that edition's own file in this task — the only edition reachable here skips
+2016 and 2017 in its Ontario table (D037). `carbon_factor("CA-ON", ...)` returns "not configured"
+until that file is located.
+
+**Not yet formalised:** the tables were built once from the pinned source files below, parsed in
+an isolated environment (`openpyxl`/`xlrd` are not project dependencies yet). An automated
+fetch-and-rebuild script is a follow-up, not part of T021a.
+
+| Source | File | SHA-256 |
+|---|---|---|
+| EIA avgprice_annual.xlsx | `eia/avgprice_annual.xlsx` | `27af5b91bd669756e72912c454eb58cea88a195cc5f67548eda12213aaa24522` |
+| DESNZ QEP table 3.4.1/3.4.2 | `desnz-qep/table_341.xlsx` | `fbd44eed6c9d2f6a4e22ac423f256cd7a5ac6a6de9e1f0b4a740a5b0e1313d31` |
+| DESNZ conversion factors 2016 (flat file) | `desnz-2016/2016_Flat_format_file_v01-01.xlsx` | `1ef42c5ebb6e17a57769cf8274a71b348bb12815eb04b55196cfa8f7b8c0a81a` |
+| DESNZ conversion factors 2017 (flat file) | `desnz-2017/Conversion_factors_2017_flat_file_v02.xls` | `e3465c553583234252aa4b44e4429b304e46a2f0fb8daea8b8e7eb57517aa001` |
+| CSO TMEGB04 | `cso/TMEGB04.csv` | `ae0d52e6ddbd7d48e97f4ed02a4a8c05ce8d705ea18eeace385078b0946cbdfd` |
+| SEAI, Energy in Ireland 2018 | `seai/Energy-in-Ireland-2018.pdf` | `788844861c68e4634b557a1a49e9bc790bc656e67f56d1501cae28d8c7a12bcb` |
+| EPA eGRID2016 Summary Tables | `egrid/eGRID2016_summarytables.xlsx` (from the 1996-2016 historical archive) | `9e212650dac0e8aa1412a85a87ecc0fac4e43543fef73ef32e5c5689e636ba68` |
+| EPA eGRID 2016 Subregions KML | `egrid-kml/egrid_2016_subregions.kml.zip` | `6a5094c4fdce792143dcfe12e7455cd1cd24431244547d04a253c645476660a2` |
+
+None of these source files are committed (they are not BDG2 data, but they are large and this
+task's job is the derived table, not a dataset mirror); the checksums above let anyone re-derive
+the committed CSVs from the same files.
 
 ### Weather enrichment
 

@@ -267,6 +267,15 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - **Quality mask** for training and calibration: identical runs of 24 hours or more, zero
     runs of 24 hours or more, and negatives. It drops 9.5% of BDG2's readings.
   - **Full-scale baselines** on all 1,148 meters: seasonal-naive test MAE 15.72 kWh, WAPE 10.8%.
+- Sourced carbon-factor and price reference tables (`wattwise.data.reference`), D037. (T021a)
+  - 9 carbon-factor rows (7 US eGRID subregions, GB, IE) and 10 price geographies (8 US states,
+    GB, IE), each with its source, URL, retrieval date, licence and file SHA-256.
+  - US BDG2 sites mapped to their eGRID subregion by a point-in-polygon lookup against the
+    published subregion boundaries (`bdg2_sites.EGRID_SUBREGION`).
+  - A source with no edition for the requested year (eGRID) falls back to its nearest earlier
+    vintage, reported explicitly rather than reused silently.
+  - Ontario's 2016/2017 carbon factor is left "not configured": a prior task's cited value could
+    not be re-verified against its own source file in this task.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

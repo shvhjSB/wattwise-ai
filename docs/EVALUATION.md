@@ -695,6 +695,102 @@ uv run python -m wattwise.ml.scale baselines --data ../data/processed/bdg2/clean
   against 10.8% at full scale. **The bar for T043 is seasonal-naive at full scale: test MAE
   15.72 kWh, WAPE 10.8%.**
 
+## Best model at full scale (T043, D036)
+
+LightGBM, searched on validation across loss function and tree size, with early stopping, on a
+seeded 25% sample of quality-checked training hours (3,214,532 of 20,137,056 rows; validation
+and test use every row); 8 threads.
+
+```bash
+uv run python -m wattwise.ml.fullscale --store ../data/processed/features-all \
+    --data ../data/processed/bdg2/cleaned-all --promote
+```
+
+**Search (validation, all rows):**
+
+| Loss | Leaves | Trees (early stop) | Validation MAE | Against seasonal-naive (common rows) | Seconds |
+|---|---|---|---|---|---|
+| L2 | 63 | 227 | 16.326 | 16.235 vs 18.779 (+13.6%) | 52 |
+| L2 | 255 | 128 | 16.202 | 16.124 vs 18.779 (+14.1%) | 53 |
+| **L1** | **255** | **1,779** | **15.267** | **15.203 vs 18.779 (+19.0%)** | 66,459 (the machine slept for about 17 h mid-fit; see below) |
+| Huber | 63 | 609 | 15.634 | 15.570 vs 18.779 (+17.1%) | 91 |
+| Huber | 255 | 239 | 15.565 | 15.501 vs 18.779 (+17.5%) | 75 |
+
+**Chosen: L1 loss, 255 leaves, 1,779 trees.** The no-history variant scores far worse on
+validation (25.289 vs 17.910 naive, −41.2%): consumption history remains essential at scale.
+
+**Test (scored once): MAE against seasonal-naive on the rows both predicted**
+
+| | Model | Seasonal-naive | Change | Rows |
+|---|---|---|---|---|
+| Chosen model | 13.700 | 16.705 | **+18.0%** | 2,261,050 |
+| Chosen model, quality rows | 13.781 | 16.823 | +18.1% | — |
+| **Production refit** (train + validation windows) | **13.660** | 16.705 | **+18.2%** | — |
+| Sample-trained model (D026, the old 20-meter model) | 17.434 | 16.705 | **−4.4%** | — |
+
+- **The old sample-trained model loses to seasonal-naive at full scale.** It was fit on 20
+  meters from 9 sites and does not generalise to the other 1,128 meters — exactly the problem
+  T042/T043 exist to fix. It is no longer the registry's promoted model.
+- **Cross-check from the saved artifact's own T011 report** (a different denominator: every row
+  the model itself scored, not only rows where seasonal-naive also had a valid lag): MAE
+  13.676, RMSE 76.608, bias −0.454, WAPE 8.8%, 2,283,087 scored rows, 154,899 without a
+  prediction. The two MAE figures (13.700 vs 13.676) differ only because they are computed over
+  slightly different row sets; both describe the same promoted model.
+
+**Per site (test, rows and MAE against seasonal-naive):**
+
+| Site | Rows | Model vs naive | Change |
+|---|---|---|---|
+| Bull | 244,740 | 15.519 vs 21.447 | +27.6% |
+| Wolf | 79,008 | 16.511 vs 22.232 | +25.7% |
+| Gator | 137,939 | 11.353 vs 14.758 | +23.1% |
+| Cockatoo | 245,539 | 9.022 vs 11.422 | +21.0% |
+| Bear | 196,008 | 12.428 vs 15.529 | +20.0% |
+| Peacock | 79,512 | 10.486 vs 13.121 | +20.1% |
+| Eagle | 207,139 | 15.924 vs 19.364 | +17.8% |
+| Bobcat | 56,025 | 9.468 vs 11.279 | +16.1% |
+| Hog | 310,509 | 21.814 vs 25.960 | +16.0% |
+| Mouse | 2,755 | 24.099 vs 28.258 | +14.7% |
+| Panther | 229,944 | 10.604 vs 12.263 | +13.5% |
+| Fox | 295,135 | 10.657 vs 12.269 | +13.1% |
+| Moose | 25,498 | 31.388 vs 33.133 | +5.3% |
+| Lamb | 145,487 | 10.958 vs 10.969 | +0.1% (tie) |
+| Crow | 5,812 | 30.321 vs 30.206 | −0.4% (tie, 5,812 rows) |
+
+13 of 15 sites improve by 13–28%; Crow and Moose/Lamb are small-sample or effectively tied.
+
+**Unseen buildings and sites** (same chosen settings, retrained without the held-out group):
+
+- Building holdout (287 held-out buildings): seen 13.232 vs 16.064 (+17.6%); **unseen 15.730
+  vs 18.662 (+15.7%)**.
+- Site holdout (230 held-out buildings): seen 12.134 vs 14.964 (+18.9%); **unseen 21.206 vs
+  23.172 (+8.5%)**.
+- **This reverses T014's sample-scale finding.** At 20 meters the model tied on a building
+  holdout and lost on a site holdout, so seasonal-naive stayed the default for buildings
+  without training data (D026). At full scale the model beats seasonal-naive even on
+  completely unseen sites, though by a smaller margin (+8.5%) than on seen data (+18.9%).
+
+**Adopted: yes.** The validation-chosen model beats seasonal-naive on the test rows both
+predict (the pre-stated rule). **Promoted: yes** — artifact `20261027T103133Z-ea3909799a6b` is
+now the registry's current model, replacing the D026 sample-trained model.
+
+**What made this slow, and the fixes applied (docs/DECISIONS.md, D036):**
+- **The L1 loss's first attempt at 63 leaves took 46,970 s** (a separate benchmark run, not
+  part of the final search): dropped from the grid in favour of 255 leaves, which reached a
+  nearly identical validation MAE (15.283 vs 15.306 in that earlier run) in a twelfth of the
+  time.
+- **Two attempts at training multiple models concurrently were tried and reverted.** Running 2
+  models at once (4 threads each) thrashed this machine's 15.3 GB RAM instead of using idle
+  CPU, since each fit holds its own copy of the float32 input matrix; it was slower than
+  training one model at a time with all 8 threads, and once even crashed the process. The final
+  run trains sequentially.
+- **The machine slept for about 17 hours mid-fit**, pausing the L1@255 trial without losing
+  progress (the process resumed exactly where it left off) but adding that time to the trial's
+  reported duration. A later run that must finish within a bounded window should keep the
+  machine from sleeping.
+- **Float32, not float64, inputs to LightGBM:** the feature store is float32 already; converting
+  it to float64 before fitting doubled memory for no benefit to a tree model.
+
 ## Excess energy, cost and carbon impact (T021)
 
 `wattwise.ml.impact` turns the hours above a T019 prediction interval's upper bound into kWh,

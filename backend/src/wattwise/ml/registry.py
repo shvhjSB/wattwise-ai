@@ -104,7 +104,7 @@ class ModelInfo(_Strict):
     name: str
     family: str
     variant: str
-    settings: dict[str, int | float]  # ints stay ints, so the model name is unchanged
+    settings: dict[str, int | float | str]  # ints stay ints, so the model name is unchanged
     seed: int
 
 
@@ -161,7 +161,7 @@ def train(
     split_config: SplitConfig = DEFAULT_SPLIT,
     family: Family = ADOPTED[0],
     variant: Variant = ADOPTED[1],
-    settings: Mapping[str, float] = ADOPTED[2],
+    settings: Mapping[str, float | str] = ADOPTED[2],
 ) -> Trained:
     """Fit on the split's training rows and score validation and test with the T011 harness.
 
@@ -184,7 +184,9 @@ def train(
         split_config_sha256=split_config.sha256(),
         split_config=split_config.model_dump(mode="json"),
     )
-    metrics = {role.value: overall(result, model.name, role) for role in SCORED}
+    metrics = {
+        role.value: overall(result, model.name, role) for role in SCORED if role in part.positions
+    }
     return Trained(model=model, training=training, metrics=metrics)
 
 
@@ -408,6 +410,7 @@ def reevaluate(
             part.rows(role).drop(columns="value"), readings
         )
         for role in SCORED
+        if role in part.positions  # a production refit has no validation window
     }
     report = evaluate(
         split, predictions, Forecaster(name=loaded.model.name, params=loaded.model.params)

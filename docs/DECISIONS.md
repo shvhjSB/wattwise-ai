@@ -1226,6 +1226,59 @@ links to the entry that replaces it.
   - Full-scale runs use about 5.5–6.1 GB at peak, so they should run one at a time on this
     machine.
 
+## D036 — Best model at full scale: LightGBM, L1 loss, adopted and promoted
+
+- **Date:** 2026-10-27 · **Task:** T043 · **Status:** Accepted
+- **Decision:** `wattwise.ml.fullscale` ([EVALUATION.md](EVALUATION.md#best-model-at-full-scale-t043-d036)).
+  - **Search grid:** LightGBM, L2, L1 and Huber losses, 63 and 255 leaves, early stopping on a
+    validation fold, trained from a seeded 25% sample of quality-checked training hours (every
+    row is used for validation and test). **L1 loss at 63 leaves is dropped from the grid**: a
+    separate run showed it needing 46,970 s against 255 leaves' 3,477 s for a near-identical
+    validation MAE (15.283 vs 15.306).
+  - **Chosen: L1 loss, 255 leaves, 1,779 trees** (validation MAE 15.267, beating seasonal-naive
+    by 19.0% on the rows both predict). The no-history variant scores 41.2% worse than
+    seasonal-naive: history remains essential at scale.
+  - **Adopted and promoted.** Test MAE 13.700 vs seasonal-naive 16.705 (+18.0%, 2,261,050 rows,
+    scored once). The production refit (trained on train+validation, same tree count) scores
+    13.660 (+18.2%) and is the saved, promoted artifact.
+  - **Training runs sequentially, not concurrently.** Two attempts to train multiple models at
+    once (2-4 threads each) were tried and reverted: on this machine's 15.3 GB RAM, each
+    concurrent fit's own copy of the float32 input matrix caused memory thrashing, not CPU
+    parallelism — one run had to be killed before it finished, and the other ran slower than
+    sequential training at full thread count would have.
+  - **LightGBM's inputs are float32, not float64.** The feature store is already float32;
+    converting it to float64 before fitting (the previous behaviour) doubled memory with no
+    accuracy benefit to a tree model.
+- **Evidence:**
+  - **The old D026 sample-trained model (20 meters) loses to seasonal-naive at full scale**
+    (17.434 vs 16.705, −4.4%): it did not generalise beyond its training sample, which is
+    exactly the problem this task exists to fix.
+  - **13 of 15 sites improve by 13–28%**; the remaining two (Crow, Lamb) are a small sample or
+    an effective tie, not a regression.
+  - **Unseen buildings and sites beat seasonal-naive too**, reversing T014's sample-scale
+    finding (a tie on a building holdout, a loss on a site holdout, D026): at full scale, seen
+    +17.6–18.9%, unseen buildings +15.7%, unseen sites +8.5%.
+  - Re-evaluating the promoted artifact from disk reproduces its recorded test metrics exactly
+    (MAE 13.676, WAPE 8.8%, 2,283,087 scored rows), on the T011 report's own row accounting
+    (every row the model scored, a different denominator from the seasonal-naive comparison
+    above, which counts only rows both predicted).
+- **Alternatives considered:**
+  - **Training 2 models concurrently in threads** (both at 4 and at 2 workers): rejected after
+    measurement — memory thrashing, not a speed-up, and a crash at the first attempt.
+  - **A faster learning rate for L1 loss** to force convergence in fewer trees: tried first,
+    reverted before adoption — it was an untested guess at the model's actual training
+    behaviour, and the evidence-backed fix (drop the 63-leaf L1 point) was both simpler and
+    already measured to work.
+  - **Letting the machine sleep overnight uninterrupted:** the process survived it (resumed
+    exactly where it left off, no data lost), but it added about 17 hours to the slowest
+    trial's reported duration for no benefit; a future bounded run should keep the machine
+    awake.
+- **Consequences:**
+  - The promoted model (`20261027T103133Z-ea3909799a6b`) replaces the D026 sample-trained
+    model as the registry's current artifact.
+  - T044 re-runs intervals, the detector benchmark, the LEAD check and explanations against
+    this model at full scale.
+
 ## D037 — Reference tables: average US factors, the publisher's UK convention, Ontario left open
 
 - **Date:** 2026-10-26 · **Task:** T021a · **Status:** Accepted

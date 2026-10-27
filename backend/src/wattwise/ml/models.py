@@ -114,7 +114,7 @@ class FeatureModel:
         self,
         family: Family,
         variant: Variant,
-        settings: Mapping[str, float],
+        settings: Mapping[str, float | str],
         features: pd.DataFrame,
         seed: int = SEED,
     ) -> None:
@@ -128,6 +128,7 @@ class FeatureModel:
         self.profile: pd.Series | None = None
         self.model: Any = None
         self.columns: list[str] = []
+        self.best_iteration: int | None = None  # set when fitted with early stopping
 
     @property
     def params(self) -> dict[str, Param]:
@@ -139,7 +140,14 @@ class FeatureModel:
             **self.settings,
         }
 
-    def fit(self, train: pd.DataFrame) -> None:
+    def fit(
+        self,
+        train: pd.DataFrame,
+        validation: pd.DataFrame | None = None,
+        stopping_rounds: int | None = None,
+    ) -> None:
+        """Fit on `train`. For LightGBM, `validation` rows with `stopping_rounds` stop the boosting
+        when the weighted L1 error on them has not improved for that many rounds (T043)."""
         observed = train.dropna(subset=["value"])
         if self.variant is Variant.CONDITIONS:
             self.level = observed.groupby("meter_id")["value"].mean()
@@ -150,12 +158,30 @@ class FeatureModel:
         if not usable.any():
             raise ValueError(f"{self.name}: no training row has a usable scale.")
         target = observed["value"].to_numpy(dtype=float)[usable] / scale[usable]
+        design = design[usable]  # one copy of the training rows; the full frame is released
         # A column with no value in the training rows carries nothing to learn (e.g. ERA5 for a
         # sample of unlocated sites); calendar columns are always kept for the ridge encoding.
-        present = design[usable].notna().any()
+        present = design.notna().any()
         self.columns = [c for c in design.columns if present[c] or c in RAW_CALENDAR]
+        inputs = self._inputs(design)
+        del design  # only the estimator's input matrix is kept while it trains (T043)
         self.model = self._estimator()
-        self.model.fit(self._inputs(design[usable]), target, **{self._weight_arg(): scale[usable]})
+        extra: dict[str, Any] = {}
+        if validation is not None and stopping_rounds and self.family is Family.LIGHTGBM:
+            checked = validation.dropna(subset=["value"])
+            v_design, v_scale = self._design(checked)
+            v_ok = np.isfinite(v_scale) & (v_scale >= MIN_SCALE)
+            v_target = checked["value"].to_numpy(dtype=float)[v_ok] / v_scale[v_ok]
+            extra = {
+                "eval_X": (self._inputs(v_design[v_ok]),),  # LightGBM 4.7 replaces eval_set
+                "eval_y": (v_target,),
+                "eval_sample_weight": [v_scale[v_ok]],
+                "eval_metric": "l1",
+                "callbacks": [lightgbm.early_stopping(stopping_rounds, verbose=False)],
+            }
+        self.model.fit(inputs, target, **{self._weight_arg(): scale[usable]}, **extra)
+        if extra:
+            self.best_iteration = int(self.model.best_iteration_)
 
     def predict(self, rows: pd.DataFrame, history: pd.DataFrame) -> pd.Series:
         """Features only; `history` is not used (history features are already past-only)."""
@@ -226,7 +252,9 @@ class FeatureModel:
             frame = design[self.columns].copy()
             frame["hour_weekend"] = frame["hour_local"] + 24 * frame["is_weekend_local"]
             return frame
-        return design[self.columns].to_numpy(dtype=float)
+        # float32: the feature store is float32 already, and LightGBM trains on it natively;
+        # float64 would double the input matrix's memory for no gain in a tree model (T043).
+        return design[self.columns].to_numpy(dtype=np.float32)
 
     def _weight_arg(self) -> str:
         return "ridge__sample_weight" if self.family is Family.RIDGE else "sample_weight"
@@ -264,16 +292,23 @@ class FeatureModel:
                 early_stopping=False,
                 random_state=self.seed,
             )
+        objective = str(s.get("objective", "regression"))
+        optional: dict[str, Any] = {}
+        if objective == "huber":
+            optional["alpha"] = float(s.get("alpha", 0.9))  # the Huber transition, ratio units
         return lightgbm.LGBMRegressor(
+            objective=objective,
             n_estimators=int(s["n_estimators"]),
             learning_rate=float(s["learning_rate"]),
             num_leaves=int(s["num_leaves"]),
             min_child_samples=int(s["min_child_samples"]),
+            colsample_bytree=float(s.get("feature_fraction", 1.0)),
             random_state=self.seed,
             deterministic=True,
             force_row_wise=True,
-            n_jobs=1,
+            n_jobs=int(s.get("n_jobs", 1)),  # results are reproducible for a fixed thread count
             verbose=-1,
+            **optional,
         )
 
 

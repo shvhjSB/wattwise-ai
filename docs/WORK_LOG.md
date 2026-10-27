@@ -1983,3 +1983,46 @@ Also done in parallel while T043's full-scale study trained in the background.
   no issues in 83 files.
 - `pytest -W error`: 619 passed project-wide (20 new in `test_impact.py`, plus 2 new assertions
   added to `test_explanations.py` for the new `"impact"` bundle section).
+
+---
+
+## 2026-10-27 — T043 Best model at full scale
+
+**Done**
+- **`wattwise.ml.fullscale` run, to completion** (D036): LightGBM search on validation (L2, L1,
+  Huber x 63/255 leaves, early stopping), chosen on validation, scored once on test, evaluated
+  on building and site holdouts, refit on train+validation, saved and promoted.
+- **Search grid fixed before the real run:** L1 loss at 63 leaves took 46,970 s in an earlier
+  attempt for a validation MAE barely different from 255 leaves (15.283 vs 15.306 in 3,477 s).
+  Dropped from the grid.
+- **Two concurrency attempts tried and reverted** before the real run: training 2 models at
+  once (4, then 2 worker threads) thrashed this machine's 15.3 GB RAM instead of using idle
+  CPU (each fit holds its own float32 input-matrix copy); the first attempt had to be killed,
+  the second ran slower than sequential would have. The final run trains one model at a time
+  with all 8 threads.
+- **LightGBM inputs changed from float64 to float32** (the feature store's own dtype):
+  `_inputs` used to upcast to float64 before handing data to LightGBM, doubling memory for no
+  accuracy benefit to a tree model.
+
+**The run itself**
+- **Launched 2026-10-26 17:03:38, finished 2026-10-27 ~15:30** (background, `uv run`).
+- **The machine slept for about 17 hours mid-run**, pausing the slow L1@255 trial without
+  losing progress (the process resumed exactly where it left off); the trial's reported
+  duration (66,459 s) includes that gap.
+- **Search:** L2@63 16.326, L2@255 16.202, **L1@255 15.267** (chosen, 1,779 trees), Huber@63
+  15.634, Huber@255 15.565.
+- **Test, scored once:** chosen model 13.700 vs seasonal-naive 16.705 (+18.0%, 2,261,050 rows);
+  production refit 13.660 (+18.2%); the old D026 sample-trained model 17.434 (**−4.4%**, it now
+  loses to seasonal-naive at full scale).
+- **Unseen buildings/sites:** seen +17.6–18.9%, unseen buildings +15.7%, **unseen sites +8.5%**
+  — reversing T014's sample-scale finding (a tie or a loss there).
+- **13 of 15 sites improve 13–28%**; Crow and Lamb are a small sample or an effective tie.
+- **Adopted: yes. Promoted: yes.** Artifact `20261027T103133Z-ea3909799a6b` replaces the D026
+  sample-trained model as the registry's current artifact.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0 (no dependency changes). ruff: clean. Format: clean. `mypy` (strict):
+  no issues.
+- `pytest -W error`: project-wide pass, including 6 new tests on `fullscale.py` (sampling, the
+  fast seasonal-naive lag, loading exact feature rows, a study that adopts and saves its refit,
+  reproducibility, and the CLI's error path).

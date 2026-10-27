@@ -70,7 +70,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
-| T043 | Best model at full scale | M5b | T042, T014 | Not started |
+| T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044 | Downstream re-run at full scale (intervals, detectors, LEAD, explanations) | M5b | T043, T019b, T020 | Not started |
 
 ---
@@ -434,6 +434,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Adopted only if it beats seasonal-naive on the same test rows, scored once.
   - Results labelled; the registry is updated.
+- **Done (2026-10-27, D036):** LightGBM, L1 loss, 255 leaves, 1,779 trees. Adopted and
+  promoted: test MAE 13.700 vs seasonal-naive 16.705 (+18.0%); the production refit scores
+  13.660 (+18.2%). Beats seasonal-naive even on unseen sites (+8.5%), reversing T014's
+  sample-scale finding. The old D026 sample-trained model loses to seasonal-naive at full scale
+  (−4.4%) ([EVALUATION.md](EVALUATION.md#best-model-at-full-scale-t043-d036)).
 
 ### T044 — Downstream re-run at full scale
 - **Objective:** re-check every downstream result with the full-scale model.

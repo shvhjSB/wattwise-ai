@@ -284,6 +284,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   - Wired into every T020 evidence bundle (an `"impact"` section and a rendered sentence).
   - Priced per event's own BDG2 site; cost is only computed for one named geography at a time,
     since summing it across geographies would mix currencies.
+- Best model at full scale (`python -m wattwise.ml.fullscale`), D036. (T043)
+  - **Adopted and promoted:** LightGBM, L1 loss, 255 leaves, 1,779 trees. Test MAE 13.700 vs
+    seasonal-naive 16.705 (+18.0%, scored once); the production refit scores 13.660 (+18.2%).
+  - Beats seasonal-naive even on unseen sites (+8.5%), reversing T014's sample-scale finding.
+  - The old D026 sample-trained model now loses to seasonal-naive at full scale (−4.4%).
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

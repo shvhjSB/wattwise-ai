@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-25 · **Current milestone:** M5 — Improved forecasting model (M1–M4 complete)
+**Last updated:** 2026-10-27 · **Current milestone:** M5b — Scale-up and model quality (M1–M5, M7 complete)
 
 ## Summary
 
@@ -243,6 +243,20 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **BDG2 test quarter (rolling z-score, 100 events):** 5,766.7 kWh total potential excess,
     2,459.2 kg CO2e across 7 configured geographies; the 25 events at Eagle and Gator (no
     coordinates) correctly show "not configured", not zero.
+- **Best model at full scale (T043, D036):** LightGBM, L1 loss, 255 leaves, 1,779 trees,
+  **adopted and promoted** as the production model.
+  - **Test MAE 13.700 vs seasonal-naive 16.705 (+18.0%)**, scored once on 2,261,050 rows. The
+    production refit (train+validation) scores 13.660 (+18.2%) and is the saved artifact
+    (`20261027T103133Z-ea3909799a6b`).
+  - **The old D026 sample-trained model (20 meters) now loses to seasonal-naive** at full scale
+    (17.434 vs 16.705, −4.4%): it never generalised past its training sample.
+  - **Generalises to genuinely unseen sites**, reversing T014's sample-scale finding (a tie or
+    a loss there): unseen buildings +15.7%, unseen sites +8.5%.
+  - **13 of 15 sites improve 13–28%**; the other two are a small sample or an effective tie.
+  - **What made this slow:** an untuned L1-loss grid point that took 46,970 s in isolation was
+    dropped; two attempts to train models concurrently thrashed this machine's RAM and were
+    reverted in favour of sequential training; the machine slept for about 17 hours mid-run
+    without losing progress ([EVALUATION.md](EVALUATION.md#best-model-at-full-scale-t043-d036)).
 
 ## Completed tasks
 
@@ -278,6 +292,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T042 | Full-scale data, memory-efficient features and quality masking | 2026-10-25 |
 | T021a | Sourced carbon-factor and price reference tables | 2026-10-26 |
 | T021 | Excess energy, cost and carbon estimates | 2026-10-27 |
+| T043 | Best model at full scale | 2026-10-27 |
 
 ## Current task
 
@@ -285,17 +300,14 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T043 — Best model at full scale** (owner request, M5b):
-- **Search on validation only:** LightGBM with early stopping, L2, L1 and Huber losses, tree
-  sizes, with and without history, trained from the T042 store with the quality mask.
-- **Evaluation:** seen buildings, unseen buildings and unseen sites at scale, with per-site
-  breakdowns.
-- **Production refit** on all data before the test window.
-- **Adoption rule:** only if it beats seasonal-naive at full scale (test MAE 15.72 kWh) on the
-  same rows, scored once.
+**T044 — Downstream re-run at full scale** (M5b):
+- Re-check prediction intervals (coverage), the detector benchmark (all detectors, same rule),
+  the LEAD check (a full-scale H1-2016 model) and explanations, all against the newly promoted
+  T043 model.
+- Defaults change only under the rules already fixed (D030, D032); every changed number is
+  recorded with the command that produced it.
 
-Then T044: intervals, detectors, the LEAD check and explanations re-run at full scale. See
-[ROADMAP.md](ROADMAP.md#t043--best-model-at-full-scale).
+See [ROADMAP.md](ROADMAP.md#t044--downstream-re-run-at-full-scale).
 
 ## Milestone progress
 
@@ -306,7 +318,7 @@ Then T044: intervals, detectors, the LEAD check and explanations re-run at full 
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M5b Scale-up and model quality | T042–T044 | 1 / 3 |
+| M5b Scale-up and model quality | T042–T044 | 2 / 3 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 2 / 3 |

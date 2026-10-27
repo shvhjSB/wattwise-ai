@@ -1946,3 +1946,40 @@ venv was not touched, so it could not interfere with the T043 run.
   no issues.
 - `pytest -W error`: 20 new tests (geography resolution, vintage fallback, "not configured" for
   every unconfigured case, the committed tables' schema, checksums and no duplicate rows).
+
+---
+
+## 2026-10-27 — T021 Excess energy, cost and carbon estimates
+
+Also done in parallel while T043's full-scale study trained in the background.
+
+**Done**
+- **`wattwise.ml.impact`** (D038): `potential_excess_kwh` (kWh strictly above a T019 interval's
+  upper bound; a negative residual never counts, and an unknown actual or bound gives NaN, not
+  zero), `TariffConfig` (explicit currency and rate, otherwise kWh only), `Impact`/`estimate_impact`
+  (carbon from an already-resolved `CarbonFactor`, so the maths is testable without the T021a
+  tables).
+- **Wired into T020's evidence bundles:** every bundle now carries an `"impact"` section, and
+  the rendered explanation states the potential excess when it is positive, worded "an estimate
+  from the interval, not a verified figure" — never "waste" (explanations.py's forbidden-word
+  list is unchanged and still passes).
+- **CLI (`python -m wattwise.ml.impact`):** prices every T020-detected event by its own BDG2
+  site (so a US and a UK site in the same run each get their own carbon factor). Cost is only
+  computed for one named `--geography` at a time; carbon sums safely across every geography
+  since kg CO2e carries no currency.
+- **Circular import, fixed before it shipped:** `explanations.py` imports `estimate_impact` from
+  `impact.py`, and `impact.py`'s CLI wanted to reuse `explanations.explain`. Fixed with a local
+  import inside `run_impact`, documented at the top of `impact.py`.
+
+**Real data (BDG2 test quarter, rolling z-score, 100 events)**
+- **Total: 5,766.7 kWh potential excess, 2,459.2 kg CO2e**, across 7 configured geographies.
+- **25 events at Eagle and Gator (no coordinates) correctly show "not configured"** carbon, not
+  zero and not a guess.
+- Cost was priced only for US-MROW (Hog, 20 events) at the EIA Minnesota 2016 commercial rate
+  (T021a): 2,035.7 kWh x $0.0986/kWh.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0 (no dependency changes). ruff: clean. Format: clean. `mypy` (strict):
+  no issues in 83 files.
+- `pytest -W error`: 619 passed project-wide (20 new in `test_impact.py`, plus 2 new assertions
+  added to `test_explanations.py` for the new `"impact"` bundle section).

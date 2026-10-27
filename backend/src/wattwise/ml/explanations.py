@@ -35,6 +35,7 @@ import pandas as pd
 from wattwise.data.acquisition import sha256_of
 from wattwise.ml.detection import Detector, Run, run_detection
 from wattwise.ml.features import FEATURES
+from wattwise.ml.impact import estimate_impact
 from wattwise.ml.intervals import coverage, rolling_bounds
 from wattwise.ml.registry import DEFAULT_ROOT, NoModelError, RegistryError, read_inputs
 from wattwise.ml.signatures import DESCRIPTIONS, Signature
@@ -212,6 +213,7 @@ def _bundle(
     compared = np.isfinite(observed) & np.isfinite(baseline)
     evidence = json.loads(event.evidence)
     influences, note = _influences(model, rows, features, top)
+    impact = estimate_impact(actual, upper)  # T021: kWh above the upper bound, potential only
     bundle: dict[str, Any] = {
         "event": {
             "meter_id": event.meter_id,
@@ -251,6 +253,15 @@ def _bundle(
         },
         "influences": influences,
         "influences_note": note,
+        "impact": {
+            "status": impact.status.value,
+            "potential_excess_kwh": impact.excess_kwh,
+            "hours_with_interval": impact.hours_with_interval,
+            "hours_above_upper_bound": impact.hours_above_upper_bound,
+            "cost": impact.cost,
+            "currency": impact.currency,
+            "carbon_kg": impact.carbon_kg,
+        },
         "check": check_for(event.signature, event.direction),
     }
     model_view = bundle["model"]
@@ -331,6 +342,12 @@ def render(bundle: Mapping[str, Any]) -> str:
             lines.append(
                 "The model, which accounts for weather and the calendar, found every hour within "
                 "its interval: the deviation may reflect conditions the comparison does not see."
+            )
+        impact = bundle.get("impact")
+        if impact is not None and impact["potential_excess_kwh"] > 0:
+            lines.append(
+                f"Potential excess above the upper bound: {_number(impact['potential_excess_kwh'])}"
+                " (an estimate from the interval, not a verified figure)."
             )
     else:
         lines.append("The model had no expected value for these hours.")

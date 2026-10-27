@@ -48,7 +48,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T019b | Season-adaptive model detector, re-benchmarked | M7 | T018, T019 | Done |
 | T020 | Alert explanations | M7 | T017, T019 | Done |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Done |
-| T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Not started |
+| T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Done |
 | T022 | Alert prioritisation | M8 | T020, T021 | Not started |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Not started |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Not started |
@@ -568,6 +568,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - a missing tariff
   - a missing carbon factor
   - currency handling
+- **Done (2026-10-27, D038):** `wattwise.ml.impact`, wired into every T020 evidence bundle.
+  Priced per event's own BDG2 site; cost summed only within one named geography at a time.
+  On the BDG2 test quarter: 5,766.7 kWh potential excess, 2,459.2 kg CO2e
+  ([EVALUATION.md](EVALUATION.md#excess-energy-cost-and-carbon-impact-t021)).
 
 ### T022 — Alert prioritisation
 - **Objective:** rank alerts by likely business impact, not by anomaly score alone.

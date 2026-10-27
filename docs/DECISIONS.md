@@ -1280,6 +1280,45 @@ links to the entry that replaces it.
     pinned source files in an isolated environment) is deferred; `openpyxl`/`xlrd` are not yet
     project dependencies.
 
+## D038 — Excess, cost and carbon impact: priced per site, never mixed, always "potential"
+
+- **Date:** 2026-10-27 · **Task:** T021 · **Status:** Accepted
+- **Decision:** `wattwise.ml.impact` ([EVALUATION.md](EVALUATION.md#excess-energy-cost-and-carbon-impact-t021)).
+  - **`potential_excess_kwh`:** kWh strictly above a T019 interval's upper bound, per row. A
+    negative residual (at or below the bound) never counts; an unknown actual or bound gives
+    `NaN`, not 0 — a missing bound is not zero excess.
+  - **Always `ImpactStatus.POTENTIAL`.** `VERIFIED` exists in the enum for a future
+    human-confirmed figure (T025's feedback loop); this module never sets it itself.
+  - **`TariffConfig` is explicit and optional.** Without one, `estimate_impact` reports kWh
+    only; a configured one must carry an ISO 4217 letter code and a positive rate.
+  - **Carbon uses an already-resolved `CarbonFactor`**, not a geography/year pair, so the maths
+    is testable without the committed reference tables; the caller resolves it via
+    `wattwise.data.reference`.
+  - **The command line prices every T020-detected event by its own BDG2 site**, not one factor
+    for the whole run: a US and a UK site in the same run each get their own carbon factor.
+    **Cost is only computed for one named `--geography` at a time** — summing cost across
+    geographies would mix currencies into a meaningless total; carbon sums safely across
+    geographies instead, since kg CO2e is a single, currency-free unit.
+  - **Wired into T020's evidence bundles:** every bundle gets an `"impact"` section
+    (`potential_excess_kwh`, hours, and cost/carbon if a tariff or factor is threaded through),
+    and the rendered explanation names the figure when it is positive, worded as "potential
+    excess ... not a verified figure" — never "waste", which stays in explanations.py's
+    forbidden-word list.
+- **Evidence:** on the BDG2 test quarter (rolling z-score, 100 events): 5,766.7 kWh total
+  potential excess, 2,459.2 kg CO2e across 7 configured geographies; 25 events at Eagle and
+  Gator (no coordinates) correctly show "not configured" carbon, not zero or a guess.
+- **Alternatives considered:**
+  - **Summing cost across all geographies into one total:** rejected; mixes USD, GBP and EUR
+    into a meaningless number.
+  - **Resolving geography/year inside `estimate_impact` itself:** rejected; it would force
+    every unit test of the maths to depend on the committed CSV tables.
+  - **A `verified` status set automatically** (e.g. when a detector and the model agree):
+    rejected — agreement is not human confirmation, and the project's own rule is that an
+    anomaly is not confirmed waste regardless of how many signals agree.
+- **Consequences:** T022 (alert prioritisation) and T032 (the frontend's cost-impact view) can
+  read a `potential_excess_kwh`/`cost`/`carbon_kg` straight from each event's evidence bundle,
+  already labelled "potential" and already resolved to the event's own site.
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -64,9 +64,15 @@ def test_every_event_gets_an_evidence_bundle_and_an_explanation(
 
     assert len(bundles) == len(run.events) > 0
     for b in bundles:
-        assert set(b) >= {"event", "detector", "model", "signature", "influences", "check"}
+        assert set(b) >= {
+            "event", "detector", "model", "signature", "influences", "impact", "check",
+        }  # fmt: skip
         assert isinstance(b["explanation"], str) and b["explanation"]
         assert wording_problems(b["explanation"]) == []
+        impact = b["impact"]
+        assert isinstance(impact, dict)
+        assert impact["status"] == "potential"
+        assert impact["potential_excess_kwh"] >= 0
     json.dumps(bundles, allow_nan=False)  # finite JSON throughout
 
 
@@ -88,6 +94,11 @@ def test_the_surge_explanation_carries_the_model_interval_and_influences(
     assert "above the model's expected consumption" in text
     assert "associations within the model and not causes" in text
     assert "Possible explanations to check" in text
+    impact = b["impact"]
+    assert isinstance(impact, dict)
+    assert impact["potential_excess_kwh"] > 0  # sustained above the upper bound
+    assert "Potential excess above the upper bound" in text
+    assert "not a verified figure" in text
 
 
 def test_contributions_add_up_to_the_expected_value(

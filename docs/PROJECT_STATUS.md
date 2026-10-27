@@ -230,6 +230,19 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Ontario stays "not configured" for 2016/2017:** a prior task cited a value from an older
     NIR edition, but that edition's own file could not be found and hashed in this task, so it
     is not committed rather than taken on trust.
+- **Excess, cost and carbon impact (T021, D038):** also done in parallel while T043 trained.
+  - **`potential_excess_kwh`:** kWh strictly above a T019 interval's upper bound; a negative
+    residual never counts, and a missing bound gives "unknown", never zero.
+  - **Always labelled "potential", never "verified":** `ImpactStatus.VERIFIED` exists only for
+    a future human-confirmed figure (T025); nothing here sets it.
+  - **Wired into every T020 evidence bundle** (an `"impact"` section, and a sentence in the
+    rendered explanation when the figure is positive).
+  - **Priced per event's own BDG2 site, never mixed:** cost is computed only for one named
+    geography at a time (mixing currencies would misstate a total); carbon sums safely across
+    every geography.
+  - **BDG2 test quarter (rolling z-score, 100 events):** 5,766.7 kWh total potential excess,
+    2,459.2 kg CO2e across 7 configured geographies; the 25 events at Eagle and Gator (no
+    coordinates) correctly show "not configured", not zero.
 
 ## Completed tasks
 
@@ -264,6 +277,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T020 | Alert explanations | 2026-10-25 |
 | T042 | Full-scale data, memory-efficient features and quality masking | 2026-10-25 |
 | T021a | Sourced carbon-factor and price reference tables | 2026-10-26 |
+| T021 | Excess energy, cost and carbon estimates | 2026-10-27 |
 
 ## Current task
 
@@ -295,7 +309,7 @@ Then T044: intervals, detectors, the LEAD check and explanations re-run at full 
 | M5b Scale-up and model quality | T042–T044 | 1 / 3 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
-| M8 Business impact | T021a, T021, T022 | 1 / 3 |
+| M8 Business impact | T021a, T021, T022 | 2 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |

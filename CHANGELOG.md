@@ -276,6 +276,14 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     vintage, reported explicitly rather than reused silently.
   - Ontario's 2016/2017 carbon factor is left "not configured": a prior task's cited value could
     not be re-verified against its own source file in this task.
+- Excess energy, cost and carbon impact (`wattwise.ml.impact`), D038. (T021)
+  - `potential_excess_kwh`: kWh strictly above a T019 interval's upper bound; a negative
+    residual never counts, and a missing bound gives "unknown", never zero.
+  - Always `ImpactStatus.POTENTIAL`; `VERIFIED` exists only for a future human-confirmed figure
+    (T025) and is never set by this module.
+  - Wired into every T020 evidence bundle (an `"impact"` section and a rendered sentence).
+  - Priced per event's own BDG2 site; cost is only computed for one named geography at a time,
+    since summing it across geographies would mix currencies.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -694,3 +694,40 @@ uv run python -m wattwise.ml.scale baselines --data ../data/processed/bdg2/clean
 - **The sample was easier than BDG2 as a whole.** Its seasonal-naive test WAPE was 8.6%,
   against 10.8% at full scale. **The bar for T043 is seasonal-naive at full scale: test MAE
   15.72 kWh, WAPE 10.8%.**
+
+## Excess energy, cost and carbon impact (T021)
+
+`wattwise.ml.impact` turns the hours above a T019 prediction interval's upper bound into kWh,
+then prices them with a tariff and carbon-costs them with a `wattwise.data.reference` factor
+(T021a) — both explicitly configured, never guessed. **Potential, not verified:** an anomaly is
+not confirmed excess consumption, and nothing here is confirmed by a person
+(`ImpactStatus.VERIFIED` exists for a future human-feedback label, T025).
+
+```bash
+uv run python -m wattwise.ml.impact --data ../data/processed/bdg2/cleaned \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet \
+    --geography US-MROW --tariff-currency USD --tariff-rate 0.0986
+```
+
+- **Carbon is priced per event's own BDG2 site**, never one site's factor applied to another's.
+  Cost is priced only for one named geography at a time: summing cost across geographies would
+  mix currencies into a meaningless total.
+- **A missing geography or carbon factor gives `None` ("not configured"), not zero and not a
+  guess.** Eagle and Gator have no coordinates, so their events carry no carbon factor.
+
+**BDG2 test quarter, rolling same-hour z-score (the default detector), 100 events:**
+
+| Geography | Events | Potential excess (kWh) | Carbon (kg CO2e) |
+|---|---|---|---|
+| GB | 9 | 34.7 | 13.3 |
+| US-AZNM | 3 | 23.2 | 11.1 |
+| US-ERCT | 19 | 1,881.8 | 865.6 |
+| US-FRCC | 10 | 764.9 | 352.6 |
+| US-MROW | 20 | 2,035.7 | 1,151.8 |
+| US-NYUP | 8 | 40.9 | 5.5 |
+| US-RFCE | 6 | 171.5 | 59.3 |
+| not configured (Eagle, Gator) | 25 | 814.0 | 0.0 |
+
+**Total: 5,766.7 kWh potential excess, 2,459.2 kg CO2e potential carbon**, across all 9
+geographies. Cost was priced only for US-MROW (Hog's site, 20 events) at the EIA Minnesota 2016
+commercial rate (T021a): 2,035.7 kWh × $0.0986/kWh.

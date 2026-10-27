@@ -980,3 +980,84 @@ USD** over 652 events.
 - **T044b:** the injected-anomaly benchmark (the rule that decides the default detector).
 - **T044c:** the LEAD human-label check with a full-scale model.
 - **The 5 November cluster and the remaining very wide intervals** are open questions.
+
+## Detector benchmark at full scale (T044b, D042)
+
+The T018 benchmark, unchanged in procedure and in decision rule (D030), on all 1,148 meters
+with the evaluation model (D039). Known anomalies of 7 patterns are injected into real BDG2
+readings, so this is a **synthetic benchmark on a real background**; alerts outside injections
+are an upper bound on false alerts, because real data has its own unlabelled anomalies.
+
+```bash
+uv run python -m wattwise.ml.benchmark --data ../data/processed/bdg2/cleaned-all \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet \
+    --store ../data/processed/features-all --replicates 1 \
+    --output ../data/processed/fullscale-downstream/benchmark
+```
+
+- **Design.** One replicate per phase, which already injects one anomaly per meter: **1,133
+  injections to tune on and 1,133 fresh ones to evaluate on** (15 more did not fit their
+  window each time), against 240 and 240 on the sample. Seed 0. Calibration 2017-07-01 to
+  2017-10-01, tuning 2017-10-01 to 2017-11-01, evaluation 2017-11-01 to 2018-01-02 (scored
+  once). With about 1,100 injections, the standard error of a mean recall is about 1.4
+  points, so differences under about 3 points are not meaningful.
+- **Time.** Tuning 1,408 s, evaluation 538 s, the evaluation window without injections 467 s,
+  plus about 5 minutes of setup; about 3.2 GB working set while it ran.
+
+**Evaluation (scored once), each detector at the setting chosen in tuning:**
+
+| Detector | Mean recall | Alerts per meter-week (budget 0.5) | Same, without injections | Sample (T018/T019b) |
+|---|---|---|---|---|
+| **rolling z-score** | **70.0%** | **0.341** | 0.395 | 72%, 0.39 |
+| model | 62.1% | 0.827 | 0.856 | 81%, 0.97 |
+| model, season-adaptive (T019b) | 70.0% | 0.735 | 0.839 | 69%, 0.71 |
+| *model at the T016 default* | *72.2%* | *1.313* | *1.392* | |
+| *model-adaptive at its default* | *74.6%* | *1.046* | *1.213* | |
+
+**The rule gives the same answer as on the sample: neither model-based detector is kept; the
+rolling z-score stays the alert source (D030, D033).**
+- **Model:** recall is *lower* than the rolling z-score's (62.1% against 70.0%), and its alert
+  rate exceeds the budget (0.827).
+- **Season-adaptive model:** recall is level with the rolling z-score's (70.03% against
+  69.95%, a difference far inside the noise), but its alert rate is 0.735, over the 0.5
+  budget. **The first, looser rule (budget in tuning only) would have kept it**, which is the
+  reason D030 tightened the rule.
+
+**One finding reverses.** On the sample the model detector found more of every pattern (81%
+against 72%). At full scale, tuned to the same budget, it finds *fewer* (62% against 70%).
+At its T016 default it still has the higher recall (72.2%), but at 1.31 alerts per meter-week,
+2.6 times the budget and 3.8 times the rolling z-score's alert rate. Why is not investigated.
+
+**Recall per pattern, chosen settings (the share whose signature also matched, in brackets):**
+
+| Pattern | Injected | rolling z-score | model | model-adaptive |
+|---|---|---|---|---|
+| spike | 162 | 58% (74%) | 63% (79%) | 69% (86%) |
+| sustained | 161 | 68% (33%) | 52% (64%) | 60% (65%) |
+| long sustained | 164 | 80% (31%) | 69% (67%) | 83% (68%) |
+| overnight | 163 | 75% (70%) | 60% (44%) | 69% (52%) |
+| drift | 160 | 71% (11%) | 64% (11%) | 76% (13%) |
+| flatline | 163 | 43% (74%) | 42% (84%) | 45% (91%) |
+| dropout | 160 | 94% (87%) | 85% (89%) | 87% (91%) |
+
+- **What the rolling z-score does well and badly:** it finds a dropout 94% of the time and a
+  long sustained excess 80%, but a flatline only 43% and a spike 58%.
+- **The signature labels are weak for slow patterns:** a drift is found about 71% of the time
+  and labelled `drift` only 11% of the time, whichever detector finds it, and a rolling
+  z-score event for a sustained excess carries the `sustained` signature 33% of the time. An
+  event can be right and its label wrong.
+
+**Best tuning recall within an alert rate:**
+
+| Detector | at most 0.2 | 0.3 | 0.5 | 1.0 |
+|---|---|---|---|---|
+| rolling z-score | 71% | 73% | 73% | 73% |
+| model | none | none | 62% | 72% |
+| model-adaptive | none | 45% | 65% | 70% |
+
+At every alert rate the rolling z-score has the highest recall (or the only one at all below
+0.5), and the model detectors reach their recall only at several times the rate.
+
+**Not done:** more replicates (one gives about 1,100 injections per phase); and the benchmark
+still does not say how the detectors do on *real* anomalies. T044c checks that with the LEAD
+human labels.

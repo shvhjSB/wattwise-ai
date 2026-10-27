@@ -53,6 +53,7 @@ from wattwise.ml.detection import (
     rolling_same_hour,
 )
 from wattwise.ml.features import build_features
+from wattwise.ml.fullscale import downstream_inputs
 from wattwise.ml.registry import (
     DEFAULT_ROOT,
     NO_VALIDATION_WINDOW,
@@ -75,6 +76,9 @@ DEFAULT_SEED: Final = 0
 DEFAULT_ALERT_BUDGET: Final = 0.5
 #: Readings before a window that features (4 weeks) and pre-event references (4 weeks) use.
 HISTORY_MARGIN: Final = timedelta(weeks=5)
+#: Further readings before those, so that the features of the rows above equal the features
+#: computed on the whole series: they look back at most 4 weeks (same hour on 4 previous weeks).
+FEATURE_MARGIN: Final = timedelta(weeks=5)
 EDGE_MARGIN: Final = timedelta(hours=24)  # injections start and end this far inside a window
 LABEL: Final = "synthetic benchmark: injected anomalies on real BDG2 readings"
 #: Alert rates at which the detectors' best tuning recall is compared like for like.
@@ -189,10 +193,22 @@ def inject(
     """A copy of `readings` with the injections applied. Missing readings stay missing."""
     values = readings["value"].to_numpy(dtype=float).copy()
     times = pd.DatetimeIndex(readings["timestamp"])
-    meters = readings["meter_id"].astype(str).to_numpy()
     buildings = readings["building_id"].astype(str).to_numpy()
+    # Each meter's rows are indexed once (ascending positions), so an injection looks only at its
+    # own meter's rows: the work grows with the rows, not with injections x rows (T044b).
+    positions = pd.Series(np.arange(len(readings)))
+    by_meter: dict[str, npt.NDArray[np.int64]] = {
+        str(meter): np.asarray(found, dtype=np.int64)
+        for meter, found in positions.groupby(
+            readings["meter_id"].astype(str).to_numpy(), sort=False
+        ).indices.items()
+    }
     for inj in injections:
-        rows = np.flatnonzero((meters == inj.meter_id) & (times >= inj.start) & (times < inj.end))
+        mine = by_meter.get(inj.meter_id)
+        if mine is None:
+            continue
+        within = (times[mine] >= inj.start) & (times[mine] < inj.end)
+        rows: npt.NDArray[np.int64] = mine[np.asarray(within)]
         if rows.size == 0:
             continue
         spec = PATTERNS[inj.pattern]
@@ -402,6 +418,9 @@ def run_replicates(
     meters = int(inputs.readings.loc[in_window, "meter_id"].nunique())
     weeks = (window[1] - window[0]) / pd.Timedelta(weeks=1)
     nearby = ((times >= window[0] - HISTORY_MARGIN) & (times < window[1])).to_numpy()
+    featured = (
+        (times >= window[0] - HISTORY_MARGIN - FEATURE_MARGIN) & (times < window[1])
+    ).to_numpy()
     for replicate in replicates:
         started = time.perf_counter()
         injections: list[Injection] = []
@@ -409,7 +428,12 @@ def run_replicates(
             injections, missed = plan(levels, window, replicate, seed)
             skipped += missed
         data = inject(inputs.readings, injections, inputs.timezones)
-        features = build_features(data, inputs.buildings, inputs.weather, inputs.enrichment)
+        # Features only for the rows used (T044b): equal to features on the whole series, and
+        # the only way to do this at full scale. The model's history sees the injection, as it
+        # would in reality.
+        features = build_features(
+            data[featured], inputs.buildings, inputs.weather, inputs.enrichment
+        )
         model = load(features, root=root).model
         subset = data[nearby]
         rows = ((subset["timestamp"] >= window[0]) & (subset["timestamp"] < window[1])).to_numpy()
@@ -444,11 +468,16 @@ def run_benchmark(
     seed: int = DEFAULT_SEED,
     grid: Sequence[Mapping[str, float]] = GRID,
     log: Callable[[str], None] = print,
+    features: pd.DataFrame | None = None,
 ) -> dict[str, Any]:
-    """Tune on the tuning window, evaluate once on the evaluation window, and report."""
+    """Tune on the tuning window, evaluate once on the evaluation window, and report.
+
+    `features` are the (uninjected) features of `inputs.readings`, indexed like them; at full
+    scale they come from the T042 store. Without them they are built from the readings."""
     calibration_window, tuning_window, evaluation_window = windows(root)
     readings = inputs.readings
-    features = build_features(readings, inputs.buildings, inputs.weather, inputs.enrichment)
+    if features is None:
+        features = build_features(readings, inputs.buildings, inputs.weather, inputs.enrichment)
     loaded = load(features, root=root)
     times = readings["timestamp"]
     calibration_rows = (
@@ -706,15 +735,28 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--replicates", type=int, default=DEFAULT_REPLICATES)
     parser.add_argument("--alert-budget", type=float, default=DEFAULT_ALERT_BUDGET)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
+    parser.add_argument(
+        "--store", type=Path, help="T042 feature store: read full-scale readings and features"
+    )
     args = parser.parse_args(argv)
     try:
+        from_store: pd.DataFrame | None = None
+        if args.store:
+            readings, buildings, from_store = downstream_inputs(
+                args.data, args.enrichment, args.store, args.root
+            )
+        else:
+            readings = pd.read_parquet(args.data / "readings.parquet")
+            buildings = pd.read_parquet(args.data / "buildings.parquet")
         inputs = Inputs(
-            readings=pd.read_parquet(args.data / "readings.parquet"),
-            buildings=pd.read_parquet(args.data / "buildings.parquet"),
+            readings=readings,
+            buildings=buildings,
             weather=_read(args.data / "weather.parquet"),
             enrichment=_read(args.enrichment) if args.enrichment else None,
         )
-        report = run_benchmark(inputs, args.root, args.replicates, args.alert_budget, args.seed)
+        report = run_benchmark(
+            inputs, args.root, args.replicates, args.alert_budget, args.seed, features=from_store
+        )
     except (RegistryError, FileNotFoundError, ValueError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

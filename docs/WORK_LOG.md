@@ -2087,3 +2087,33 @@ and the LEAD check rebuild features in memory, and the interval code was quadrat
   code equals the old loop; masked rows leave calibration; the echo-week defect, reproduced and
   fixed; an outlier meter moves the mean width, not the median; meter problems are never
   counted (and old bundles are priced the same way); the priced cost is for one geography.
+
+---
+
+## 2026-10-28 — T044b Detector benchmark at full scale
+
+**Done**
+- **Two changes that make the benchmark run at full scale, both proved equal to the original:**
+  - `inject` compared every row's meter name to every injection (about 6 billion string
+    comparisons here); it now indexes each meter's rows once. A test keeps the original
+    implementation and checks all seven patterns on shuffled data with missing readings.
+  - Each replicate rebuilt features for all 20 million rows; it now builds them for the rows
+    the detectors use plus 10 weeks of history (features look back at most 4 weeks). A test
+    checks the features equal those on the whole series.
+- **`benchmark --store`** reads the readings and features from the T042 store.
+- **Profiled before choosing the design:** on the sample, detection, signature classification
+  and scoring dominate (about 0.85 s per setting for 20 meters), so a full-scale replicate was
+  estimated at about 40 minutes. A first run with 2 replicates per phase was stopped after
+  about 17 minutes and restarted with 1: each replicate already injects one anomaly per meter,
+  so 1 gives 1,133 injections per phase, 4.7 times the sample's 240. The tuning replicate then
+  took 23 minutes (faster than estimated).
+
+**Result** (docs/EVALUATION.md, D042): the same pre-stated rule, the same answer. Rolling
+z-score 70.0% recall at 0.341 alerts per meter-week; model 62.1% at 0.827; season-adaptive
+model 70.0% at 0.735 (budget 0.5). **The model's recall advantage from the sample (81% against
+72%) is gone;** not investigated.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error`: **635 passed**, 2 new (633 before): the indexed injection equals the
+  original, and features on a history margin equal features on the whole series.

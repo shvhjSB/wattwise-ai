@@ -300,6 +300,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     The report adds median width and the per-meter width spread.
   - Impact: events the signatures call meter problems (data fault, flatline) are never counted
     as potential excess, cost or carbon, and are reported apart (D040). States the priced cost.
+- Detector benchmark at full scale (T044b), D042: `benchmark --store`, with indexed injection
+  (equal to the original) and features rebuilt only for the rows the detectors use (equal to
+  features on the whole series). The same rule keeps the rolling z-score as the default.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

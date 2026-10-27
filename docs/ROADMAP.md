@@ -72,7 +72,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
-| T044b | Detector benchmark at full scale | M5b | T044a, T018 | Not started |
+| T044b | Detector benchmark at full scale | M5b | T044a, T018 | Done |
 | T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Not started |
 
 ---
@@ -478,6 +478,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Scope:** the T018 injected-anomaly benchmark (all detectors, the same pre-stated rule)
   against the full-scale evaluation model, with features recomputed only for the injected
   meters.
+- **Done (2026-10-28, D042):** the same rule gives the same answer: neither model detector is
+  kept; the rolling z-score (70.0% recall at 0.341 alerts per meter-week) stays the default.
+  One finding reverses: the model's recall advantage on the sample is gone (62% against 70%).
+  1,133 injections per phase, in about 40 minutes
+  ([EVALUATION.md](EVALUATION.md#detector-benchmark-at-full-scale-t044b-d042)).
 
 ### T044c — LEAD check with a full-scale H1-2016 model
 - **Scope:** the T018b check with a model trained at full scale on January–May 2016, scored on

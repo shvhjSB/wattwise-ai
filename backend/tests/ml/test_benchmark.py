@@ -374,3 +374,80 @@ def test_every_model_detector_gets_its_own_decision_against_the_rolling_z_score(
             and result["within_budget_on_evaluation"]
         )
         assert result["keep"] is False  # nothing meets a zero budget
+
+
+# ---------------------------------------------------------------------------
+# Full-scale equivalences (T044b): the same results, in time that scales
+# ---------------------------------------------------------------------------
+
+
+def _reference_inject(
+    readings: pd.DataFrame, injections: list[Injection], timezones: dict[str, str]
+) -> pd.DataFrame:
+    """The original implementation, which compared every row to every injection's meter."""
+    from wattwise.ml.signatures import SignatureConfig
+
+    night_hours = SignatureConfig().night_hours
+    out = readings["value"].to_numpy(dtype=float).copy()
+    times = pd.DatetimeIndex(readings["timestamp"])
+    meters = readings["meter_id"].astype(str).to_numpy()
+    buildings = readings["building_id"].astype(str).to_numpy()
+    for inj in injections:
+        rows = np.flatnonzero((meters == inj.meter_id) & (times >= inj.start) & (times < inj.end))
+        if rows.size == 0:
+            continue
+        spec = PATTERNS[inj.pattern]
+        amount = spec.magnitude * inj.level
+        if inj.pattern in (Pattern.SPIKE, Pattern.SUSTAINED, Pattern.LONG_SUSTAINED):
+            out[rows] += amount
+        elif inj.pattern is Pattern.OVERNIGHT:
+            local = times[rows].tz_convert(timezones.get(buildings[rows[0]], "UTC"))
+            out[rows[np.isin(local.hour, night_hours)]] += amount
+        elif inj.pattern is Pattern.DRIFT:
+            elapsed = np.asarray((times[rows] - inj.start) / pd.Timedelta(hours=1), dtype=float)
+            out[rows] += amount * elapsed / max(spec.hours - 1, 1)
+        elif inj.pattern is Pattern.FLATLINE:
+            first = out[rows[0]]
+            stuck = first if np.isfinite(first) else inj.level
+            out[rows] = np.where(np.isnan(out[rows]), np.nan, stuck)
+        else:
+            out[rows] = np.where(np.isnan(out[rows]), np.nan, 0.0)
+    return readings.assign(value=out)
+
+
+def test_the_indexed_injection_equals_the_original_for_every_pattern() -> None:
+    rng = np.random.default_rng(2)
+    readings = flat_readings(("m1", "m2", "m3"), days=40).sample(frac=1.0, random_state=4)
+    readings["value"] = rng.normal(50, 5, len(readings))
+    readings.loc[readings.sample(frac=0.02, random_state=1).index, "value"] = np.nan
+    starts = ("2017-01-10T00:00Z", "2017-01-15T06:00Z", "2017-01-20T00:00Z")
+    injections = [
+        injection(pattern, start, meter)
+        for i, pattern in enumerate(Pattern)
+        for meter, start in [(("m1", "m2", "m3")[i % 3], starts[i % 3])]
+    ]
+    zones = {"M1": "America/New_York", "M2": "Europe/London", "M3": "UTC"}
+
+    fast = inject(readings, injections, zones)
+    slow = _reference_inject(readings, injections, zones)
+
+    pd.testing.assert_frame_equal(fast, slow)
+    assert (fast["value"].fillna(-1) != readings["value"].fillna(-1)).any()  # something changed
+
+
+def test_features_on_a_history_margin_equal_features_on_the_whole_series() -> None:
+    from wattwise.ml.benchmark import FEATURE_MARGIN, HISTORY_MARGIN
+    from wattwise.ml.features import build_features
+
+    readings, weather = synthetic()
+    window = (pd.Timestamp("2017-03-25T00:00Z"), pd.Timestamp("2017-04-08T00:00Z"))
+    times = readings["timestamp"]
+    needed = ((times >= window[0] - HISTORY_MARGIN) & (times < window[1])).to_numpy()
+    kept = ((times >= window[0] - HISTORY_MARGIN - FEATURE_MARGIN) & (times < window[1])).to_numpy()
+    assert readings["timestamp"].min() <= window[0] - HISTORY_MARGIN - FEATURE_MARGIN  # real margin
+
+    whole = build_features(readings, BUILDINGS, weather, None)
+    cut = build_features(readings[kept], BUILDINGS, weather, None)
+
+    rows = readings.index[needed]
+    pd.testing.assert_frame_equal(cut.loc[rows], whole.loc[rows])

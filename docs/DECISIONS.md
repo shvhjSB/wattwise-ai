@@ -1508,6 +1508,40 @@ links to the entry that replaces it.
   - **A higher floor (10%, 50%):** unnecessary on the measured meters, and a larger parameter
     to defend.
 
+## D042 — The benchmark at full scale: the rule is unchanged, so is its answer
+
+- **Date:** 2026-10-28 · **Task:** T044b · **Status:** Accepted
+- **Decision:** the T018 injected-anomaly benchmark runs at full scale under **the same
+  pre-stated rule** (D030, the tightened version): keep a model-based detector only if, with both
+  tuned to the same alert budget, its mean recall on the evaluation window is higher than the
+  rolling z-score's, and it stays within the budget in tuning and in evaluation. **Neither model
+  detector passes, so the rolling z-score stays the default alert source** (and D033 stands).
+- **How it runs at full scale (the procedure is unchanged; these are equivalences):**
+  - **Injection** indexes each meter's rows once, instead of comparing every row to every
+    injection (about 6 billion string comparisons at this size). Equal to the original on all
+    seven patterns (a test keeps the original as a reference).
+  - **Features** are rebuilt each replicate only for the rows the detectors use plus 10 weeks of
+    history (features look back at most 4 weeks), not for 20 million rows. Equal to the features
+    on the whole series (tested), and the model's history still sees the injection.
+  - **Inputs** come from the T042 store (`--store`), as for the other downstream commands.
+  - **One replicate per phase** (`--replicates 1`): each replicate injects one anomaly per meter,
+    so it already gives 1,133 injections to tune on and 1,133 to evaluate on, 4.7 times the
+    sample's 240 each (12 replicates of 20 meters). With about 1,100 injections the standard error
+    of a mean recall is about 1.4 points.
+- **Evidence:** rolling z-score 70.0% recall at 0.341 alerts per meter-week; model 62.1% at 0.827;
+  season-adaptive model 70.0% at 0.735; budget 0.5. The season-adaptive model would have passed
+  the first rule (budget in tuning only), which is why D030 tightened it.
+- **A sample-scale finding reverses:** the model detector's recall advantage (81% against 72%) is
+  gone (62% against 70% at the same budget). The reason was not investigated.
+- **Alternatives considered:**
+  - **More replicates:** 12 replicates would take hours at full scale for a precision the
+    decision does not need: the gap between the model and the rolling z-score is about 7.9
+    points, several standard errors.
+  - **Changing the rule or the budget after seeing the results:** rejected; the rule was fixed
+    before the run, and the budget is a product assumption the owner can change.
+- **Consequences:** nothing changes for users. The model keeps its other jobs: expected
+  consumption, intervals, impact and explanations.
+
 ---
 
 ## Open decisions (tracked in tasks)

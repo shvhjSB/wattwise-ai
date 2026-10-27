@@ -279,6 +279,19 @@ The application foundation runs end to end locally, and CI checks it automatical
     308,410 kWh at 462 meter-problem events is reported apart
     ([EVALUATION.md](EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041)).
 
+- **Detector benchmark at full scale (T044b, D042):** the T018 benchmark on all 1,148 meters
+  (1,133 injections to tune on and 1,133 to evaluate on, against 240 on the sample), under the
+  same pre-stated rule.
+  - **The answer is the same: the rolling z-score stays the default.** Rolling z-score 70.0%
+    recall at 0.341 alerts per meter-week; model 62.1% at 0.827; season-adaptive model 70.0% at
+    0.735 (budget 0.5). The season-adaptive model would have passed the first, looser rule.
+  - **One sample-scale finding reverses:** the model detector's recall advantage (81% against
+    72%) is gone; tuned to the same budget it finds fewer (62% against 70%). The reason was not
+    investigated.
+  - **Made possible by two equivalences, both tested:** indexed injection (equal to the
+    original on all seven patterns) and features rebuilt only for the rows used.
+  - Nothing changes for users.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -315,6 +328,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T021 | Excess energy, cost and carbon estimates | 2026-10-27 |
 | T043 | Best model at full scale | 2026-10-27 |
 | T044a | Downstream pipeline at full scale (evaluation model, intervals, detection, explanations, impact) | 2026-10-28 |
+| T044b | Detector benchmark at full scale | 2026-10-28 |
 
 ## Current task
 
@@ -322,11 +336,11 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T044b — Detector benchmark at full scale** (M5b):
-- The T018 injected-anomaly benchmark, all detectors, under the same pre-stated rule that chose
-  the default (D030), against the evaluation model. It rebuilds features in memory for the
-  sample; at full scale it must recompute them only for the injected meters.
-- Then **T044c:** the LEAD human-label check with a full-scale H1-2016 model.
+**T044c — LEAD human-label check with a full-scale H1-2016 model** (M5b):
+- The T018b check: a model trained at full scale on January-May 2016, scored on the trusted
+  LEAD labels for July-December 2016, for the rolling z-score and the model detector. It
+  trains a model inside the check and rebuilds features in memory; at full scale both must use
+  the store.
 - Open from T044a: the 5 November event cluster (check against the clock audit), and a few
   meters whose intervals are still very wide.
 
@@ -341,7 +355,7 @@ See [ROADMAP.md](ROADMAP.md#t044b--detector-benchmark-at-full-scale).
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 3 / 5 |
+| M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 4 / 5 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 2 / 3 |

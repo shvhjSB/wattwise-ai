@@ -11,13 +11,16 @@ import pytest
 from tests.ml.conftest import BUILDINGS, SPLIT, features_of, synthetic
 from wattwise.ml.intervals import (
     MIN_MONTH_ROWS,
+    SCALE_FLOOR_FRACTION,
     Method,
     assess,
     conformal_quantile,
+    daily_window_statistics,
     fit,
     main,
     rolling_bounds,
     run_intervals,
+    usable_level,
 )
 from wattwise.ml.registry import promote, save, train
 
@@ -260,3 +263,153 @@ def test_the_command_line_writes_the_report_and_needs_a_model(
     capsys.readouterr()
     assert main(["--data", str(folder), "--root", str(tmp_path / "none")]) == 1
     assert "Train and promote one first" in capsys.readouterr().err
+
+
+def _epoch_ns(times: pd.DatetimeIndex) -> np.ndarray:
+    return np.asarray(
+        times.tz_convert(None).as_unit("ns").to_numpy(), dtype="datetime64[ns]"
+    ).astype(np.int64)
+
+
+def _reference_window_statistics(
+    rows: pd.DataFrame, values: np.ndarray, first: pd.Timestamp, days: int, lag: int, least: int
+) -> np.ndarray:
+    """The original per-meter, per-day implementation (before T044a), kept to check the
+    linear-time version against."""
+    times = pd.DatetimeIndex(rows["timestamp"])
+    usable = np.asarray(times >= first) & np.isfinite(values)
+    day = times.floor("D")
+    meters = rows["meter_id"].to_numpy()
+    out = np.full((1, len(rows)), np.nan)
+    for meter in sorted(set(meters)):
+        mine = meters == meter
+        known_times = times[mine & usable]
+        known = values[mine & usable]
+        order = np.argsort(_epoch_ns(known_times))
+        known = known[order]
+        stamps = _epoch_ns(known_times[order])
+        for d in sorted(set(day[mine])):
+            end = (d - pd.Timedelta(days=lag)).value
+            lo, hi = np.searchsorted(stamps, [end - pd.Timedelta(days=days).value, end])
+            if hi - lo < least:
+                continue
+            out[:, mine & np.asarray(day == d)] = np.quantile(known[lo:hi], 0.9)
+    return out
+
+
+def test_the_linear_window_statistics_equal_the_original_per_meter_loop() -> None:
+    rng = np.random.default_rng(3)
+    frames = []
+    for meter in ("m-c", "m-a", "m-b"):  # unsorted names, so grouping order is exercised
+        times = pd.date_range(T0, periods=24 * 40, freq="h").as_unit("us")
+        keep = rng.random(len(times)) > 0.1  # gaps
+        frames.append(pd.DataFrame({"timestamp": times[keep], "meter_id": meter}))
+    rows = pd.concat(frames).sample(frac=1.0, random_state=1).reset_index(drop=True)  # shuffled
+    values = rng.normal(size=len(rows))
+    values[rng.random(len(rows)) < 0.05] = np.nan  # missing scores are ignored
+    first = T0 + pd.Timedelta(days=3)
+
+    fast = daily_window_statistics(
+        rows, values, first.to_pydatetime(), lambda w: (np.quantile(w, 0.9),), outputs=1,
+        days=7, lag_days=1, min_values=50,
+    )  # fmt: skip
+    slow = _reference_window_statistics(rows, values, first, days=7, lag=1, least=50)
+
+    np.testing.assert_array_equal(fast, slow)
+    assert np.isfinite(fast).any() and np.isnan(fast).any()  # both branches covered
+
+
+def test_masked_rows_are_left_out_of_rolling_calibration_but_still_get_intervals() -> None:
+    days = 50
+    times = pd.date_range(T0, periods=24 * days, freq="h").as_unit("us")
+    rng = np.random.default_rng(5)
+    values = 10 + rng.normal(size=len(times))
+    rows = pd.DataFrame({"timestamp": times, "meter_id": "m", "value": values})
+    predicted, level = np.full(len(rows), 10.0), np.full(len(rows), 10.0)
+    usable = np.ones(len(rows), dtype=bool)
+    masked_days = slice(24 * 36, 24 * 39)  # three days, e.g. a stuck meter
+    usable[masked_days] = False
+    blanked = rows.assign(value=np.where(usable, values, np.nan))
+    start = T0.to_pydatetime()
+
+    masked = rolling_bounds(rows, predicted, level, 0.1, start, usable=usable)
+    as_missing = rolling_bounds(blanked, predicted, level, 0.1, start)
+    unmasked = rolling_bounds(rows, predicted, level, 0.1, start)
+
+    for got, expected in zip(masked, as_missing, strict=True):
+        np.testing.assert_array_equal(got, expected)  # masked = left out of calibration
+    assert np.isfinite(masked[1][masked_days]).all()  # ...but still given an interval
+    later = slice(24 * 47, 24 * days)  # windows that would include the masked days
+    assert not np.array_equal(unmasked[1][later], masked[1][later])
+
+
+def test_an_outlier_meter_moves_the_mean_width_but_not_the_typical_meter() -> None:
+    times = pd.date_range(T0, periods=200, freq="h").as_unit("us")
+    meters = ["a"] * 200 + ["b"] * 200 + ["wild"] * 200
+    rows = pd.DataFrame(
+        {"timestamp": list(times) * 3, "meter_id": meters, "value": np.full(600, 10.0)}
+    )
+    lower = np.concatenate([np.full(400, 8.0), np.full(200, 0.0)])
+    upper = np.concatenate([np.full(400, 12.0), np.full(200, 100_000.0)])
+
+    result = assess(rows, lower, upper, alpha=0.1)
+
+    assert result["mean_width"] > 30_000  # dominated by the one wild meter
+    assert result["median_width"] == 4.0  # most rows are ordinary
+    assert result["per_meter_relative_width"]["median"] == pytest.approx(0.4)  # 4 / 10
+    assert result["per_meter_relative_width"]["max"] == pytest.approx(10_000.0)  # the outlier
+
+
+def _echo_series() -> tuple[pd.DataFrame, np.ndarray, np.ndarray, np.ndarray]:
+    """One meter near 50 kWh/h with a week of zeros (an outage) in the calibration window. A
+    week later the past-only level is about 0 while consumption is normal again (the "echo")."""
+    times = pd.date_range(T0, periods=24 * 90, freq="h").as_unit("us")
+    rng = np.random.default_rng(11)
+    value = 50 + rng.normal(scale=3, size=len(times))
+    value[24 * 30 : 24 * 37] = 0.0  # the outage
+    level = pd.Series(value).shift(24 * 7).rolling(24 * 7, min_periods=1).mean().to_numpy()
+    level = np.where(np.isnan(level), 50.0, level)
+    level[24 * 37 : 24 * 44] = 0.02  # the echo: a tiny, positive level while value is ~50
+    rows = pd.DataFrame({"timestamp": times, "meter_id": "m", "value": value})
+    return rows, np.full(len(rows), 50.0), level, value
+
+
+def test_a_level_below_one_percent_of_the_meters_median_is_not_a_usable_scale() -> None:
+    rows, _, level, _ = _echo_series()
+    first, last = T0.to_pydatetime(), (T0 + pd.Timedelta(days=60)).to_pydatetime()
+
+    cleaned = usable_level(rows, level, first, last)
+
+    window = (rows["timestamp"] < last).to_numpy() & (level > 0)
+    floor = SCALE_FLOOR_FRACTION * np.median(level[window])  # 1% of the meter's median level
+    np.testing.assert_array_equal(np.isnan(cleaned), level < floor)  # the rule, exactly
+    assert np.isnan(cleaned[24 * 37 : 24 * 44]).all()  # including the echo week
+    np.testing.assert_array_equal(cleaned[level >= floor], level[level >= floor])  # nothing else
+
+
+def test_an_echo_week_no_longer_blows_up_the_rolling_intervals() -> None:
+    rows, predicted, level, _ = _echo_series()
+    start = T0.to_pydatetime()
+    after = slice(24 * 44, 24 * 80)  # the weeks whose windows contain the echo
+
+    quality = np.ones(len(rows), dtype=bool)
+    quality[24 * 30 : 24 * 37] = False  # the T042 mask drops the zero run itself, not its echo
+    naive = rolling_bounds(rows, predicted, level, 0.1, start, usable=quality)
+    cleaned = usable_level(rows, level, start, (T0 + pd.Timedelta(days=60)).to_pydatetime())
+    fixed = rolling_bounds(rows, predicted, cleaned, 0.1, start, usable=quality)
+
+    def widest(bounds: tuple[np.ndarray, np.ndarray]) -> float:
+        return float(np.nanmax(bounds[1][after] - bounds[0][after]))
+
+    assert widest(naive) > 1_000  # the defect: thousands of kWh around a 50 kWh/h meter
+    assert widest(fixed) < 100  # a few multiples of the noise
+    assert np.isnan(fixed[0][24 * 37 : 24 * 44]).all()  # no interval at all on echo rows
+
+
+def test_a_meter_with_no_level_in_the_window_keeps_its_levels() -> None:
+    rows, _, level, _ = _echo_series()
+    before = (T0 - pd.Timedelta(days=20)).to_pydatetime()  # a window before the meter's data
+
+    cleaned = usable_level(rows, level, before, (T0 - pd.Timedelta(days=10)).to_pydatetime())
+
+    np.testing.assert_array_equal(cleaned, level)  # nothing to compare with: nothing changed

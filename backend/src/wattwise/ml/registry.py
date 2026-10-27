@@ -71,6 +71,12 @@ METADATA_FILE: Final = "metadata.json"
 #: The model adopted in D026: LightGBM on every feature group, 200 trees.
 ADOPTED: Final = (Family.LIGHTGBM, Variant.FULL, GRID[Family.LIGHTGBM][0])
 SCORED: Final = (Role.VALIDATION, Role.TEST)
+#: Calibration (intervals, the model detector) needs residuals the model has not trained on.
+NO_VALIDATION_WINDOW: Final = (
+    "The model's split has no validation window to calibrate on (a production refit has "
+    "trained on it). Promote a model with an out-of-sample validation window, e.g. "
+    "python -m wattwise.ml.fullscale --evaluation-model --promote (D039)."
+)
 _VERSION_NAME: Final = re.compile(r"^\d{8}T\d{6}Z-[0-9a-f]{12}$")
 _SCALE_RULE: Final = {
     Variant.FULL: "target / rolling_mean_168h (the meter's mean over the week ending one "

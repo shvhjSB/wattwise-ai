@@ -515,15 +515,19 @@ the SHA-256 of the file it was read from:
 real coordinates), now pinned in
 [`bdg2_sites.py`](../backend/src/wattwise/data/bdg2_sites.py) as `EGRID_SUBREGION`:
 
-| Site | Coordinates | eGRID subregion |
-|---|---|---|
-| Bear | 37.871903, -122.260729 | CAMX (WECC California) |
-| Bull | 30.267200, -97.743100 | ERCT (ERCOT All) |
-| Cockatoo | 42.459837, -76.485292 | NYUP (NPCC Upstate NY) |
-| Fox | 33.424425, -111.928140 | AZNM (WECC Southwest) |
-| Hog | 44.978782, -93.255398 | MROW (MRO West) |
-| Panther | 28.517689, -81.379039 | FRCC (FRCC All) |
-| Peacock | 40.350000, -74.700000 | RFCE (RFC East) |
+| Site | eGRID subregion |
+|---|---|
+| Bear | CAMX (WECC California) |
+| Bull | ERCT (ERCOT All) |
+| Cockatoo | NYUP (NPCC Upstate NY) |
+| Fox | AZNM (WECC Southwest) |
+| Hog | MROW (MRO West) |
+| Panther | FRCC (FRCC All) |
+| Peacock | RFCE (RFC East) |
+
+The sites' coordinates are deliberately not repeated here (D014: BDG2 data is not
+redistributed); only the resulting subregion is. (An earlier version of this table listed them;
+that version is in the repository's history.)
 
 Rat (US-DC, per the geography table above) has no row: it is in the published BDG2 metadata but
 not in this project's electricity meters, so its coordinates were never looked up.

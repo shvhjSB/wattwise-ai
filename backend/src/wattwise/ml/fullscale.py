@@ -31,7 +31,8 @@ import json
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
-from datetime import datetime
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Final
 
@@ -46,16 +47,20 @@ from wattwise.ml.features import FEATURE_SET_VERSION, feature_names
 from wattwise.ml.models import HOLDOUTS, Family, FeatureModel, Variant
 from wattwise.ml.registry import (
     DEFAULT_ROOT,
+    NO_VALIDATION_WINDOW,
     NoModelError,
     RegistryError,
     Trained,
     TrainingInfo,
+    current,
     load,
     promote,
+    read_inputs,
     save,
+    verify,
 )
 from wattwise.ml.scale import CATEGORIES, DEFAULT_STORE, KEY_COLUMNS, quality_mask
-from wattwise.ml.splits import Chronological, Holdout, Role, SplitConfig, make_split
+from wattwise.ml.splits import Chronological, Holdout, Role, Split, SplitConfig, make_split
 
 IntArray = npt.NDArray[np.int64]
 
@@ -86,6 +91,11 @@ SEARCH: Final = tuple(
     for leaves in leaves_tried
 )
 NAIVE: Final = "seasonal-naive-1w"
+#: Days of readings kept before a model's validation window when the downstream tools
+#: (detectors, intervals, explanations, impact) read from the store: the rolling same-hour
+#: score looks back 14 days and a long event's reference one week (T044a).
+WINDOW_LEAD_DAYS: Final = 28
+READING_COLUMNS: Final = ("timestamp", "meter_id", "building_id", "meter_type", "unit", "value")
 
 
 # ---------------------------------------------------------------------------
@@ -126,6 +136,50 @@ def load_features(store: Path, ids: npt.ArrayLike) -> pd.DataFrame:
             frames.append(frame)
         offset += rows
     return pd.concat(frames) if frames else pd.DataFrame(columns=columns, dtype="float32")
+
+
+def window_inputs(
+    store: Path, data: Path, start: datetime, end: datetime
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Readings, buildings and features for [start, end) from the T042 store, shaped like
+    `registry.read_inputs` returns them: canonical columns and dtypes, and one RangeIndex shared
+    by readings and features.
+
+    The features are the store's, computed on each meter's whole series, so the window's
+    history features equal the full-scale ones; nothing is recomputed from the window."""
+    keys = load_keys(store)
+    stamps = keys["timestamp"]
+    ids = np.flatnonzero(((stamps >= start) & (stamps < end)).to_numpy())
+    features = load_features(store, ids)  # rows in store order, like `ids`
+    readings = keys.loc[ids, list(READING_COLUMNS)].astype(
+        {"meter_id": "str", "building_id": "str", "meter_type": "str", "unit": "str"}
+    )
+    readings.index = pd.RangeIndex(len(ids))
+    features.index = pd.RangeIndex(len(ids))
+    return readings, pd.read_parquet(data / "buildings.parquet"), features
+
+
+def model_window_inputs(
+    store: Path, data: Path, root: Path = DEFAULT_ROOT
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """`window_inputs` for what the promoted model's downstream tools need: WINDOW_LEAD_DAYS
+    before its validation window (calibration) up to the end of its test window (detection)."""
+    split = SplitConfig.model_validate(verify(current(root), root).training.split_config).time
+    if not isinstance(split, Chronological) or split.validation_start is None:
+        raise RegistryError(NO_VALIDATION_WINDOW)
+    start = split.validation_start - timedelta(days=WINDOW_LEAD_DAYS)
+    return window_inputs(store, data, start, split.test_end)
+
+
+def downstream_inputs(
+    data: Path, enrichment: Path | None, store: Path | None, root: Path = DEFAULT_ROOT
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+    """Inputs for the downstream tools (detection, intervals, explanations, impact): built in
+    memory from prepared tables (the 20-meter sample), or, with `store`, read from the T042 store
+    for the promoted model's windows (full scale, where features do not fit in memory)."""
+    if store is None:
+        return read_inputs(data, enrichment)
+    return model_window_inputs(store, data, root)
 
 
 def sample_rows(candidates: npt.NDArray[np.bool_], fraction: float, seed: int) -> IntArray:
@@ -183,6 +237,39 @@ def compare(
 # ---------------------------------------------------------------------------
 
 
+@dataclass(frozen=True)
+class _Rows:
+    split: Split
+    ok: npt.NDArray[np.bool_]  # the T042 quality mask
+    roles: dict[Role, IntArray]
+    train_ids: IntArray  # the seeded training sample
+    stop_ids: IntArray  # the seeded early-stopping sample of validation rows
+
+
+def _rows(
+    keys: pd.DataFrame, split_config: SplitConfig, buildings: pd.DataFrame, fraction: float
+) -> _Rows:
+    """The split, and the seeded samples of quality-checked training and validation hours. Every
+    command that must reproduce the T043 study's models samples through here."""
+    split = make_split(keys, split_config, buildings)
+    part = split.folds[0]
+    ok = quality_mask(keys)
+    roles = {role: np.asarray(part.positions[role], dtype=np.int64) for role in part.positions}
+    finite = keys["value"].notna().to_numpy()
+    in_role: dict[Role, npt.NDArray[np.bool_]] = {}
+    for role in (Role.TRAIN, Role.VALIDATION):
+        flags = np.zeros(len(keys), dtype=bool)
+        flags[roles[role]] = True
+        in_role[role] = flags
+    return _Rows(
+        split=split,
+        ok=ok,
+        roles=roles,
+        train_ids=sample_rows(in_role[Role.TRAIN] & ok & finite, fraction, SAMPLE_SEED),
+        stop_ids=sample_rows(in_role[Role.VALIDATION] & ok & finite, fraction, SAMPLE_SEED + 1),
+    )
+
+
 def run_study(
     store: Path,
     buildings: pd.DataFrame,
@@ -198,18 +285,9 @@ def run_study(
 ) -> dict[str, Any]:
     started = time.perf_counter()
     keys = load_keys(store)
-    split = make_split(keys, split_config, buildings)
-    part = split.folds[0]
-    ok = quality_mask(keys)
-    roles = {role: np.asarray(part.positions[role], dtype=np.int64) for role in part.positions}
-    finite = keys["value"].notna().to_numpy()
-    in_role: dict[Role, npt.NDArray[np.bool_]] = {}
-    for role in (Role.TRAIN, Role.VALIDATION):
-        flags = np.zeros(len(keys), dtype=bool)
-        flags[roles[role]] = True
-        in_role[role] = flags
-    train_ids = sample_rows(in_role[Role.TRAIN] & ok & finite, fraction, SAMPLE_SEED)
-    stop_ids = sample_rows(in_role[Role.VALIDATION] & ok & finite, fraction, SAMPLE_SEED + 1)
+    rows = _rows(keys, split_config, buildings, fraction)
+    split, ok, roles = rows.split, rows.ok, rows.roles
+    train_ids, stop_ids = rows.train_ids, rows.stop_ids
     val_ids, test_ids = roles[Role.VALIDATION], roles[Role.TEST]
     needed = np.unique(np.concatenate([train_ids, stop_ids, val_ids, test_ids]))
     features = load_features(store, needed)
@@ -433,29 +511,30 @@ def _save_refit(
             test_end=time_split.test_end,
         )
     )
-    refit_split = make_split(keys, refit_config)
-    part = refit_split.folds[0]
-    test_ids = np.asarray(part.positions[Role.TEST], dtype=np.int64)
-    report = evaluate(
-        refit_split,
-        {(part.fold.name, Role.TEST): refit_test.reindex(test_ids).set_axis(test_ids)},
-        Forecaster(name=refit.name, params=refit.params),
-    )
-    o = report.scores[0].overall
-    used = keys.loc[np.concatenate([train_ids, stop_ids])]
-    used = used[refit.usable(used) & used["value"].notna().to_numpy()]
-    training = TrainingInfo(
-        data_fingerprint=fingerprint(keys),
-        data_rows=len(keys),
-        training_rows=len(used),
-        meters=int(used["meter_id"].nunique()),
-        first=_iso(used["timestamp"].min()),
-        last=_iso(used["timestamp"].max()),
-        split_config_sha256=refit_config.sha256(),
-        split_config=refit_config.model_dump(mode="json"),
-    )
-    metrics: dict[str, dict[str, float | int | None]] = {
-        "test": {
+    used = np.concatenate([train_ids, stop_ids])
+    return _save_model(refit, keys, refit_config, used, {Role.TEST: refit_test}, root)
+
+
+def _save_model(
+    model: FeatureModel,
+    keys: pd.DataFrame,
+    split_config: SplitConfig,
+    used_ids: IntArray,
+    predicted: Mapping[Role, pd.Series],
+    root: Path,
+) -> str:
+    """Save `model` with its training rows and its T011 metrics for each role in `predicted`."""
+    split = make_split(keys, split_config)
+    part = split.folds[0]
+    predictions = {}
+    for role, values in predicted.items():
+        ids = np.asarray(part.positions[role], dtype=np.int64)
+        predictions[(part.fold.name, role)] = values.reindex(ids).set_axis(ids)
+    report = evaluate(split, predictions, Forecaster(name=model.name, params=model.params))
+    metrics: dict[str, dict[str, float | int | None]] = {}
+    for role in predicted:
+        o = next(s for s in report.scores if s.role is role).overall
+        metrics[role.value] = {
             "mae": o.mae,
             "rmse": o.rmse,
             "bias": o.bias,
@@ -463,8 +542,72 @@ def _save_refit(
             "scored": o.scored,
             "missing_prediction": o.missing_prediction,
         }
+    used = keys.loc[used_ids]
+    used = used[model.usable(used) & used["value"].notna().to_numpy()]
+    training = TrainingInfo(
+        data_fingerprint=fingerprint(keys),
+        data_rows=len(keys),
+        training_rows=len(used),
+        meters=int(used["meter_id"].nunique()),
+        first=_iso(used["timestamp"].min()),
+        last=_iso(used["timestamp"].max()),
+        split_config_sha256=split_config.sha256(),
+        split_config=split_config.model_dump(mode="json"),
+    )
+    return save(Trained(model=model, training=training, metrics=metrics), root)
+
+
+def evaluation_model(
+    store: Path,
+    buildings: pd.DataFrame,
+    study: Path = DEFAULT_OUTPUT,
+    root: Path = DEFAULT_ROOT,
+    split_config: SplitConfig = DEFAULT_SPLIT,
+    fraction: float = SAMPLE_FRACTION,
+    promote_if_reproduced: bool = False,
+    log: Callable[[str], None] = print,
+) -> dict[str, Any]:
+    """Rebuild the T043 study's chosen model (trained on the training window only) and save it
+    with its own split, so that its validation window is out-of-sample (T044a, D039).
+
+    The production refit has seen the validation window, so calibrating intervals or a detector
+    on that window would use in-sample residuals. The chosen model is retrained with the study's
+    settings, sample and tree count; it is only promoted if it reproduces the study's recorded
+    validation MAE, which shows it is the same model."""
+    summary = json.loads((study / "fullscale.json").read_text(encoding="utf-8"))
+    chosen = summary["chosen"]
+    settings = {**chosen["settings"], "n_estimators": int(chosen["best_iteration"])}
+    recorded = next(
+        t["validation"]["mae"] for t in summary["search"] if t["settings"] == chosen["settings"]
+    )
+    keys = load_keys(store)
+    rows = _rows(keys, split_config, buildings, fraction)
+    val_ids, test_ids = rows.roles[Role.VALIDATION], rows.roles[Role.TEST]
+    features = load_features(store, np.unique(np.concatenate([rows.train_ids, val_ids, test_ids])))
+    t0 = time.perf_counter()
+    model = FeatureModel(Family.LIGHTGBM, Variant.FULL, settings, features)
+    model.fit(keys.loc[rows.train_ids])
+    log(f"  refitted {model.name} in {time.perf_counter() - t0:.0f} s")
+    predicted = {
+        Role.VALIDATION: predict(model, keys, val_ids),
+        Role.TEST: predict(model, keys, test_ids),
     }
-    return save(Trained(model=refit, training=training, metrics=metrics), root)
+    actual = keys["value"].to_numpy(dtype=float)
+    validation = _metrics(actual[val_ids], predicted[Role.VALIDATION].reindex(val_ids).to_numpy())
+    reproduced = validation["mae"] is not None and abs(validation["mae"] - recorded) <= 1e-6
+    version = _save_model(model, keys, split_config, rows.train_ids, predicted, root)
+    if reproduced and promote_if_reproduced:
+        promote(version, root)
+    result = {
+        "version": version,
+        "settings": settings,
+        "validation_mae": validation["mae"],
+        "recorded_validation_mae": recorded,
+        "reproduced": reproduced,
+        "promoted": bool(reproduced and promote_if_reproduced),
+    }
+    log(json.dumps(result, indent=2))
+    return result
 
 
 def _iso(value: Any) -> str:
@@ -546,14 +689,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, required=True, help="folder with buildings.parquet")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="model registry")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
-    parser.add_argument("--promote", action="store_true", help="promote the refit if adopted")
+    parser.add_argument("--promote", action="store_true", help="promote the result if it passes")
+    parser.add_argument(
+        "--evaluation-model",
+        action="store_true",
+        help="rebuild the study's chosen (training-window) model instead of running the study",
+    )
     args = parser.parse_args(argv)
     try:
         buildings = pd.read_parquet(args.data / "buildings.parquet")
+        if args.evaluation_model:
+            result = evaluation_model(
+                args.store, buildings, args.output, args.root,
+                promote_if_reproduced=args.promote,
+            )  # fmt: skip
+            return 0 if result["reproduced"] else 1
         summary = run_study(
             args.store, buildings, args.output, args.root, promote_if_adopted=args.promote
         )
-    except (FileNotFoundError, ValueError, RegistryError) as exc:
+    except (FileNotFoundError, ValueError, RegistryError, KeyError, StopIteration) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     print(to_markdown(summary))

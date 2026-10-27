@@ -71,7 +71,9 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
-| T044 | Downstream re-run at full scale (intervals, detectors, LEAD, explanations) | M5b | T043, T019b, T020 | Not started |
+| T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
+| T044b | Detector benchmark at full scale | M5b | T044a, T018 | Not started |
+| T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Not started |
 
 ---
 
@@ -440,12 +442,46 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   sample-scale finding. The old D026 sample-trained model loses to seasonal-naive at full scale
   (−4.4%) ([EVALUATION.md](EVALUATION.md#best-model-at-full-scale-t043-d036)).
 
-### T044 — Downstream re-run at full scale
+### T044 — Downstream re-run at full scale (split into T044a, T044b, T044c)
 - **Objective:** re-check every downstream result with the full-scale model.
-- **Scope:** prediction intervals (coverage), the detector benchmark (all detectors, same rule),
-  the LEAD check (with a full-scale H1-2016 model) and explanations.
-- **Acceptance:** defaults change only under the rules already fixed (D030, D032); every
-  changed number is recorded with the command that produced it.
+- **Why split (2026-10-27):** at the start of the task, every downstream command failed with the
+  T043 production refit promoted (its split has no validation window, and calibrating on a
+  window it trained on would use in-sample residuals); the benchmark and the LEAD check rebuild
+  features in memory, which does not fit at full scale; and the interval code was quadratic in
+  meters. Each part is a task of its own.
+- **Acceptance (all three):** defaults change only under the rules already fixed (D030, D032);
+  every changed number is recorded with the command that produced it.
+
+### T044a — Downstream pipeline at full scale
+- **Scope:**
+  - An evaluation model: the T043 chosen model (training window only), rebuilt
+    deterministically, saved with its out-of-sample validation window and promoted only if it
+    reproduces T043's recorded validation MAE.
+  - Downstream inputs read from the T042 store for the model's windows (`--store`).
+  - Interval code that scales with rows, not meters x days x rows; the D035 quality mask
+    applied to calibration (intervals and the model detector).
+  - Re-run at full scale: prediction intervals (coverage), detection (default and model
+    detector), explanations and impact.
+- **Acceptance:** the shared acceptance above; the linear interval code equals the original on
+  test data; every command runs at full scale on this machine.
+- **Done (2026-10-28, D039, D040, D041):** everything above runs at full scale in under 13
+  minutes per step (intervals 12 min, peak 4.3 GB; TreeSHAP influences take hours). Three defects the sample could not show were found
+  and fixed: the downstream tools could not run on the production refit (D039); meter problems
+  were counted as potential excess, 42% of the first full-scale total (D040); and an outage left
+  an "echo week" of near-zero levels that made 31 meters' intervals 5-2,190 times their mean
+  reading (D041). Rolling stays the default interval method under D032's criteria; the alert
+  load of both detectors matches the sample; the corrected potential excess is 558,722 kWh and
+  220,140 kg CO2e
+  ([EVALUATION.md](EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041)).
+
+### T044b — Detector benchmark at full scale
+- **Scope:** the T018 injected-anomaly benchmark (all detectors, the same pre-stated rule)
+  against the full-scale evaluation model, with features recomputed only for the injected
+  meters.
+
+### T044c — LEAD check with a full-scale H1-2016 model
+- **Scope:** the T018b check with a model trained at full scale on January–May 2016, scored on
+  the trusted LEAD labels for July–December 2016.
 
 ## M6 — Anomaly detection and test scenarios
 
@@ -575,8 +611,9 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - currency handling
 - **Done (2026-10-27, D038):** `wattwise.ml.impact`, wired into every T020 evidence bundle.
   Priced per event's own BDG2 site; cost summed only within one named geography at a time.
-  On the BDG2 test quarter: 5,766.7 kWh potential excess, 2,459.2 kg CO2e
-  ([EVALUATION.md](EVALUATION.md#excess-energy-cost-and-carbon-impact-t021)).
+  The first sample-scale figures were superseded in T044a (D040: meter problems are not
+  consumption); see
+  [EVALUATION.md](EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041).
 
 ### T022 — Alert prioritisation
 - **Objective:** rank alerts by likely business impact, not by anomaly score alone.

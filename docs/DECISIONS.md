@@ -1357,7 +1357,8 @@ links to the entry that replaces it.
     and the rendered explanation names the figure when it is positive, worded as "potential
     excess ... not a verified figure" — never "waste", which stays in explanations.py's
     forbidden-word list.
-- **Evidence:** on the BDG2 test quarter (rolling z-score, 100 events): 5,766.7 kWh total
+- **Evidence (superseded by D040: these figures counted meter problems):** on the BDG2 test
+  quarter (rolling z-score, 100 events): 5,766.7 kWh total
   potential excess, 2,459.2 kg CO2e across 7 configured geographies; 25 events at Eagle and
   Gator (no coordinates) correctly show "not configured" carbon, not zero or a guess.
 - **Alternatives considered:**
@@ -1372,6 +1373,141 @@ links to the entry that replaces it.
   read a `potential_excess_kwh`/`cost`/`carbon_kg` straight from each event's evidence bundle,
   already labelled "potential" and already resolved to the event's own site.
 
+## D039 — The evaluation model: downstream tools calibrate on a model that did not train on the window
+
+- **Date:** 2026-10-28 · **Task:** T044a · **Status:** Accepted
+- **Decision:** the registry's promoted model is now the T043 chosen model **trained on the
+  training window only** (`20261027T121334Z-eeec81e9592c`), not the production refit
+  (`20261027T103133Z-ea3909799a6b`, kept in the registry).
+  - **Why:** intervals and the model detector calibrate on the model's validation window. The
+    refit has trained on it, so its residuals there are in-sample and would make every interval
+    too tight. With the refit promoted, every downstream command failed with "no validation
+    window" (a correct refusal).
+  - **How:** `python -m wattwise.ml.fullscale --evaluation-model --promote` rebuilds the model
+    with the study's settings, sample and tree count, and **promotes it only if it reproduces
+    the study's recorded validation MAE exactly. It did: 15.267402**, with identical RMSE, bias,
+    WAPE and row counts. Its training data ends 2017-06-30 23:00, before the validation window.
+  - **Cost in accuracy:** test MAE 13.720 against the refit's 13.676 on the harness's rows
+    (0.3%).
+- **Also made possible at full scale:**
+  - The downstream commands (`intervals`, `detection`, `explanations`, `impact`) read inputs
+    from the T042 store with `--store`: readings, buildings and features for the model's windows
+    (from 28 days before validation to the end of test). Features are the store's, computed on
+    each meter's whole series, so nothing is recomputed from a window. A test checks this equals
+    the in-memory path exactly.
+  - The interval code was quadratic (meters x days x rows) and took hours at full scale; it is
+    linear and **equals the original on test data** (checked against a kept copy of the old
+    loop).
+  - `explanations --no-influences` skips TreeSHAP (about 42 ms per event hour, hours at full
+    scale), and `impact` uses it, since pricing needs the bounds, not the influences.
+- **Open (for T024/T026/T027):** one `CURRENT` pointer cannot say both "the best predictor" (the
+  refit) and "the model the calibrated tools use" (the evaluation model). Until the API tasks
+  decide, `CURRENT` is the evaluation model, and the refit is addressed by its version.
+- **Alternatives considered:**
+  - **Calibrate on the refit's in-sample residuals:** rejected; intervals would be
+    over-confident, in a way nothing in the report would show.
+  - **Hold out a slice of the training window for calibration instead:** rejected for this task;
+    it would change the model T043 evaluated.
+  - **Keep the refit promoted and leave downstream tools broken:** rejected.
+
+## D040 — Meter problems are not potential excess: a correction to T021 (D038)
+
+- **Date:** 2026-10-27 · **Task:** T044a · **Status:** Accepted
+- **Decision:** events whose primary signature is `data_fault` or `flatline`
+  (`signatures.METER_PROBLEMS`) are **never counted** in potential excess, cost or carbon. Their
+  kWh above the interval's upper bound is kept, apart, as `kwh_above_bound_not_counted`, and
+  reported on its own line in the impact summary, so nothing is hidden and nothing is presented
+  as consumption.
+  - **Bundles:** `impact.potential_excess_kwh` is `None` (not 0) for such events, with
+    `meter_problem: true`; the rendered explanation does not state a potential excess for them.
+  - **`price_bundles`** reads the signature itself, so explanations written before this
+    decision are priced the same way.
+- **Why:** D029 says "a meter problem is never presented as consumption", and T021 (D038)
+  broke it. On the 20-meter sample the effect was hidden by the small number of such events. At
+  full scale, **462 of 5,546 events (8.3%) are meter problems, and in the first run they held
+  425,193 kWh (42.4%) of the first total of 1,002,572 kWh.** Two single hours alone
+  (Bull_education_Dottie and Bull_education_Delia, both `data_fault`) were about 54,000 kWh
+  each. The effect differs by geography: 92% of GB's first figure was meter faults (121,227 kWh
+  before, 9,293 after).
+- **Corrected full-scale figures** (rolling z-score, BDG2 test quarter, 5,084 counted events,
+  after this decision and D041): **558,722 kWh potential excess and 220,140 kg CO2e** (from
+  1,002,572 kWh and 390,369 kg). Cost at the EIA Minnesota 2016 commercial rate for US-MROW:
+  11,860.84 USD over 652 events. The 462 meter-problem events sit 308,410 kWh above their
+  bounds, reported apart and not counted.
+- **What this does not claim:** the remaining 577,379 kWh is still *potential*, not verified.
+  The total is concentrated: the 10 largest counted events hold 17.5% of it, the largest 50
+  hold 40.5% and the largest 200 hold 68.5%. Only 2,286 of the 5,084 counted events have any
+  hour above the upper bound at all. A person should check the largest first (T022).
+- **The sample-scale T021 figures (5,766.7 kWh, 2,459.2 kg CO2e) are superseded.** They counted
+  meter problems, and used the D026 model. They are not re-derived; the full-scale run replaces
+  them.
+- **Alternatives considered:**
+  - **Counting them and labelling them:** rejected. A total that includes meter faults is the
+    number people read.
+  - **Setting their excess to 0:** rejected. Zero reads as "nothing found"; `None` says "not
+    applicable", and the real figure stays visible in its own field.
+  - **Re-running the 4.5-hour full-scale explanations to regenerate the bundles:** rejected as
+    unnecessary. The numbers are deterministic, and the signature is in every bundle.
+
+## D041 — Intervals need a usable scale: a level that collapsed after an outage is not one
+
+- **Date:** 2026-10-28 · **Task:** T044a · **Status:** Accepted
+- **Decision:** in `wattwise.ml.intervals.usable_level`, a row's recent level is a usable scale
+  only if it is at least **1% of the meter's own median level** in the calibration window
+  (`SCALE_FLOOR_FRACTION`, the detectors' `scale_floor_fraction` from T016). Otherwise the level
+  is NaN: the row gets **no interval, and no calibration score** ("unknown", never zero). The
+  interval report and the explanations use the same rule, and both calibrate on quality rows
+  only (D035, which T044a also made true for intervals and the model detector for the first
+  time).
+- **The defect (found at full scale; the sample never showed it):**
+  - The level is the mean of the week ending a week earlier (past-only). After a week or more of
+    zero readings (an outage), it is about 0 a week later, while consumption is back to
+    normal: **a week of "echo" rows, with relative scores in the thousands.** The quality mask
+    drops the zero readings but not the echo, because those readings are valid.
+  - The echo rows were about a quarter of the next 28-day calibration windows, so the
+    90th-percentile score q, and every interval around a normal 50 kWh/h meter, became
+    plus or minus thousands of kWh for about five weeks. 31 of 1,017 meters had intervals wider
+    than 500% of their mean reading, and 4 wider than 100,000%. The mean width of rolling 90%
+    intervals was 819 kWh against a median of 32.
+  - The echo rows themselves got collapsed intervals (q times a level of 0.02), so all their
+    normal consumption would count as "above the upper bound".
+- **Measured on the two clearest real meters before changing anything** (Bear_education_Wade,
+  Lamb_office_Bertha): mean width 109,459 and 123,430 kWh before; 82 and 108 after; medians
+  unchanged (41 to 40 and 38 to 30). Only about 3.7% of their rows sit on the ramp between the
+  floor and normal, too few to inflate a 90th percentile, so no second parameter was needed.
+- **Full-scale effect** (rolling, nominal 90%): mean width 819.5 to **76.4 kWh**, interval score
+  867 to **122.8**, coverage 87.1% to **87.2%**. 148,892 rows in the window have no usable scale
+  and now get no interval; 3,222 more test rows are without an interval than before (0.15%).
+  Impact: the potential-excess total falls a further 3% (577,379 to 558,722 kWh) because the
+  collapsed intervals no longer count normal consumption.
+- **How the 1% was chosen:** it is the project's existing scale-floor constant, justified by the
+  diagnosis (echo levels were 0.02-0.07 kWh against medians of 30-60, three orders of magnitude
+  below), not by any coverage result. The meter's median is taken from the calibration window,
+  so no test information is used.
+- **D032 re-checked under the same criteria at full scale: rolling stays the default.**
+
+  | At nominal 90% | Rolling | Relative | Absolute |
+  |---|---|---|---|
+  | Coverage (test) | **87.2%** | 87.0% | 86.0% |
+  | Median width (kWh) | **31.8** | 32.8 | 32.4 |
+  | Interval score (mean) | **122.8** | 2,829.7 | 123.1 |
+  | Worst meter's coverage | **58.2%** | 28.2% | 25.5% |
+  | Meters within 2 points of nominal | **367 of 1,017** | 240 of 991 | 209 of 991 |
+
+  Still **not calibrated** (November, the first winter month, covers 84.5%), as in T019.
+- **Remaining, stated plainly:** a few meters still have very wide intervals (the worst is 468
+  times its mean reading, from a cause other than an echo week that this task did not find),
+  so a mean width is not a typical one; the report now shows the median and the spread.
+- **Not changed:** the model itself predicts about 0 kWh in an echo week, because its own level
+  feature has collapsed. That is a model limitation (its `MIN_SCALE` is 0.01 kWh). It is in the
+  test metrics already, and is a candidate for a later model task.
+- **Alternatives considered:**
+  - **No floor, dropping the nadir by hand:** rejected, not principled.
+  - **A level that ignores masked hours:** it would change a model feature, which means a
+    retrain. Rejected for this task.
+  - **A higher floor (10%, 50%):** unnecessary on the measured meters, and a larger parameter
+    to defend.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1384,4 +1520,5 @@ links to the entry that replaces it.
 | Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
+| Which artifact serves predictions: the refit (best accuracy) or the evaluation model (the calibrated tools) | T024/T026/T027 | One `CURRENT` pointer cannot be both (D039) |
 

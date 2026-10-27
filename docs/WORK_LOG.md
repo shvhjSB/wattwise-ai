@@ -1972,7 +1972,8 @@ Also done in parallel while T043's full-scale study trained in the background.
   import inside `run_impact`, documented at the top of `impact.py`.
 
 **Real data (BDG2 test quarter, rolling z-score, 100 events)**
-- **Total: 5,766.7 kWh potential excess, 2,459.2 kg CO2e**, across 7 configured geographies.
+- **Total: 5,766.7 kWh potential excess, 2,459.2 kg CO2e**, across 7 configured geographies
+  (*superseded in T044a: this counted meter problems, see D040*).
 - **25 events at Eagle and Gator (no coordinates) correctly show "not configured"** carbon, not
   zero and not a guess.
 - Cost was priced only for US-MROW (Hog, 20 events) at the EIA Minnesota 2016 commercial rate
@@ -2026,3 +2027,63 @@ Also done in parallel while T043's full-scale study trained in the background.
 - `pytest -W error`: project-wide pass, including 6 new tests on `fullscale.py` (sampling, the
   fast seasonal-naive lag, loading exact feature rows, a study that adopts and saves its refit,
   reproducibility, and the CLI's error path).
+
+---
+
+## 2026-10-28 — T044a Downstream pipeline at full scale
+
+T044 was split into T044a (this), T044b (the detector benchmark) and T044c (the LEAD check):
+at the start of the task every downstream command failed on the promoted model, the benchmark
+and the LEAD check rebuild features in memory, and the interval code was quadratic.
+
+**Done**
+- **Evaluation model (D039):** `fullscale --evaluation-model`. Rebuilt the T043 chosen model on
+  the training window only in 4,292 s, and it **reproduced the recorded validation MAE exactly
+  (15.267402)**, so it was promoted. The production refit stays in the registry. `MODELS.md`
+  now describes both (it still called the 20-meter model current).
+- **Store-backed inputs:** `--store` on the four downstream commands; a test shows the store
+  window equals the in-memory readings and features exactly.
+- **Interval code:** linear in rows, equal to the old per-meter loop on test data (the old loop
+  is kept in the test). Calibration now excludes the D035 quality-mask rows for intervals and the
+  model detector. Report adds median width and the per-meter width spread.
+- **Full-scale runs**, one at a time: intervals 737 s (4.30 GB), detection 110 s, model
+  detector 447 s, explanations 16,468 s with TreeSHAP (of which about 2.8 h standby) and 339 s
+  without, impact 29 s.
+
+**Defects found and fixed (the 20-meter sample could not show any of them)**
+- **D040, meter problems counted as consumption.** The first full-scale impact total was
+  1,002,572 kWh; 425,193 kWh (42.4%) of it was data faults and flatlines, two single hours alone
+  about 54,000 kWh each. Now excluded and reported apart; the total is 558,722 kWh.
+- **D041, echo weeks.** Mean rolling width 819 kWh against a median of 32. Traced to the
+  past-only level collapsing to about 0 a week after an outage. Measured on two real meters
+  (109,459 and 123,430 kWh mean width before, 82 and 108 after) before the rule was fixed.
+  A rule that a level below 1% of the meter's median is not a usable scale.
+- **Errors of my own caught on the way:** a runner script that reported a successful step as
+  failed (an empty exit code read as non-zero); a file written with the wrong encoding (repaired,
+  and the test run again); and a claim about how concentrated the impact total is, written from
+  the earlier numbers, which I recomputed before it was kept.
+- **A T021a slip, corrected here:** the DATASETS.md table I added in T021a listed exact
+  six-decimal coordinates for seven BDG2 sites, which D014 says not to redistribute and which
+  nothing needed. Removed; only the site-to-subregion mapping stays. **The coordinates remain in
+  the history of commit `bca720c`, which is pushed and public;** removing them from history would
+  need a force-push, which the working agreement forbids, so that is the owner's decision.
+
+**Results** (docs/EVALUATION.md)
+- **Intervals:** rolling at nominal 90% measures 87.2% (87.1% before the fix; 86.7% on the sample).
+  Not calibrated (November 84.5%). Rolling stays the default under D032's criteria.
+- **Detection:** 0.369 (rolling z-score) and 0.953 (model) events per meter-week, matching the
+  sample's 0.39 and 0.97. Events cluster on 20-24 November, 5 November and 23 December.
+- **Explanations:** 5,546 explained; the model agrees on 3,937, disagrees on 1,346.
+- **Impact:** 558,722 kWh and 220,140 kg CO2e over 5,084 events; 308,410 kWh at 462
+  meter-problem events reported apart; 11,860.84 USD for US-MROW at the EIA Minnesota rate.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0 (no dependency changes). ruff: clean. Format: clean. `mypy` (strict):
+  no issues.
+- `pytest -W error`: **633 passed**, 14 new (619 before), and existing assertions in
+  `test_explanations` and `test_impact` updated for the meter-problem rule. The new tests:
+  the evaluation model reproduces the study (and is refused when it does not); store windows
+  equal the in-memory data; every downstream command runs from the store; the linear interval
+  code equals the old loop; masked rows leave calibration; the echo-week defect, reproduced and
+  fixed; an outlier meter moves the mean width, not the median; meter problems are never
+  counted (and old bundles are priced the same way); the priced cost is for one geography.

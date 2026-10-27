@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-27 · **Current milestone:** M5b — Scale-up and model quality (M1–M5, M7 complete)
+**Last updated:** 2026-10-28 · **Current milestone:** M5b — Scale-up and model quality (M1–M5, M7 complete)
 
 ## Summary
 
@@ -240,9 +240,10 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **Priced per event's own BDG2 site, never mixed:** cost is computed only for one named
     geography at a time (mixing currencies would misstate a total); carbon sums safely across
     every geography.
-  - **BDG2 test quarter (rolling z-score, 100 events):** 5,766.7 kWh total potential excess,
-    2,459.2 kg CO2e across 7 configured geographies; the 25 events at Eagle and Gator (no
-    coordinates) correctly show "not configured", not zero.
+  - **Corrected in T044a (D040):** the first sample-scale figures counted events that the
+    signatures call meter problems (data faults and flatlines), which D029 forbids. At full
+    scale they held 42% of the first total. Meter problems are now kept out of potential
+    excess, cost and carbon, and reported on their own line.
 - **Best model at full scale (T043, D036):** LightGBM, L1 loss, 255 leaves, 1,779 trees,
   **adopted and promoted** as the production model.
   - **Test MAE 13.700 vs seasonal-naive 16.705 (+18.0%)**, scored once on 2,261,050 rows. The
@@ -257,6 +258,26 @@ The application foundation runs end to end locally, and CI checks it automatical
     dropped; two attempts to train models concurrently thrashed this machine's RAM and were
     reverted in favour of sequential training; the machine slept for about 17 hours mid-run
     without losing progress ([EVALUATION.md](EVALUATION.md#best-model-at-full-scale-t043-d036)).
+
+- **Downstream pipeline at full scale (T044a, D039–D041):** intervals, both detectors,
+  explanations and impact now run on all 1,148 meters, on the T043 model, in under 13 minutes
+  per step (TreeSHAP influences take hours). Three defects the sample could not show were found and fixed:
+  - **The pipeline could not run on the production refit** (it has trained on the validation
+    window, so calibrating on it would be in-sample). The promoted model is now the same
+    model trained on the training window only; it reproduced T043's validation MAE exactly
+    (15.267402). Test MAE 13.720 against the refit's 13.676 (D039).
+  - **Meter problems were counted as potential excess**, against D029: 42% of the first
+    full-scale total (D040).
+  - **"Echo weeks":** after an outage, the past-only level is about 0 a week later while
+    consumption is normal, which made 31 meters' relative intervals wider than 500% of their
+    mean reading (the worst 2,190 times). Rolling mean width at 90% fell from 819 to 76 kWh
+    (D041).
+  - **Results:** rolling intervals measure 87.2% coverage at nominal 90% (87.1% on the sample;
+    still not calibrated), and rolling stays the default under D032's criteria. Alert load
+    matches the sample: 0.369 and 0.953 events per meter-week (rolling z-score and model).
+    Corrected potential excess: **558,722 kWh and 220,140 kg CO2e** over 5,084 counted events;
+    308,410 kWh at 462 meter-problem events is reported apart
+    ([EVALUATION.md](EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041)).
 
 ## Completed tasks
 
@@ -293,6 +314,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T021a | Sourced carbon-factor and price reference tables | 2026-10-26 |
 | T021 | Excess energy, cost and carbon estimates | 2026-10-27 |
 | T043 | Best model at full scale | 2026-10-27 |
+| T044a | Downstream pipeline at full scale (evaluation model, intervals, detection, explanations, impact) | 2026-10-28 |
 
 ## Current task
 
@@ -300,14 +322,15 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T044 — Downstream re-run at full scale** (M5b):
-- Re-check prediction intervals (coverage), the detector benchmark (all detectors, same rule),
-  the LEAD check (a full-scale H1-2016 model) and explanations, all against the newly promoted
-  T043 model.
-- Defaults change only under the rules already fixed (D030, D032); every changed number is
-  recorded with the command that produced it.
+**T044b — Detector benchmark at full scale** (M5b):
+- The T018 injected-anomaly benchmark, all detectors, under the same pre-stated rule that chose
+  the default (D030), against the evaluation model. It rebuilds features in memory for the
+  sample; at full scale it must recompute them only for the injected meters.
+- Then **T044c:** the LEAD human-label check with a full-scale H1-2016 model.
+- Open from T044a: the 5 November event cluster (check against the clock audit), and a few
+  meters whose intervals are still very wide.
 
-See [ROADMAP.md](ROADMAP.md#t044--downstream-re-run-at-full-scale).
+See [ROADMAP.md](ROADMAP.md#t044b--detector-benchmark-at-full-scale).
 
 ## Milestone progress
 
@@ -318,7 +341,7 @@ See [ROADMAP.md](ROADMAP.md#t044--downstream-re-run-at-full-scale).
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M5b Scale-up and model quality | T042–T044 | 2 / 3 |
+| M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 3 / 5 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 2 / 3 |

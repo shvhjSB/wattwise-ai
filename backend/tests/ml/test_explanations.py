@@ -72,7 +72,17 @@ def test_every_event_gets_an_evidence_bundle_and_an_explanation(
         impact = b["impact"]
         assert isinstance(impact, dict)
         assert impact["status"] == "potential"
-        assert impact["potential_excess_kwh"] >= 0
+        signature = b["signature"]
+        assert isinstance(signature, dict)
+        meter_problem = signature["primary"] in {"data_fault", "flatline"}
+        assert impact["meter_problem"] is meter_problem
+        if meter_problem:  # D029: a meter problem is never presented as consumption
+            assert impact["potential_excess_kwh"] is None
+            assert impact["kwh_above_bound_not_counted"] >= 0
+            assert "Potential excess" not in b["explanation"]
+        else:
+            assert impact["potential_excess_kwh"] >= 0
+            assert impact["kwh_above_bound_not_counted"] is None
     json.dumps(bundles, allow_nan=False)  # finite JSON throughout
 
 

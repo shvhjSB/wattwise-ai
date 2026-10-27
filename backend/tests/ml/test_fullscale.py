@@ -5,19 +5,22 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from tests.ml.conftest import BUILDINGS, SPLIT, synthetic
 from wattwise.ml.baselines import SeasonalNaive
 from wattwise.ml.fullscale import (
+    evaluation_model,
     lagged,
     load_features,
     load_keys,
     main,
     run_study,
     sample_rows,
+    window_inputs,
 )
-from wattwise.ml.registry import current, verify
+from wattwise.ml.registry import NoModelError, current, verify
 from wattwise.ml.scale import build_store, load_store
 from wattwise.ml.splits import Holdout
 
@@ -134,3 +137,101 @@ def test_the_command_line_needs_its_inputs(
 ) -> None:
     assert main(["--data", str(tmp_path), "--store", str(tmp_path / "none")]) == 1
     assert "error:" in capsys.readouterr().err
+
+
+def test_the_evaluation_model_reproduces_the_chosen_model_with_its_validation_window(
+    store: Path, tmp_path: Path
+) -> None:
+    root, output = tmp_path / "models", tmp_path / "out"
+    summary = study(store, root, output)
+
+    result = evaluation_model(
+        store, BUILDINGS, output, root, SPLIT, fraction=0.5, promote_if_reproduced=True,
+        log=lambda _: None,
+    )  # fmt: skip
+
+    assert result["reproduced"] and result["promoted"]
+    chosen = summary["chosen"]
+    assert result["validation_mae"] == pytest.approx(result["recorded_validation_mae"], abs=1e-6)
+    assert result["settings"]["n_estimators"] == chosen["best_iteration"]
+    metadata = verify(current(root), root)
+    assert set(metadata.metrics) == {"validation", "test"}  # both out-of-sample
+    assert metadata.training.split_config["time"]["validation_start"] is not None
+    assert metadata.training.last < metadata.training.split_config["time"]["validation_start"]
+
+
+def test_the_evaluation_model_is_not_promoted_if_it_does_not_reproduce(
+    store: Path, tmp_path: Path
+) -> None:
+    root, output = tmp_path / "models", tmp_path / "out"
+    study(store, root, output)
+    report = output / "fullscale.json"
+    summary = json.loads(report.read_text(encoding="utf-8"))
+    for trial in summary["search"]:
+        trial["validation"]["mae"] += 1.0  # a record this model cannot reproduce
+    report.write_text(json.dumps(summary), encoding="utf-8")
+
+    result = evaluation_model(
+        store, BUILDINGS, output, root, SPLIT, fraction=0.5, promote_if_reproduced=True,
+        log=lambda _: None,
+    )  # fmt: skip
+
+    assert not result["reproduced"] and not result["promoted"]
+    with pytest.raises(NoModelError):
+        current(root)
+
+
+def test_store_window_inputs_match_the_in_memory_readings_and_features(
+    store: Path, tmp_path: Path
+) -> None:
+    readings, _weather = synthetic()
+    data = tmp_path / "data"
+    data.mkdir()
+    BUILDINGS.to_parquet(data / "buildings.parquet")
+    start, end = pd.Timestamp("2017-02-20T00:00Z"), pd.Timestamp("2017-03-10T00:00Z")
+
+    got, buildings, features = window_inputs(
+        store, data, start.to_pydatetime(), end.to_pydatetime()
+    )
+
+    within = readings[(readings["timestamp"] >= start) & (readings["timestamp"] < end)]
+    keys = ["meter_id", "timestamp"]
+    expected = within.sort_values(keys).reset_index(drop=True)
+    pd.testing.assert_frame_equal(
+        got.sort_values(keys).reset_index(drop=True)[expected.columns], expected
+    )
+    assert isinstance(got.index, pd.RangeIndex) and features.index.equals(got.index)
+    whole = load_store(store)
+    stamps = whole["timestamp"]
+    window = whole[(stamps >= start) & (stamps < end)].reset_index(drop=True)
+    np.testing.assert_array_equal(features.to_numpy(), window[features.columns].to_numpy())
+    assert len(buildings) == len(BUILDINGS)
+
+
+def test_every_downstream_command_runs_from_the_store_with_the_evaluation_model(
+    store: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from wattwise.ml import detection, explanations, impact, intervals
+
+    root, study_out = tmp_path / "models", tmp_path / "study"
+    study(store, root, study_out)
+    assert evaluation_model(
+        store, BUILDINGS, study_out, root, SPLIT, fraction=0.5, promote_if_reproduced=True,
+        log=lambda _: None,
+    )["promoted"]  # fmt: skip
+    data = tmp_path / "data"
+    data.mkdir()
+    BUILDINGS.to_parquet(data / "buildings.parquet")
+    common = ["--data", str(data), "--store", str(store), "--root", str(root)]
+    out = tmp_path / "out"
+
+    assert intervals.main([*common, "--output", str(out / "intervals")]) == 0
+    assert detection.main([*common, "--output", str(out / "detection")]) == 0
+    assert detection.main([*common, "--detector", "model", "--output", str(out / "model")]) == 0
+    assert explanations.main([*common, "--output", str(out / "explanations")]) == 0
+    saved = out / "explanations" / "explanations.json"
+    assert impact.main(["--data", str(data), "--explanations", str(saved), "--output",
+                        str(out / "impact")]) == 0  # fmt: skip
+    report = json.loads((out / "intervals" / "intervals.json").read_text(encoding="utf-8"))
+    assert report["model_version"] == current(root)
+    capsys.readouterr()

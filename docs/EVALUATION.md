@@ -811,7 +811,7 @@ uv run python -m wattwise.ml.impact --data ../data/processed/bdg2/cleaned \
 - **A missing geography or carbon factor gives `None` ("not configured"), not zero and not a
   guess.** Eagle and Gator have no coordinates, so their events carry no carbon factor.
 
-**BDG2 test quarter, rolling same-hour z-score (the default detector), 100 events:**
+**BDG2 test quarter, rolling same-hour z-score (the default detector), 100 events** — *superseded: this run counted events the signatures call meter problems, and used the D026 model. The corrected full-scale figures are in [T044a](#downstream-pipeline-at-full-scale-t044a-d039-d040-d041) (D040).*
 
 | Geography | Events | Potential excess (kWh) | Carbon (kg CO2e) |
 |---|---|---|---|
@@ -827,3 +827,156 @@ uv run python -m wattwise.ml.impact --data ../data/processed/bdg2/cleaned \
 **Total: 5,766.7 kWh potential excess, 2,459.2 kg CO2e potential carbon**, across all 9
 geographies. Cost was priced only for US-MROW (Hog's site, 20 events) at the EIA Minnesota 2016
 commercial rate (T021a): 2,035.7 kWh × $0.0986/kWh.
+
+## Downstream pipeline at full scale (T044a, D039, D040, D041)
+
+Every downstream result so far came from the 20-meter sample. T044a runs the pipeline on all
+1,148 meters, with the model T043 chose, and re-checks each result under the rules already fixed
+(D030, D032). Three defects the sample could not show were found and fixed on the way; the
+results below are after the fixes, with the before-numbers where they differ.
+
+```bash
+# the evaluation model (D039): the T043 model trained on the training window only
+uv run python -m wattwise.ml.fullscale --evaluation-model --promote \
+    --store ../data/processed/features-all --data ../data/processed/bdg2/cleaned-all
+# then, one at a time (each reads the store: --store ../data/processed/features-all
+#   --data ../data/processed/bdg2/cleaned-all --output ../data/processed/fullscale-downstream/...)
+uv run python -m wattwise.ml.intervals    ...
+uv run python -m wattwise.ml.detection    ...                  # rolling z-score (default)
+uv run python -m wattwise.ml.detection    ... --detector model
+uv run python -m wattwise.ml.explanations ... --no-influences  # the influences: see below
+uv run python -m wattwise.ml.impact       ... --explanations .../explanations.json \
+    --geography US-MROW --tariff-currency USD --tariff-rate 0.0986
+```
+
+| Step | Time | Peak memory |
+|---|---|---|
+| Evaluation model (retrain) | 4,292 s (training) | about 5 GB committed |
+| Intervals | 737 s | 4.30 GB |
+| Detection, rolling z-score | 110 s | 2.92 GB |
+| Detection, model | 447 s | 4.12 GB |
+| Explanations, without influences | 339 s | 4.72 GB |
+| Explanations, with influences (first run) | 16,468 s, of which about 2.8 h the machine was in standby (system power log) | 4.71 GB |
+| Impact (priced from saved explanations) | 29 s | 0.23 GB |
+
+### The evaluation model (D039)
+
+The T043 production refit has trained on the validation window, so intervals and the model
+detector cannot be calibrated on it. The same model, trained on the training window only,
+**reproduced T043's validation MAE exactly (15.267402, with identical RMSE, bias, WAPE and
+counts)** and is now promoted. Test MAE 13.720 (T011 harness), against the refit's 13.676. See
+[MODELS.md](MODELS.md).
+
+### Prediction intervals (T019 rerun, D041)
+
+Rolling intervals calibrated on quality rows (D035), on rows with a usable scale (D041);
+calibration 2017-07-01 to 2017-10-01, test 2017-10-01 to 2018-01-02. "Typical meter" is each
+meter's mean width against its mean reading.
+
+| Method | Nominal | Coverage | Meters within 2 points | Worst meter | Mean width (kWh) | Median width (kWh) | Interval score |
+|---|---|---|---|---|---|---|---|
+| absolute | 80% | 75.8% | 142 of 991 | 14.8% | 48.9 | 21.4 | 90 |
+| absolute | 90% | 86.0% | 209 of 991 | 25.5% | 70.5 | 32.4 | 123.1 |
+| absolute | 95% | 91.7% | 301 of 991 | 34.0% | 91.7 | 42.7 | 163 |
+| relative | 80% | 76.9% | 162 of 991 | 17.2% | 45.7 | 22.5 | 84 |
+| relative | 90% | 87.0% | 240 of 991 | 28.2% | 2,781.4 | 32.8 | 2,829.7 |
+| relative | 95% | 92.5% | 306 of 991 | 40.1% | 4,357.6 | 44.0 | 4,422 |
+| **rolling (default)** | 80% | 77.8% | 317 of 1,017 | 54.9% | 50.1 | 22.1 | 86 |
+| **rolling (default)** | **90%** | **87.2%** | 367 of 1,017 | 58.2% | 76.4 | 31.8 | 122.8 |
+| **rolling (default)** | 95% | 92.3% | 436 of 1,017 | 59.9% | 108.8 | 41.7 | 171 |
+
+- **Coverage matches the sample.** Rolling at nominal 90% measures 87.2%, against 86.7% on the
+  sample (T019). **Still not calibrated:** none of the methods is within 2 points of nominal
+  overall and in every month. November, the first winter month, covers 84.5% for rolling.
+- **D032's default stands.** Rolling has the highest coverage, the narrowest median width, the
+  best interval score (by a hair) and is by far the most even across meters (the worst meter
+  covers 58.2%, against 25.5% for absolute and 28.2% for relative). The decision is unchanged.
+- **A typical meter's 90% interval is about 46% of its mean reading wide** (the sample's was
+  about a third), with a 90th percentile of 147%.
+
+**A defect found here (D041).** Before the fix, the rolling method's mean width at 90% was
+**819.5 kWh against a median of 31.7**, and its interval score 867, because of "echo weeks": a
+week of zero readings makes the past-only level about 0 a week later, while consumption is back
+to normal. 31 of 1,017 meters had intervals wider than 500% of their mean reading and 4 wider
+than 100,000%; the worst was 2,190 times the mean reading. On the two clearest meters, mean width
+fell from 109,459 and 123,430 kWh to 82 and 108 after the fix (medians unchanged). After it:
+mean width **76.4 kWh**, interval score **122.8**, coverage 87.1% → 87.2%; 148,892 rows now have
+no interval because their level is not a usable scale. **Remaining:** the worst meter's interval
+is still 468 times its mean reading, from a cause this task did not find.
+
+### Detection (T016–T018 rerun)
+
+Test window 2017-10-01 to 2018-01-02. The default is still the rolling same-hour z-score (D030);
+the decision rule that chose it compares recall on injected anomalies, which is T044b's job. Here
+only the alert load is re-measured.
+
+| Detector | Events | Per meter-week | Event hours | Sample (T018) |
+|---|---|---|---|---|
+| Rolling z-score (default) | 5,546 | **0.369** (budget 0.5) | 53,145 = 2.2% of 2,433,767 scored hours | 0.39 |
+| Model | 12,550 | **0.953** | 169,634 = 8.0% of 2,114,920 scored hours | 0.97 |
+
+- **Both match the sample's alert rates** (over 1,132 and 991 meters). The model detector is
+  still about double the budget.
+- **Signatures, rolling z-score:** data fault 215, flatline 247, spike 1,750, overnight excess
+  733, sustained 335, drift 1, **unclassified 2,265 (41%**, against 65% on the sample).
+- **Events cluster on certain days** (the daily average is 60). 766 of the 5,546 (13.8%) start
+  on 20–24 November, US Thanksgiving week; 147 start on 5 November (the US clock change) and
+  149 on 23 December, each about 2.5 times the average; 814 (14.7%) start between 15 and 26
+  December. The rolling z-score knows neither the calendar nor the weather, so holiday weeks
+  are a likely explanation. For 369 events the model's top influence is `is_public_holiday`.
+  These are patterns to investigate, not findings; the 5 November cluster in particular is
+  worth checking against the clock audit (D016, D020).
+
+### Explanations (T020 rerun)
+
+- **All 5,546 events are explained**, 5,493 with a model expectation, and the command's wording
+  guard (no causes, certainty or "waste") passed on all of them.
+- **The interval held for 87.2% of hours in the detection window** (shown with every
+  explanation).
+- **Model agreement:** the weather-aware model agrees with the detector on 3,937 events,
+  disagrees on 1,346 (every hour inside its interval, which the text says) and has no interval
+  for 263 (80 before D041; the rest are echo-week hours, which now get none). On the sample,
+  20% disagreed.
+- **Most common top influences** (TreeSHAP, associations not causes; from the first full run,
+  which is identical for the model): `same_hour_mean_4w` 2,568, `lag_168h` 1,893,
+  `day_of_year_local` 500, `is_public_holiday` 369, `log_scale` 43. The final bundles were
+  regenerated without influences (they do not depend on the intervals, and TreeSHAP takes hours).
+
+### Excess energy, cost and carbon (T021 rerun, D040)
+
+Rolling z-score, 5,546 events. **462 (8.3%) are meter problems** (data faults and flatlines), which
+D029 says are never consumption; T021 had counted them. The first full-scale total was 1,002,572
+kWh, **of which 425,193 kWh (42.4%) was meter problems**: two single hours alone were about
+54,000 kWh each. Now they are kept out, and listed apart.
+
+| Geography | Events counted | Potential excess (kWh) | Carbon (kg CO2e) |
+|---|---|---|---|
+| GB | 359 | 9,292.7 | 3,572.4 |
+| IE | 176 | 4,419.9 | 1,931.5 |
+| US-AZNM | 803 | 47,626.3 | 22,662.5 |
+| US-CAMX | 375 | 24,578.4 | 5,907.5 |
+| US-ERCT | 818 | 187,659.0 | 86,318.8 |
+| US-FRCC | 608 | 63,356.7 | 29,208.1 |
+| US-MROW | 652 | 120,292.5 | 68,064.2 |
+| US-NYUP | 447 | 9,678.2 | 1,299.2 |
+| US-RFCE | 141 | 3,401.4 | 1,175.8 |
+| not configured (no coordinates, or Canada) | 705 | 88,417.0 | 0.0 |
+
+**Total potential excess 558,721.9 kWh and 220,140.0 kg CO2e** over 5,084 counted events (from
+1,002,572 kWh and 390,369 kg), plus **308,410 kWh above the bound at the 462 meter-problem
+events, not counted.** Cost at the EIA Minnesota 2016 commercial rate, US-MROW only: **11,860.84
+USD** over 652 events.
+
+- **It is concentrated:** the 10 largest events hold 17.5% of the total, the largest 50 hold
+  40.5% and the largest 200 hold 68.5%. Only 2,286 of the 5,084 counted events have any hour
+  above the upper bound.
+- **Still potential, not verified.** GB's figure fell from 121,227 to 9,293 kWh (92% of it was
+  meter faults); ERCT's from 446,140 to 187,659.
+- The sample-scale figures in the T021 section above (5,766.7 kWh, 2,459.2 kg CO2e) are
+  superseded: they counted meter problems and used the D026 model.
+
+### Not done here
+
+- **T044b:** the injected-anomaly benchmark (the rule that decides the default detector).
+- **T044c:** the LEAD human-label check with a full-scale model.
+- **The 5 November cluster and the remaining very wide intervals** are open questions.

@@ -49,6 +49,11 @@ class Signature(StrEnum):
     UNCLASSIFIED = "unclassified"
 
 
+#: Signatures that say the meter or its data is the problem, not the building's consumption.
+#: Such events never count as potential excess energy, cost or carbon (D029, D040).
+METER_PROBLEMS: Final = frozenset({Signature.DATA_FAULT, Signature.FLATLINE})
+
+
 #: Plain descriptions shown with each signature. They describe the pattern, never a cause.
 DESCRIPTIONS: Final = {
     Signature.DATA_FAULT: "The readings look like a metering or data problem (negative values, "

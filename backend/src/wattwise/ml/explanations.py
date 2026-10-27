@@ -35,10 +35,12 @@ import pandas as pd
 from wattwise.data.acquisition import sha256_of
 from wattwise.ml.detection import Detector, Run, run_detection
 from wattwise.ml.features import FEATURES
+from wattwise.ml.fullscale import downstream_inputs
 from wattwise.ml.impact import estimate_impact
-from wattwise.ml.intervals import coverage, rolling_bounds
-from wattwise.ml.registry import DEFAULT_ROOT, NoModelError, RegistryError, read_inputs
-from wattwise.ml.signatures import DESCRIPTIONS, Signature
+from wattwise.ml.intervals import coverage, rolling_bounds, usable_level
+from wattwise.ml.registry import DEFAULT_ROOT, NoModelError, RegistryError
+from wattwise.ml.scale import quality_mask
+from wattwise.ml.signatures import DESCRIPTIONS, METER_PROBLEMS, Signature
 
 FloatArray = npt.NDArray[np.float64]
 
@@ -151,16 +153,21 @@ def explain(
     features: pd.DataFrame,
     top: int = TOP_INFLUENCES,
 ) -> list[dict[str, Any]]:
-    """An evidence bundle and explanation for every event of `run`, in event order."""
+    """An evidence bundle and explanation for every event of `run`, in event order.
+
+    The intervals are the ones `wattwise.ml.intervals` reports: calibrated on quality rows only
+    (D035) and only where the recent level is a usable scale (D041). With `top=0` the
+    influences (TreeSHAP, the slow part at full scale) are not computed."""
     model = run.model.model
     times = readings["timestamp"]
     since = (times >= run.calibration_window[0]).to_numpy()
     part = readings[since]
     predicted_part = model.predict(part.drop(columns="value"), readings)
     level = features["rolling_mean_168h"].reindex(part.index).to_numpy(dtype=float)
+    level = usable_level(part, level, *run.calibration_window)
     lower, upper = rolling_bounds(
         part, predicted_part.to_numpy(dtype=float), level, INTERVAL_ALPHA,
-        first_score_time=run.calibration_window[0],
+        first_score_time=run.calibration_window[0], usable=quality_mask(readings)[since],
     )  # fmt: skip
     window = (
         (part["timestamp"] >= run.detection_window[0])
@@ -214,6 +221,7 @@ def _bundle(
     evidence = json.loads(event.evidence)
     influences, note = _influences(model, rows, features, top)
     impact = estimate_impact(actual, upper)  # T021: kWh above the upper bound, potential only
+    meter_problem = Signature(event.signature) in METER_PROBLEMS  # D029: not consumption
     bundle: dict[str, Any] = {
         "event": {
             "meter_id": event.meter_id,
@@ -255,7 +263,11 @@ def _bundle(
         "influences_note": note,
         "impact": {
             "status": impact.status.value,
-            "potential_excess_kwh": impact.excess_kwh,
+            "meter_problem": meter_problem,
+            # A meter or data problem is never presented as consumption (D029, D040): its kWh
+            # above the bound is kept, apart, and is not a potential excess.
+            "potential_excess_kwh": None if meter_problem else impact.excess_kwh,
+            "kwh_above_bound_not_counted": impact.excess_kwh if meter_problem else None,
             "hours_with_interval": impact.hours_with_interval,
             "hours_above_upper_bound": impact.hours_above_upper_bound,
             "cost": impact.cost,
@@ -278,6 +290,8 @@ def _bundle(
 def _influences(
     model: Any, rows: pd.DataFrame, features: pd.DataFrame, top: int
 ) -> tuple[list[dict[str, Any]], str]:
+    if top <= 0:
+        return [], "Influences were not computed for this run."
     try:
         contributions = model.contributions(rows)
     except Exception as exc:  # the explanation must not fail with its optional part
@@ -344,7 +358,7 @@ def render(bundle: Mapping[str, Any]) -> str:
                 "its interval: the deviation may reflect conditions the comparison does not see."
             )
         impact = bundle.get("impact")
-        if impact is not None and impact["potential_excess_kwh"] > 0:
+        if impact is not None and (impact["potential_excess_kwh"] or 0) > 0:
             lines.append(
                 f"Potential excess above the upper bound: {_number(impact['potential_excess_kwh'])}"
                 " (an estimate from the interval, not a verified figure)."
@@ -394,15 +408,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, required=True, help="prepared canonical tables")
     parser.add_argument("--enrichment", type=Path, help="weather_enrichment.parquet (T007d)")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="model registry")
+    parser.add_argument(
+        "--store", type=Path, help="T042 feature store: read full-scale inputs from it"
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--detector", type=Detector, choices=list(Detector), default=Detector.ROLLING_Z
     )
+    parser.add_argument(
+        "--no-influences",
+        action="store_true",
+        help="skip the TreeSHAP influences (the slow part at full scale)",
+    )
     args = parser.parse_args(argv)
     try:
-        readings, buildings, features = read_inputs(args.data, args.enrichment)
+        readings, buildings, features = downstream_inputs(
+            args.data, args.enrichment, args.store, args.root
+        )
         run = run_detection(readings, buildings, features, args.root, detector=args.detector)
-        bundles = explain(run, readings, features)
+        bundles = explain(run, readings, features, top=0 if args.no_influences else TOP_INFLUENCES)
     except NoModelError as exc:
         print(f"error: {exc} Train and promote one first.", file=sys.stderr)
         return 1

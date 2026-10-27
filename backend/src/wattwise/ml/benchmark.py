@@ -53,7 +53,14 @@ from wattwise.ml.detection import (
     rolling_same_hour,
 )
 from wattwise.ml.features import build_features
-from wattwise.ml.registry import DEFAULT_ROOT, RegistryError, current, load, verify
+from wattwise.ml.registry import (
+    DEFAULT_ROOT,
+    NO_VALIDATION_WINDOW,
+    RegistryError,
+    current,
+    load,
+    verify,
+)
 from wattwise.ml.signatures import Signature, SignatureConfig, classify
 from wattwise.ml.splits import Chronological, SplitConfig
 
@@ -355,7 +362,7 @@ def windows(root: Path) -> tuple[Window, Window, Window]:
     metadata = verify(current(root), root)
     split = SplitConfig.model_validate(metadata.training.split_config).time
     if not isinstance(split, Chronological) or split.validation_start is None:
-        raise RegistryError("The model's split has no validation window to calibrate on.")
+        raise RegistryError(NO_VALIDATION_WINDOW)
     test_start, test_end = pd.Timestamp(split.test_start), pd.Timestamp(split.test_end)
     third = ((test_end - test_start) / 3).floor("h")
     return (

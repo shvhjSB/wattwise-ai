@@ -70,10 +70,32 @@ reproduces the recorded metrics exactly. With different data it says so, and doe
 - **No model:** without a promoted model, `load` raises `NoModelError`, and `evaluate` exits
   with "No model has been promoted". The API will report "no model available" (T024).
 
-## Current model (2026-10-25)
+## Versions in the registry (2026-10-27)
 
-`train --promote` on the BDG2 sample saved the D026 model: LightGBM, all features, 200 trees.
-It took about 22 s and made a 720 KB text model. Its recorded metrics equal the T014 results
-(validation MAE 7.570, test MAE 7.490 kWh), and `evaluate` reproduced them exactly from disk.
-It is valid for buildings with training data. For unseen buildings, seasonal-naive stays the
-default (D026).
+| Version | What it is | Trained on | Role |
+|---|---|---|---|
+| `20261025T070700Z-4cf91609c9ef` | The D026 model: LightGBM, all features, 200 trees | 20 sample meters | Superseded. At full scale it loses to seasonal-naive (−4.4%, T043) |
+| `20261027T103133Z-ea3909799a6b` | **The production refit** (D036): L1 loss, 255 leaves, 1,779 trees | Training and validation windows, 1,148 meters | The best model, but not the one downstream tools calibrate on (below) |
+| `20261027T121334Z-eeec81e9592c` | **The evaluation model** (D039): the same settings and tree count | Training window only (to 2017-06-30), 1,146 meters | **Promoted** (`CURRENT`) |
+
+**Why two models with the same settings (D039).** Intervals and the model detector are
+calibrated on the model's validation window. The production refit has trained on that window,
+so its residuals there are in-sample and would make every interval too tight. The evaluation
+model never saw the window, so its residuals there are honest. `fullscale --evaluation-model`
+rebuilds it deterministically and promotes it only if it reproduces the T043 study's recorded
+validation MAE exactly (it did: 15.267402).
+
+| Role | Evaluation model (promoted) | Production refit |
+|---|---|---|
+| Validation MAE | 15.267 (out-of-sample) | in-sample, not reported |
+| Test MAE (T011 harness, 2,283,087 scored rows) | 13.720 | 13.676 |
+| Test MAE against seasonal-naive on common rows (T043) | 13.700 | 13.660 |
+
+The test difference is 0.3%: promoting the evaluation model costs almost nothing in accuracy.
+It is valid for every meter with training data; for unseen buildings and sites see D036
+(+15.7% and +8.5% against seasonal-naive).
+
+```bash
+uv run python -m wattwise.ml.fullscale --evaluation-model --promote \
+    --store ../data/processed/features-all --data ../data/processed/bdg2/cleaned-all
+```

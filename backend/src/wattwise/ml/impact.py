@@ -44,7 +44,9 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 from wattwise.data.acquisition import sha256_of
 from wattwise.data.reference import CarbonFactor, carbon_factor, geography_for_site
 from wattwise.ml.detection import Detector, run_detection
-from wattwise.ml.registry import DEFAULT_ROOT, NoModelError, RegistryError, read_inputs
+from wattwise.ml.fullscale import downstream_inputs
+from wattwise.ml.registry import DEFAULT_ROOT, NoModelError, RegistryError
+from wattwise.ml.signatures import METER_PROBLEMS, Signature
 
 # wattwise.ml.explanations imports estimate_impact from here (its evidence bundles carry a
 # potential-excess figure, T021); importing it back at module load would be circular, so
@@ -163,7 +165,22 @@ def run_impact(
     from wattwise.ml.explanations import explain  # local: see the module-level note above
 
     run = run_detection(readings, buildings, features, root, detector=detector)
-    bundles = explain(run, readings, features)
+    bundles = explain(run, readings, features, top=0)  # impact needs the bounds, not the SHAP
+    return price_bundles(bundles, buildings, geography_filter, tariff)
+
+
+def price_bundles(
+    bundles: Sequence[Mapping[str, Any]],
+    buildings: pd.DataFrame,
+    geography_filter: str | None = None,
+    tariff: TariffConfig | None = None,
+) -> dict[str, Any]:
+    """`run_impact` for evidence bundles already written by `wattwise.ml.explanations` (its
+    `explanations.json`), so a full-scale run need not detect and explain twice (T044a).
+
+    Events the signatures classify as meter or data problems (`data_fault`, `flatline`) are
+    never counted: a meter problem is not consumption (D029, D040). They are listed, with the
+    kWh they sit above the bound, and totalled apart."""
     site_of = dict(
         zip(buildings["building_id"].astype(str), buildings["site_id"].astype(str), strict=True)
     )
@@ -174,6 +191,29 @@ def run_impact(
         site = site_of.get(str(event["building_id"]))
         geography = geography_for_site(site) if site else None
         year = pd.Timestamp(event["start"]).year
+        # The signature is the single source of the rule, so bundles written before it was
+        # enforced (without a `meter_problem` flag) are priced the same way.
+        if Signature(bundle["signature"]["primary"]) in METER_PROBLEMS:
+            above = bundle_impact.get("kwh_above_bound_not_counted")
+            if above is None:
+                above = bundle_impact["potential_excess_kwh"]
+            events.append(
+                {
+                    "meter_id": event["meter_id"],
+                    "building_id": event["building_id"],
+                    "site_id": site,
+                    "geography": geography,
+                    "year": year,
+                    "meter_problem": True,
+                    "excess_kwh": None,
+                    "kwh_above_bound_not_counted": above,
+                    "cost": None,
+                    "currency": None,
+                    "carbon_kg": None,
+                    "carbon_source": None,
+                }
+            )
+            continue
         use_tariff = tariff if geography is not None and geography == geography_filter else None
         impact = _price(
             bundle_impact["potential_excess_kwh"],
@@ -189,7 +229,9 @@ def run_impact(
                 "site_id": site,
                 "geography": geography,
                 "year": year,
+                "meter_problem": False,
                 "excess_kwh": impact.excess_kwh,
+                "kwh_above_bound_not_counted": None,
                 "cost": impact.cost,
                 "currency": impact.currency,
                 "carbon_kg": impact.carbon_kg,
@@ -203,15 +245,34 @@ def run_impact(
         bucket["excess_kwh"] = round(bucket["excess_kwh"] + impact.excess_kwh, 4)
         if impact.carbon_kg is not None:
             bucket["carbon_kg"] = round(bucket["carbon_kg"] + impact.carbon_kg, 4)
+    counted = [e for e in events if not e["meter_problem"]]
+    problems = [e for e in events if e["meter_problem"]]
+    detectors = sorted({str(b["detector"]["name"]) for b in bundles})
+    models = sorted({str(b["model"]["version"]) for b in bundles})
     return {
         "impact_version": IMPACT_VERSION,
-        "detector": run.detector.value,
+        "detector": ", ".join(detectors) or None,
+        "model_version": ", ".join(models) or None,
         "events": len(events),
-        "total_potential_excess_kwh": round(sum(e["excess_kwh"] for e in events), 4),
+        "events_counted": len(counted),
+        "total_potential_excess_kwh": round(sum(e["excess_kwh"] for e in counted), 4),
         "total_potential_carbon_kg": round(
-            sum(e["carbon_kg"] for e in events if e["carbon_kg"] is not None), 4
+            sum(e["carbon_kg"] for e in counted if e["carbon_kg"] is not None), 4
+        ),
+        "meter_problem_events": len(problems),
+        "meter_problem_kwh_above_bound_not_counted": round(
+            sum(e["kwh_above_bound_not_counted"] for e in problems), 4
         ),
         "priced_geography": geography_filter,
+        "total_cost": (
+            {
+                "currency": tariff.currency,
+                "value": round(sum(e["cost"] for e in counted if e["cost"] is not None), 4),
+                "events": sum(e["cost"] is not None for e in counted),
+            }
+            if tariff is not None and geography_filter
+            else None
+        ),
         "by_geography": by_geography,
         "events_detail": events,
     }
@@ -221,16 +282,34 @@ def to_markdown(summary: Mapping[str, Any]) -> str:
     lines = [
         "# Excess energy, cost and carbon impact (T021)",
         "",
-        f"Detector: `{summary['detector']}`. {summary['events']} events.",
+        f"Detector: `{summary['detector']}`; model `{summary['model_version']}`. "
+        f"{summary['events']} events, of which {summary['events_counted']} are counted below.",
         "",
         f"**Total potential excess: {summary['total_potential_excess_kwh']:,.1f} kWh** "
         f"(potential, not verified — an anomaly is not confirmed excess consumption).",
         f"**Total potential carbon: {summary['total_potential_carbon_kg']:,.1f} kg CO2e**, "
         "summed per event's own site (never mixing one site's factor into another's).",
     ]
+    if summary["meter_problem_events"]:
+        lines.append(
+            f"**Not counted:** {summary['meter_problem_events']} events are classified as meter "
+            f"or data problems (a data fault or a flatline). A meter problem is not consumption, "
+            f"so their "
+            f"{summary['meter_problem_kwh_above_bound_not_counted']:,.1f} kWh above the bound is "
+            "kept out of the totals and out of cost and carbon."
+        )
     if summary["priced_geography"]:
-        lines.append(f"Cost priced only for `{summary['priced_geography']}` (mixing currencies "
-                     "across geographies would misstate a total).")  # fmt: skip
+        cost = summary["total_cost"]
+        stated = (
+            f"**Cost: {cost['value']:,.2f} {cost['currency']}** over {cost['events']} events, "
+            "at the tariff given. "
+            if cost
+            else ""
+        )
+        lines.append(
+            f"{stated}Cost is priced only for `{summary['priced_geography']}` (mixing "
+            "currencies across geographies would misstate a total)."
+        )
     lines += [
         "",
         "| Geography | Events | Potential excess (kWh) | Carbon (kg CO2e) |",
@@ -252,6 +331,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, required=True, help="prepared canonical tables")
     parser.add_argument("--enrichment", type=Path, help="weather_enrichment.parquet (T007d)")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="model registry")
+    parser.add_argument(
+        "--store", type=Path, help="T042 feature store: read full-scale inputs from it"
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--detector", type=Detector, choices=list(Detector), default=Detector.ROLLING_Z
@@ -261,6 +343,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         "--tariff-currency", help="ISO 4217 code, with --geography and --tariff-rate"
     )
     parser.add_argument("--tariff-rate", type=float, help="currency per kWh")
+    parser.add_argument(
+        "--explanations",
+        type=Path,
+        help="price this explanations.json (wattwise.ml.explanations) instead of re-detecting",
+    )
     args = parser.parse_args(argv)
     tariff = None
     if args.tariff_currency or args.tariff_rate is not None:
@@ -272,14 +359,21 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 1
         tariff = TariffConfig(currency=args.tariff_currency, rate_per_kwh=args.tariff_rate)
     try:
-        readings, buildings, features = read_inputs(args.data, args.enrichment)
-        summary = run_impact(
-            readings, buildings, features, args.root, args.detector, args.geography, tariff
-        )
+        if args.explanations:
+            payload = json.loads(args.explanations.read_text(encoding="utf-8"))
+            buildings = pd.read_parquet(args.data / "buildings.parquet")
+            summary = price_bundles(payload["events"], buildings, args.geography, tariff)
+        else:
+            readings, buildings, features = downstream_inputs(
+                args.data, args.enrichment, args.store, args.root
+            )
+            summary = run_impact(
+                readings, buildings, features, args.root, args.detector, args.geography, tariff
+            )
     except NoModelError as exc:
         print(f"error: {exc} Train and promote one first.", file=sys.stderr)
         return 1
-    except (RegistryError, FileNotFoundError, ValueError) as exc:
+    except (RegistryError, FileNotFoundError, ValueError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     args.output.mkdir(parents=True, exist_ok=True)

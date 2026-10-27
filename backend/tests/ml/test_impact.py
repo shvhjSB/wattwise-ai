@@ -1,5 +1,6 @@
 """T021 excess energy, cost and carbon impact (synthetic — not real performance)."""
 
+import json
 from pathlib import Path
 
 import numpy as np
@@ -9,13 +10,15 @@ from pydantic import ValidationError
 
 from tests.ml.conftest import SPLIT, features_of, synthetic
 from wattwise.data.reference import CarbonFactor
-from wattwise.ml.detection import Detector
+from wattwise.ml.detection import Detector, run_detection
+from wattwise.ml.explanations import explain
 from wattwise.ml.impact import (
     ImpactStatus,
     TariffConfig,
     estimate_impact,
     main,
     potential_excess_kwh,
+    price_bundles,
     run_impact,
     to_markdown,
 )
@@ -184,10 +187,14 @@ def test_run_impact_prices_each_event_by_its_own_site(
 
     assert summary["events"] > 0
     assert summary["total_potential_excess_kwh"] >= 0
-    bear_events = [e for e in summary["events_detail"] if e["site_id"] == "Bear"]
+    bear_events = [
+        e for e in summary["events_detail"] if e["site_id"] == "Bear" and not e["meter_problem"]
+    ]
     assert bear_events and all(e["geography"] == "US-CAMX" for e in bear_events)
     assert any(e["carbon_kg"] is not None for e in bear_events)  # a real, committed factor
-    s1_events = [e for e in summary["events_detail"] if e["site_id"] == "S1"]
+    s1_events = [
+        e for e in summary["events_detail"] if e["site_id"] == "S1" and not e["meter_problem"]
+    ]
     assert s1_events and all(e["geography"] is None and e["carbon_kg"] is None for e in s1_events)
     # cost is priced only for the named geography, never mixed across others
     assert all(e["cost"] is None for e in s1_events)
@@ -272,3 +279,94 @@ def test_the_command_line_needs_a_model(tmp_path: Path) -> None:
     code = main(["--data", str(data), "--root", str(empty_root)])
 
     assert code == 1
+
+
+def test_pricing_saved_bundles_equals_detecting_and_explaining_again(
+    prepared: tuple[pd.DataFrame, pd.DataFrame, Path], tmp_path: Path
+) -> None:
+    readings, features, root = prepared
+    run = run_detection(
+        readings, BUILDINGS_WITH_A_REAL_SITE, features, root, detector=Detector.MODEL
+    )
+    bundles = explain(run, readings, features)
+    saved = tmp_path / "explanations.json"
+    saved.write_text(json.dumps({"events": bundles}), encoding="utf-8")
+    data = tmp_path / "data"
+    data.mkdir()
+    BUILDINGS_WITH_A_REAL_SITE.to_parquet(data / "buildings.parquet")
+
+    direct = run_impact(readings, BUILDINGS_WITH_A_REAL_SITE, features, root, Detector.MODEL)
+    assert price_bundles(bundles, BUILDINGS_WITH_A_REAL_SITE) == direct
+    assert direct["model_version"] == run.model.metadata.version
+    out = tmp_path / "out"
+    assert main(["--data", str(data), "--explanations", str(saved), "--output", str(out)]) == 0
+    assert json.loads((out / "impact.json").read_text(encoding="utf-8")) == direct
+
+
+def _bundle(meter: str, signature: str, excess: float) -> dict[str, object]:
+    problem = signature in {"data_fault", "flatline"}
+    return {
+        "event": {"meter_id": meter, "building_id": "B", "start": "2017-11-01T00:00:00Z"},
+        "detector": {"name": "rolling-z"},
+        "model": {"version": "v"},
+        "signature": {"primary": signature},
+        "impact": {
+            "meter_problem": problem,
+            "potential_excess_kwh": None if problem else excess,
+            "kwh_above_bound_not_counted": excess if problem else None,
+            "hours_with_interval": 10,
+            "hours_above_upper_bound": 5,
+        },
+    }
+
+
+def test_meter_problems_are_never_counted_as_potential_excess() -> None:
+    bundles = [
+        _bundle("m1", "sustained", 100.0),
+        _bundle("m2", "data_fault", 54_000.0),  # one wild reading, as in the BDG2 data
+        _bundle("m3", "flatline", 500.0),
+        _bundle("m4", "spike", 20.0),
+    ]
+    buildings = BUILDINGS_WITH_A_REAL_SITE
+
+    summary = price_bundles(
+        bundles, buildings, "US-CAMX", TariffConfig(currency="USD", rate_per_kwh=0.5)
+    )
+
+    assert summary["events"] == 4 and summary["events_counted"] == 2
+    assert summary["total_potential_excess_kwh"] == pytest.approx(120.0)
+    assert summary["meter_problem_events"] == 2
+    assert summary["meter_problem_kwh_above_bound_not_counted"] == pytest.approx(54_500.0)
+    for e in summary["events_detail"]:
+        if e["meter_problem"]:
+            assert e["excess_kwh"] is None and e["cost"] is None and e["carbon_kg"] is None
+    text = to_markdown(summary)
+    assert "Not counted" in text and "54,500.0 kWh above the bound" in text
+    assert "waste" not in text.lower()
+
+
+def test_bundles_written_before_the_rule_are_priced_by_their_signature() -> None:
+    old = _bundle("m2", "data_fault", 54_000.0)
+    old["impact"] = {  # no `meter_problem` flag, and the figure still in potential_excess_kwh
+        "potential_excess_kwh": 54_000.0,
+        "hours_with_interval": 1,
+        "hours_above_upper_bound": 1,
+    }
+
+    summary = price_bundles([old, _bundle("m1", "sustained", 10.0)], BUILDINGS_WITH_A_REAL_SITE)
+
+    assert summary["total_potential_excess_kwh"] == pytest.approx(10.0)
+    assert summary["meter_problem_kwh_above_bound_not_counted"] == pytest.approx(54_000.0)
+
+
+def test_the_priced_cost_is_stated_for_the_named_geography_only() -> None:
+    bundles = [_bundle("m1", "sustained", 100.0), _bundle("m2", "data_fault", 9_000.0)]
+    tariff = TariffConfig(currency="USD", rate_per_kwh=0.5)
+    buildings = BUILDINGS_WITH_A_REAL_SITE.assign(site_id=["Bear", "Bear", "Bear"])
+
+    priced = price_bundles(bundles, buildings, "US-CAMX", tariff)
+    unpriced = price_bundles(bundles, buildings)
+
+    assert priced["total_cost"] == {"currency": "USD", "value": 50.0, "events": 1}  # not 4,550
+    assert "Cost: 50.00 USD" in to_markdown(priced)
+    assert unpriced["total_cost"] is None

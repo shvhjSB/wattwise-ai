@@ -43,14 +43,16 @@ import pandas as pd
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from wattwise.data.acquisition import sha256_of
+from wattwise.ml.fullscale import downstream_inputs
 from wattwise.ml.registry import (
     DEFAULT_ROOT,
+    NO_VALIDATION_WINDOW,
     Loaded,
     NoModelError,
     RegistryError,
     load,
-    read_inputs,
 )
+from wattwise.ml.scale import quality_mask
 from wattwise.ml.splits import Chronological, SplitConfig
 
 FloatArray = npt.NDArray[np.float64]
@@ -327,6 +329,7 @@ def adaptive_scores(
     level: pd.Series,
     first_residual_time: datetime,
     floor_fraction: float = 0.01,
+    usable: npt.ArrayLike | None = None,
 ) -> pd.Series:
     """Season-adaptive scores for the model's residuals (T019b, D033).
 
@@ -334,8 +337,9 @@ def adaptive_scores(
     1.4826 * MAD over the meter's 28 days ending 7 days before each day (T019's rolling window),
     counting only residuals from `first_residual_time` on, where they are out-of-sample. `level`
     is the meter's recent mean (`rolling_mean_168h`, past-only). The scale is at least
-    `floor_fraction` (a share of the level). Indexed like `readings`; NaN without enough
-    history."""
+    `floor_fraction` (a share of the level). With `usable` (the T042 quality mask), only those
+    residuals enter the centre and scale (D035); every row is still scored. Indexed like
+    `readings`; NaN without enough history."""
     from wattwise.ml.intervals import daily_window_statistics  # avoids a module cycle at import
 
     lvl = level.reindex(readings.index).to_numpy(dtype=float)
@@ -349,8 +353,9 @@ def adaptive_scores(
         center = float(np.median(window))
         return center, max(float(np.median(np.abs(window - center))) * MAD_TO_SIGMA, floor_fraction)
 
+    calibrating = relative if usable is None else np.where(usable, relative, np.nan)
     center, spread = daily_window_statistics(
-        readings, relative, first_residual_time, robust, outputs=2
+        readings, calibrating, first_residual_time, robust, outputs=2
     )
     return pd.Series((relative - center) / spread, index=readings.index)
 
@@ -525,18 +530,20 @@ def run_detection(
     loaded = load(features, root=root)
     split = SplitConfig.model_validate(loaded.metadata.training.split_config).time
     if not isinstance(split, Chronological) or split.validation_start is None:
-        raise RegistryError("The model's split has no validation window to calibrate on.")
+        raise RegistryError(NO_VALIDATION_WINDOW)
     times = readings["timestamp"]
     detection_rows = ((times >= split.test_start) & (times < split.test_end)).to_numpy()
     calibration: Calibration | None = None
     if detector is Detector.MODEL:
         expected = loaded.model.predict(readings.drop(columns="value"), readings)
-        calibration_rows = (times >= split.validation_start) & (times < split.test_start)
+        ok = quality_mask(readings)  # calibration on quality rows only; detection on every row
+        calibration_rows = ((times >= split.validation_start) & (times < split.test_start)) & ok
         calibration = calibrate(readings, expected, calibration_rows, config)
         detection = detect(readings, expected, calibration, detection_rows, config)
     elif detector is Detector.MODEL_ADAPTIVE:
         expected = loaded.model.predict(readings.drop(columns="value"), readings)
-        calibration_rows = (times >= split.validation_start) & (times < split.test_start)
+        ok = quality_mask(readings)
+        calibration_rows = ((times >= split.validation_start) & (times < split.test_start)) & ok
         calibration = calibrate(readings, expected, calibration_rows, config)  # long events
         z = adaptive_scores(
             readings,
@@ -544,6 +551,7 @@ def run_detection(
             features["rolling_mean_168h"],
             split.validation_start,
             config.scale_floor_fraction,
+            usable=ok,
         )
         detection = detect(readings, expected, calibration, detection_rows, config, z=z)
     else:
@@ -677,6 +685,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--data", type=Path, required=True, help="prepared canonical tables")
     parser.add_argument("--enrichment", type=Path, help="weather_enrichment.parquet (T007d)")
     parser.add_argument("--root", type=Path, default=DEFAULT_ROOT, help="model registry")
+    parser.add_argument(
+        "--store", type=Path, help="T042 feature store: read full-scale inputs from it"
+    )
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
     parser.add_argument(
         "--detector",
@@ -687,7 +698,9 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
     try:
-        readings, buildings, features = read_inputs(args.data, args.enrichment)
+        readings, buildings, features = downstream_inputs(
+            args.data, args.enrichment, args.store, args.root
+        )
         result = run_detection(readings, buildings, features, args.root, detector=args.detector)
     except NoModelError as exc:
         print(f"error: {exc} Train and promote one: python -m wattwise.ml.registry train "

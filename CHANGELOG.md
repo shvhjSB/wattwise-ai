@@ -289,6 +289,17 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
     seasonal-naive 16.705 (+18.0%, scored once); the production refit scores 13.660 (+18.2%).
   - Beats seasonal-naive even on unseen sites (+8.5%), reversing T014's sample-scale finding.
   - The old D026 sample-trained model now loses to seasonal-naive at full scale (−4.4%).
+- Downstream pipeline at full scale (T044a), D039-D041.
+  - `fullscale --evaluation-model --promote`: the T043 model trained on the training window
+    only, promoted only if it reproduces the study's recorded validation MAE exactly.
+  - `--store` on `intervals`, `detection`, `explanations` and `impact`: inputs for the
+    promoted model's windows read from the T042 store. `explanations --no-influences` skips
+    TreeSHAP; `impact --explanations` prices saved explanations.
+  - Intervals: linear-time (equal to the old code on test data), calibrated on quality rows
+    only (D035), and with no interval where the recent level is not a usable scale (D041).
+    The report adds median width and the per-meter width spread.
+  - Impact: events the signatures call meter problems (data fault, flatline) are never counted
+    as potential excess, cost or carbon, and are reported apart (D040). States the priced cost.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -1,5 +1,5 @@
 import pytest
-from pydantic import ValidationError
+from pydantic import SecretStr, ValidationError
 
 from wattwise.core.config import Settings, get_settings
 
@@ -36,3 +36,32 @@ def test_get_settings_returns_a_cached_instance() -> None:
         assert get_settings() is get_settings()
     finally:
         get_settings.cache_clear()
+
+
+def test_the_database_url_defaults_to_none(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("WATTWISE_DATABASE_URL", raising=False)
+
+    assert Settings().database_url is None
+
+
+def test_the_database_url_is_read_from_the_environment_and_kept_secret(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WATTWISE_DATABASE_URL", "postgresql+psycopg://u:hunter2@db:5432/w")
+
+    settings = Settings()
+
+    assert settings.database_url == SecretStr("postgresql+psycopg://u:hunter2@db:5432/w")
+    assert "hunter2" not in repr(settings)
+    assert "hunter2" not in str(settings)
+
+
+def test_a_database_url_for_another_driver_is_rejected_without_echoing_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WATTWISE_DATABASE_URL", "mysql://u:hunter2@db/w")
+
+    with pytest.raises(ValidationError, match=r"postgresql\+psycopg") as raised:
+        Settings()
+
+    assert "hunter2" not in str(raised.value)

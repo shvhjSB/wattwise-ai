@@ -27,6 +27,24 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    # The database tests (T023, D045) run against a real PostgreSQL 18, pinned by digest. The
+    # credentials belong to this throwaway container only; they protect nothing.
+    services:
+      postgres:
+        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+        env:
+          POSTGRES_USER: wattwise
+          POSTGRES_PASSWORD: wattwise-ci
+          POSTGRES_DB: wattwise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wattwise -d wattwise_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      WATTWISE_TEST_DATABASE_URL: postgresql+psycopg://wattwise:wattwise-ci@localhost:5432/wattwise_test
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

@@ -2160,3 +2160,38 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 **Validation** (Windows)
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error`: **659 passed**, 22 new (637 before).
+
+---
+
+## 2026-10-28 — T023 Database foundation and readiness
+
+**Done**
+- **`wattwise.db`:** typed SQLAlchemy 2 models for `buildings` and `meters` (the contract's rules as
+  database constraints), an Alembic baseline migration inside the package, `create_db_engine`
+  (3 s connect timeout) and `check_database`.
+- **`GET /api/v1/ready`:** 200 only if configured, reachable and at the head revision; otherwise
+  503 with `not_configured`, `unreachable` or `schema_outdated`. The password, host and error text
+  never reach the response or the log (tested).
+- **`WATTWISE_DATABASE_URL`** is a `SecretStr`, restricted to `postgresql+psycopg://`, with
+  `hide_input_in_errors` so a rejected URL is not echoed.
+- **Dependencies:** SQLAlchemy 2.0.54, Alembic 1.20.0 and psycopg 3.3.6. The newest releases of
+  SQLAlchemy (2.0.55, 2.1.x) and Alembic (1.20.1) were under two weeks old, so the lock was
+  pinned to the newest older ones with `uv lock --upgrade-package`.
+- **Tests against a real PostgreSQL:** a fresh schema per test; skipped locally without
+  `WATTWISE_TEST_DATABASE_URL`, a failure in CI without it. CI has a `postgres:18` service
+  container pinned by digest; `actionlint` passes.
+- **The command line** was run by hand against the container: `alembic upgrade head` then
+  `/ready` gave 200, `alembic downgrade base` then `/ready` gave 503 `schema_outdated`.
+
+**Problems**
+- **The local PostgreSQL service is stuck in "recovery mode"** (the service is running, every
+  connection is refused with that message, for more than 10 minutes, with no further log lines).
+  I did not restart it: it is the owner's service and restarting needs an administrator. The
+  project role and databases were therefore **not created locally**; the tests ran against a
+  PostgreSQL 18.6 container (Docker). The superuser credentials were never read.
+- A Windows port-exclusion range refused a fixed container port; Docker now picks one.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the test database: **687 passed**, 28 new (659 before). Without it, the 19
+  database tests skip and the rest pass.

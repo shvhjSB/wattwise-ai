@@ -313,6 +313,18 @@ The application foundation runs end to end locally, and CI checks it automatical
     hold 61.2%. Nothing yet shows that a higher rank means a real problem: that needs T025's
     feedback.
 
+- **Database foundation (T023, D045):** `wattwise.db` with SQLAlchemy 2 models for buildings and
+  meters (the contract's rules as constraints), an Alembic baseline migration inside the
+  package, and `GET /api/v1/ready`.
+  - **Ready means usable:** 200 only if the database is configured, reachable and migrated to
+    the head revision; otherwise 503 with `not_configured`, `unreachable` or `schema_outdated`,
+    and never the connection details.
+  - **Tests use a real PostgreSQL 18** with a fresh schema per test; CI gets a digest-pinned
+    service container. The tests ran here against a PostgreSQL 18.6 container.
+  - **Not done on this machine:** the local PostgreSQL service has been stuck in "recovery mode"
+    since this session began, so the project role and databases are not created there yet
+    ([DATABASE.md](DATABASE.md) has the setup).
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -352,6 +364,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T044b | Detector benchmark at full scale | 2026-10-28 |
 | T044c | LEAD human-label check with a full-scale H1-2016 model | 2026-10-28 |
 | T022 | Alert prioritisation | 2026-10-28 |
+| T023 | Database foundation and readiness | 2026-10-28 |
 
 ## Current task
 
@@ -359,11 +372,9 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T023 — Database foundation and readiness** (M9): SQLAlchemy models, an Alembic baseline
-migration, a PostgreSQL URL from the environment, `GET /api/v1/ready` (503 without a database, 200
-with one) and the test-database strategy. PostgreSQL 18 is installed locally (D007); the project
-role and databases are created in this task. See
-[ROADMAP.md](ROADMAP.md#t023--database-foundation-and-readiness).
+**T024 — Buildings, meters, series and summary APIs** (M9): `GET /buildings`, `/meters`,
+`/meters/{id}/series` (time range) and `/dashboard/summary`, with pagination and Pydantic schemas.
+See [ROADMAP.md](ROADMAP.md#t024--buildings-meters-series-and-summary-apis).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -382,7 +393,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
-| M9 API and persistence | T023–T027 | 0 / 5 |
+| M9 API and persistence | T023–T027 | 1 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |

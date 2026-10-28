@@ -9,6 +9,7 @@ src/wattwise/
   api/            HTTP layer: app factory, routes, schemas, dependencies
   core/           settings and shared utilities
   data/           canonical data contracts, validation, CSV reading (docs/DATA_CONTRACT.md)
+  db/             SQLAlchemy models, the engine, Alembic migrations (docs/DATABASE.md)
 tests/            pytest suite, mirroring the package layout
 ```
 
@@ -75,12 +76,28 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 | Variable | Values | Default |
 |---|---|---|
 | `WATTWISE_ENVIRONMENT` | `development`, `test`, `production` | `development` |
+| `WATTWISE_DATABASE_URL` | `postgresql+psycopg://user:password@host:port/database` | unset (no database) |
+| `WATTWISE_TEST_DATABASE_URL` | the same form; **tests only** | unset (database tests skip) |
+
+The database URL carries a password: keep it in an untracked file, never in the repository.
+`backend/.env` is git-ignored; run commands with `uv run --env-file .env ...` to load it. See
+[docs/DATABASE.md](../docs/DATABASE.md) for creating the local role and databases.
 
 ## Endpoints
 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/health` | Liveness only: the process is up. It does **not** check dependencies. |
+| GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 
-A readiness endpoint (`/api/v1/ready`) that checks the database arrives with the database
-foundation (roadmap task T023).
+## Database
+
+```bash
+uv run --env-file .env alembic upgrade head     # create or update the schema
+uv run --env-file .env alembic downgrade base   # remove it
+```
+
+The tests that need PostgreSQL create a throwaway schema per test in the database named by
+`WATTWISE_TEST_DATABASE_URL` and drop it afterwards, so use a database that holds nothing that
+matters. Without the variable they skip locally; in CI (`CI` set) a missing variable is a
+failure, so they cannot stop running unnoticed.

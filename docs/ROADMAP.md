@@ -50,7 +50,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Done |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Done |
 | T022 | Alert prioritisation | M8 | T020, T021 | Done |
-| T023 | Database foundation and readiness | M9 | T002, T004 | Not started |
+| T023 | Database foundation and readiness | M9 | T002, T004 | Done |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Not started |
 | T025 | Alerts and feedback API | M9 | T022, T023 | Not started |
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Not started |
@@ -650,6 +650,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - `/ready` returns 503 without a database and 200 with one.
 - **Environment:** PostgreSQL 18 is installed locally (D007) and Docker Desktop is available.
   CI also uses a PostgreSQL 18 service container.
+- **Done (2026-10-28, D045):** `wattwise.db` (buildings and meters, baseline migration `0001`),
+  `GET /api/v1/ready` (200 only when reachable and at the head revision; 503 names the reason
+  without connection details), a schema-per-test strategy and a CI service container
+  ([DATABASE.md](DATABASE.md)). The local project role and databases are not created yet (the
+  local service was stuck in recovery); the tests ran against a PostgreSQL 18.6 container.
 
 ### T024 — Buildings, meters, series and summary APIs
 - **Scope:** `GET /buildings`, `/meters`, `/meters/{id}/series` (time range) and

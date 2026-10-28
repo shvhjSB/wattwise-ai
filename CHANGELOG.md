@@ -309,6 +309,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - Alert prioritisation (T022), D044: `wattwise.ml.prioritisation` ranks alerts by a documented
   score (impact, persistence, severity, confidence) with deterministic ties; a product
   assumption, not a probability or a verified saving.
+- Database foundation (T023), D045: `wattwise.db` (SQLAlchemy 2 models for buildings and
+  meters, Alembic baseline migration), `WATTWISE_DATABASE_URL` as a secret setting,
+  `GET /api/v1/ready` (reachable and migrated, else 503 with a reason), a PostgreSQL 18 CI
+  service container and `docs/DATABASE.md`.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -313,6 +313,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   meters, Alembic baseline migration), `WATTWISE_DATABASE_URL` as a secret setting,
   `GET /api/v1/ready` (reachable and migrated, else 503 with a reason), a PostgreSQL 18 CI
   service container and `docs/DATABASE.md`.
+- Read APIs (T024), D046: `GET /buildings`, `/buildings/{id}`, `/meters`, `/meters/{id}`,
+  `/meters/{id}/series` and `/dashboard/summary`; `datasets` and `readings` tables (migration
+  `0002`); `python -m wattwise.db.load`. Every response carries `data_kind`; timestamps are UTC.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

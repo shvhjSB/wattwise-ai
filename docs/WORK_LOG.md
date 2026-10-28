@@ -2209,3 +2209,33 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   printed), databases `wattwise` and `wattwise_test` owned by it, URLs in the git-ignored
   `backend/.env`. `alembic upgrade head` on `wattwise`, then `/ready`: 200. The 38 database, API
   and configuration tests pass on the local server. The superuser password file was not read.
+
+---
+
+## 2026-10-28 — T024 Buildings, meters, series and summary APIs
+
+**Done**
+- **Migration `0002`:** `datasets` (kind `synthetic` or `observed`, name, provenance) and
+  `readings` (primary key (`meter_id`, `timestamp`), NULL for not measured). Every building now
+  belongs to a dataset.
+- **`python -m wattwise.db.load`:** validates buildings and readings against the contract (CSV
+  or Parquet), refuses inconsistent tables or another dataset's buildings, and replaces a
+  dataset in one transaction; readings go in with `COPY`.
+- **Endpoints:** `/buildings`, `/buildings/{id}`, `/meters`, `/meters/{id}`, `/meters/{id}/series`,
+  `/dashboard/summary`; pages, filters, 404, 422 and 503 (not configured, or lost) with no
+  connection details.
+- **Loaded the synthetic sample** into the local `wattwise` database (4 buildings, 4 meters, 5,376
+  readings, 6 missing) and ran the server against it: every endpoint answered as expected.
+
+**Problems**
+- **Timestamps came back as `+05:30`** when the real server ran: the local PostgreSQL's session
+  time zone is Asia/Kolkata, and CI's container is UTC, so the tests had not caught it. Fixed
+  twice over (sessions run in UTC; the schemas convert to UTC), and the test engine now uses an
+  Asia/Kolkata session so it cannot come back. Re-ran the server: UTC.
+- SQLAlchemy may flush a `Reading` before its `Meter` (no relationship between them); a test now
+  commits the meter first. The loader uses Core inserts in order, so it is not affected.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **732 passed**, 45 new (687 before). Without a
+  database: the 54 database tests skip, the rest pass.

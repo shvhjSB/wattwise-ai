@@ -51,7 +51,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Done |
 | T022 | Alert prioritisation | M8 | T020, T021 | Done |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Done |
-| T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Not started |
+| T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Done |
 | T025 | Alerts and feedback API | M9 | T022, T023 | Not started |
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Not started |
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Not started |
@@ -661,6 +661,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Scope:** `GET /buildings`, `/meters`, `/meters/{id}/series` (time range) and
   `/dashboard/summary`, with pagination and Pydantic schemas.
 - **Acceptance:** API tests cover success, filters, validation errors and 404s.
+- **Done (2026-10-28, D046):** the four endpoints plus `/buildings/{id}` and `/meters/{id}`;
+  readings and labelled datasets in PostgreSQL (migration `0002`) and a contract-validated loader
+  (`python -m wattwise.db.load`). Every response carries `data_kind`; timestamps are UTC (a bug
+  found by running the server on a non-UTC machine, now tested).
 
 ### T025 — Alerts and feedback API
 - **Scope:**

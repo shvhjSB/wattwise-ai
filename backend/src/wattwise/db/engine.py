@@ -23,11 +23,14 @@ class DatabaseStatus(StrEnum):
 
 
 def create_db_engine(url: str) -> Engine:
-    """An engine for `url` (postgresql+psycopg://...). It connects lazily, on first use."""
+    """An engine for `url` (postgresql+psycopg://...). It connects lazily, on first use.
+
+    Every session runs in UTC, so timestamps read back are UTC whatever the server's own time
+    zone is (the contract's rule; a server in another zone would otherwise shift them)."""
     return create_engine(
         url,
         pool_pre_ping=True,
-        connect_args={"connect_timeout": CONNECT_TIMEOUT_SECONDS},
+        connect_args={"connect_timeout": CONNECT_TIMEOUT_SECONDS, "options": "-c timezone=UTC"},
     )
 
 

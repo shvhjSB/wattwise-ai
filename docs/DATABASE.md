@@ -1,23 +1,50 @@
 # WattWise AI — Database
 
-PostgreSQL 18 (D007) holds what the API serves. The pipeline's readings stay in Parquet; the
-database stores the entities of the [data contract](DATA_CONTRACT.md) and, with later tasks, alerts,
-feedback and analysis runs. Decisions: D045.
+PostgreSQL 18 (D007) holds what the API serves: the [data contract](DATA_CONTRACT.md)'s
+buildings, meters and readings, each dataset labelled synthetic or observed, and, with later
+tasks, alerts, feedback and analysis runs. The ML pipeline still reads its Parquet tables.
+Decisions: D045, D046.
 
-## What exists (T023)
+## Tables
 
 | Table | Primary key | Contents |
 |---|---|---|
-| `buildings` | `building_id` | `site_id`, `timezone`, optional `primary_use`, `floor_area_m2` (> 0), `latitude` (-90 to 90), `longitude` (-180 to 180), `created_at` |
+| `datasets` | `dataset_id` | `name`, `kind` (`synthetic` or `observed`), `source` (provenance), `loaded_at` (T024) |
+| `buildings` | `building_id` | `dataset_id` (foreign key), `site_id`, `timezone`, optional `primary_use`, `floor_area_m2` (> 0), `latitude` (-90 to 90), `longitude` (-180 to 180), `created_at` |
 | `meters` | `meter_id` | `building_id` (foreign key, `RESTRICT`), `meter_type`, `unit`, `created_at` |
+| `readings` | (`meter_id`, `timestamp`) | `value`: NULL means not measured, never 0 (T024) |
 
+- **Every building belongs to a dataset whose kind is synthetic or observed**, so the API never
+  serves data without that label.
 - The meter type must be one of the contract's eight, and the unit must be that type's canonical
   unit (`kWh` or `m3`). The database enforces both, so data that skipped validation cannot
   contradict the contract.
 - A building with meters cannot be deleted.
+- **Time is UTC.** Timestamps are `timestamptz`; every session the engine opens runs in UTC, and
+  the API converts every timestamp it returns to UTC. The tests run on a non-UTC session to keep
+  it so.
 - Migrations are in `backend/src/wattwise/db/migrations` (inside the package, so a built image
-  carries them). Revision `0001` is the baseline. A test builds the schema from the migrations
-  and fails if the models differ from it.
+  carries them): `0001` the baseline, `0002` datasets and readings. A test builds the schema from
+  the migrations and fails if the models differ from it; each revision downgrades to the one
+  before.
+
+## Loading a dataset
+
+```bash
+uv run --env-file .env python -m wattwise.db.load --source ../data/sample/synthetic \
+    --dataset-id synthetic-sample --kind synthetic --name "WattWise synthetic sample (seed 2016)"
+```
+
+- `--source` holds `buildings` and `readings` as CSV (the upload format) or Parquet (canonical
+  tables). Both are **validated against the contract first**; a violation loads nothing and
+  prints every error.
+- **A dataset is replaced as a whole**, in one transaction: a reload never mixes two versions.
+- A building that belongs to **another** dataset is refused, never moved. Readings that name a
+  building missing from the buildings table are refused.
+- Readings go in with PostgreSQL `COPY`, so a full-scale table (millions of rows) loads in one
+  round trip.
+- BDG2 may be loaded into a **local** database (`--kind observed`); it is never redistributed
+  (D014).
 
 ## Readiness
 

@@ -327,6 +327,15 @@ The application foundation runs end to end locally, and CI checks it automatical
     `wattwise_test` databases now exist, `wattwise` is migrated to `0001`, and `/ready` answers
     200 locally ([DATABASE.md](DATABASE.md)).
 
+- **Read APIs (T024, D046):** `GET /buildings`, `/buildings/{id}`, `/meters`, `/meters/{id}`,
+  `/meters/{id}/series` and `/dashboard/summary`, with pages, filters, 404s and 422s.
+  - **Readings are in PostgreSQL** (migration `0002`), loaded by `python -m wattwise.db.load` from
+    contract-validated tables; a dataset is replaced as a whole.
+  - **Every response says whether the data is synthetic or observed** (`data_kind`), and every
+    timestamp is UTC.
+  - The local database holds the synthetic sample (4 buildings, 4 meters, 5,376 readings, 6
+    missing), labelled synthetic.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -367,6 +376,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T044c | LEAD human-label check with a full-scale H1-2016 model | 2026-10-28 |
 | T022 | Alert prioritisation | 2026-10-28 |
 | T023 | Database foundation and readiness | 2026-10-28 |
+| T024 | Buildings, meters, series and summary APIs | 2026-10-28 |
 
 ## Current task
 
@@ -374,9 +384,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T024 — Buildings, meters, series and summary APIs** (M9): `GET /buildings`, `/meters`,
-`/meters/{id}/series` (time range) and `/dashboard/summary`, with pagination and Pydantic schemas.
-See [ROADMAP.md](ROADMAP.md#t024--buildings-meters-series-and-summary-apis).
+**T025 — Alerts and feedback API** (M9): `GET /alerts` with pagination and filters,
+`GET /alerts/{id}` with the evidence bundle, and `POST /alerts/{id}/feedback`, persisted with
+timestamps. The feedback label set is decided in this task (D001). No automatic retraining. See
+[ROADMAP.md](ROADMAP.md#t025--alerts-and-feedback-api).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -395,7 +406,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
-| M9 API and persistence | T023–T027 | 1 / 5 |
+| M9 API and persistence | T023–T027 | 2 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |

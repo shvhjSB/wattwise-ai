@@ -1,4 +1,5 @@
 from collections.abc import Iterator
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import Engine
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 
 from wattwise.data.contracts import CANONICAL_UNIT, MeterType
 from wattwise.db.migrate import upgrade
-from wattwise.db.models import Building, Meter
+from wattwise.db.models import Building, Dataset, Meter, Reading
 
 
 @pytest.fixture
@@ -15,6 +16,8 @@ def session(schema_engine: Engine) -> Iterator[Session]:
     with schema_engine.begin() as connection:
         upgrade(connection)
     with Session(schema_engine) as db:
+        db.add(Dataset(dataset_id="d1", name="test", kind="synthetic", source="tests"))
+        db.commit()
         yield db
 
 
@@ -26,6 +29,7 @@ def building(
 ) -> Building:
     return Building(
         building_id=building_id,
+        dataset_id="d1",
         site_id="s1",
         timezone="Europe/London",
         floor_area_m2=floor_area_m2,
@@ -127,3 +131,44 @@ def test_every_contract_meter_type_with_its_canonical_unit_is_accepted(session: 
     session.commit()
 
     assert session.query(Meter).count() == len(MeterType)
+
+
+def test_a_dataset_must_say_whether_it_is_synthetic_or_observed(session: Session) -> None:
+    session.add(Dataset(dataset_id="d2", name="x", kind="simulated", source="tests"))
+
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_a_building_needs_an_existing_dataset(session: Session) -> None:
+    orphan = building("b9")
+    orphan.dataset_id = "missing"
+    session.add(orphan)
+
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_a_missing_reading_is_stored_as_null_and_keys_are_unique(session: Session) -> None:
+    hour = datetime(2016, 1, 1, tzinfo=UTC)
+    session.add(building())
+    session.add(Meter(meter_id="m1", building_id="b1", meter_type="electricity", unit="kWh"))
+    session.commit()  # Reading has no relationship to Meter, so flush it after its meter
+    session.add(Reading(meter_id="m1", timestamp=hour, value=None))
+    session.commit()
+
+    stored = session.get(Reading, ("m1", hour))
+    assert stored is not None
+    assert stored.value is None
+
+    session.expunge_all()
+    session.add(Reading(meter_id="m1", timestamp=hour, value=1.0))
+    with pytest.raises(IntegrityError):
+        session.commit()
+
+
+def test_a_reading_needs_an_existing_meter(session: Session) -> None:
+    session.add(Reading(meter_id="missing", timestamp=datetime(2016, 1, 1, tzinfo=UTC), value=1.0))
+
+    with pytest.raises(IntegrityError):
+        session.commit()

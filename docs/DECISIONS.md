@@ -1605,7 +1605,8 @@ links to the entry that replaces it.
     psycopg 3.3.6.
   - **Scope of the baseline:** `buildings` and `meters` only, the contract's entities, with the
     contract's rules as constraints (positive area, coordinate ranges, the meter-type vocabulary,
-    one canonical unit per type). Readings stay in Parquet. Alert, feedback and run tables arrive
+    one canonical unit per type). Readings stay in Parquet (revised by D046: the API now
+    stores the readings it serves). Alert, feedback and run tables arrive
     with T025 and T027, so no table exists before its use is known.
   - **Migrations live inside the package** (`wattwise/db/migrations`), so a built image carries
     them and the API can compare the database with the head revision. Written by hand; a test
@@ -1632,6 +1633,41 @@ links to the entry that replaces it.
 - **Consequences:** T024 and T025 add tables as migrations. The local role and databases are
   created once with a superuser (one SQL snippet, DATABASE.md): the project does not hold the superuser
   credentials.
+
+## D046 — Read APIs: readings in PostgreSQL, every dataset labelled, UTC, bounded pages
+- **Date:** 2026-10-28 · **Task:** T024 · **Status:** Accepted
+- **Decision:** ([DATABASE.md](DATABASE.md), backend README)
+  - **Readings are stored in PostgreSQL** (`readings`, primary key (`meter_id`, `timestamp`)), loaded
+    by `python -m wattwise.db.load` from contract-validated tables with `COPY`. This revises D045's
+    "readings stay in Parquet" for what the API serves; the ML pipeline still reads Parquet.
+  - **Every building belongs to a `dataset` whose `kind` is `synthetic` or `observed`**, and every
+    building, meter, series and summary response carries it (`data_kind`). Synthetic data can never
+    be served unlabelled.
+  - **Time is UTC end to end:** sessions run in UTC, and the response schemas convert every
+    timestamp to UTC. Timestamps in requests must carry an offset (422 otherwise).
+  - **Endpoints:** `GET /buildings`, `/buildings/{id}`, `/meters`, `/meters/{id}`,
+    `/meters/{id}/series`, `/dashboard/summary`. Lists are pages (`items`, `total`, `limit`,
+    `offset`; limit 1-200, default 50) ordered by identifier. A series is the readings in
+    [`start`, `end`), at most `limit` points (default 10,000, at most 50,000), with `truncated` when
+    more exist. Missing readings are `null`.
+  - **Errors:** 404 for an unknown building or meter; 422 for bad pagination, an unknown meter type,
+    a timestamp without an offset or `start` not before `end`; 503 `not_configured` without a
+    database and 503 `unreachable` if it is lost, never with connection details.
+  - **The summary reports only what is stored:** counts per dataset and overall, meters by type,
+    missing values and the time range. No alerts, savings or costs.
+- **Alternatives considered:**
+  - **Serving series from Parquet files:** no new table, but a second data path beside the
+    database, file paths in the API, and no transactions; rejected.
+  - **A `data_kind` column on buildings instead of a datasets table:** loses the dataset's name and
+    provenance, and a reload could not replace a dataset as a whole.
+  - **Cursor pagination:** better for very deep pages; offsets are enough for buildings and
+    meters, and series are bounded by time instead.
+  - **Silently capping a series:** rejected; `truncated` says when there is more.
+- **Found by running it:** the local server's session time zone is Asia/Kolkata, and the first
+  version returned `+05:30` timestamps; CI's container is UTC, so the tests had not seen it. Both
+  fixes above came from that, and the tests now use a non-UTC session.
+- **Consequences:** T025 adds alerts as another table under a dataset. The frontend (T029, T030)
+  can show the synthetic/observed label from every response.
 
 ---
 

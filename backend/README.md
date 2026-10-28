@@ -88,6 +88,12 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/health` | Liveness only: the process is up. It does **not** check dependencies. |
+| GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id` or `dataset_id`. |
+| GET | `/api/v1/buildings/{building_id}` | One building; 404 if unknown. |
+| GET | `/api/v1/meters` | Meters, a page at a time, filtered by `building_id` or `meter_type`. |
+| GET | `/api/v1/meters/{meter_id}` | One meter; 404 if unknown. |
+| GET | `/api/v1/meters/{meter_id}/series` | Readings in [`start`, `end`) (ISO 8601 with an offset), at most `limit` points, with `truncated`. Missing readings are `null`. |
+| GET | `/api/v1/dashboard/summary` | Counts per dataset and overall, meters by type, missing values and the time range. |
 | GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 
 ## Database
@@ -95,7 +101,12 @@ The database URL carries a password: keep it in an untracked file, never in the 
 ```bash
 uv run --env-file .env alembic upgrade head     # create or update the schema
 uv run --env-file .env alembic downgrade base   # remove it
+uv run --env-file .env python -m wattwise.db.load --source ../data/sample/synthetic \
+    --dataset-id synthetic-sample --kind synthetic --name "WattWise synthetic sample"
 ```
+
+Every response from the data endpoints carries `data_kind` (`synthetic` or `observed`), and all
+timestamps are UTC.
 
 The tests that need PostgreSQL create a throwaway schema per test in the database named by
 `WATTWISE_TEST_DATABASE_URL` and drop it afterwards, so use a database that holds nothing that

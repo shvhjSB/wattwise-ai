@@ -321,9 +321,11 @@ The application foundation runs end to end locally, and CI checks it automatical
     and never the connection details.
   - **Tests use a real PostgreSQL 18** with a fresh schema per test; CI gets a digest-pinned
     service container. The tests ran here against a PostgreSQL 18.6 container.
-  - **Not done on this machine:** the local PostgreSQL service has been stuck in "recovery mode"
-    since this session began, so the project role and databases are not created there yet
-    ([DATABASE.md](DATABASE.md) has the setup).
+  - **Local database set up (2026-10-28):** the local service had been stuck in "recovery mode"
+    (an orphaned server process held the data directory lock). With the owner's approval it was
+    stopped and the service restarted; the `wattwise` role and the `wattwise` and
+    `wattwise_test` databases now exist, `wattwise` is migrated to `0001`, and `/ready` answers
+    200 locally ([DATABASE.md](DATABASE.md)).
 
 ## Completed tasks
 

@@ -653,8 +653,9 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Done (2026-10-28, D045):** `wattwise.db` (buildings and meters, baseline migration `0001`),
   `GET /api/v1/ready` (200 only when reachable and at the head revision; 503 names the reason
   without connection details), a schema-per-test strategy and a CI service container
-  ([DATABASE.md](DATABASE.md)). The local project role and databases are not created yet (the
-  local service was stuck in recovery); the tests ran against a PostgreSQL 18.6 container.
+  ([DATABASE.md](DATABASE.md)). The tests first ran against a PostgreSQL 18.6 container while the
+  local service was stuck in recovery; after it was restarted, the local role and databases were
+  created and the tests pass on the local server too.
 
 ### T024 — Buildings, meters, series and summary APIs
 - **Scope:** `GET /buildings`, `/meters`, `/meters/{id}/series` (time range) and

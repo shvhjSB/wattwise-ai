@@ -2195,3 +2195,17 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the test database: **687 passed**, 28 new (659 before). Without it, the 19
   database tests skip and the rest pass.
+
+### Follow-up: the local PostgreSQL service (2026-10-28)
+
+- **Cause of "recovery mode":** the old server process (the postmaster, with its children) was
+  still running after an unclean stop and held `postmaster.pid`, so a service restart failed with
+  `lock file "postmaster.pid" already exists` (Windows event log). The cluster's control file said
+  `in production`, with nothing to recover beyond the last checkpoint.
+- **Fix, at the owner's request and with their approval at each administrator prompt:** stopped
+  the orphaned `postgres` processes and started the `postgresql-x64-18` service. It came up as
+  18.6, not in recovery.
+- **Set up:** role `wattwise` (a random 48-hex-character password, sent to `psql` on stdin, never
+  printed), databases `wattwise` and `wattwise_test` owned by it, URLs in the git-ignored
+  `backend/.env`. `alembic upgrade head` on `wattwise`, then `/ready`: 200. The 38 database, API
+  and configuration tests pass on the local server. The superuser password file was not read.

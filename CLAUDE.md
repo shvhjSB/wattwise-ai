@@ -50,8 +50,9 @@ GitHub checkpoint, Project status, Next task, Decisions needed. Use plain langua
 - Windows development machine with Docker Desktop and PostgreSQL 18 installed (2026-10-23).
   PostgreSQL runs as the `postgresql-x64-18` service on `localhost:5432`, accepting local
   connections only. The superuser credentials live in the owner's libpq password file
-  (`%APPDATA%\postgresql\pgpass.conf`). Never read, print or copy that file. Project roles and
-  databases are created in T023 with their own credentials.
+  (`%APPDATA%\postgresql\pgpass.conf`). Never read, print or copy that file. The project role
+  `wattwise` owns the databases `wattwise` and `wattwise_test` (created in T023); its URLs are in
+  the git-ignored `backend/.env` (`uv run --env-file .env ...`). Never print that file either.
 - Python work uses `backend/.venv`, managed by uv (0.12.24 or a later 0.12.x) from `backend/uv.lock`
   (`uv sync --locked`, `uv run --locked ...`). Never use the global interpreter. Change
   dependencies only with `uv add` / `uv lock`, and commit `uv.lock` together with `pyproject.toml`.

@@ -49,7 +49,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T020 | Alert explanations | M7 | T017, T019 | Done |
 | T021a | Sourced carbon-factor and price reference tables | M8 | T007b, T009c | Done |
 | T021 | Excess energy, cost and carbon estimates | M8 | T019, T021a | Done |
-| T022 | Alert prioritisation | M8 | T020, T021 | Not started |
+| T022 | Alert prioritisation | M8 | T020, T021 | Done |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Not started |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Not started |
 | T025 | Alerts and feedback API | M9 | T022, T023 | Not started |
@@ -632,6 +632,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Ordering tests on crafted alerts.
   - The formula is documented.
+- **Done (2026-10-28, D044):** `wattwise.ml.prioritisation`: 100 x (0.4 impact + 0.2 persistence
+  + 0.2 severity + 0.2 confidence), logarithmic, with the weights and caps as stated product
+  assumptions. On the 5,546 full-scale alerts the top 200 hold 61.2% of the potential excess
+  ([EVALUATION.md](EVALUATION.md#alert-prioritisation-t022-d044)).
 
 ## M9 — FastAPI integration and persistence
 

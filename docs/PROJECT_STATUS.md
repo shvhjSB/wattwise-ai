@@ -302,6 +302,17 @@ The application foundation runs end to end locally, and CI checks it automatical
   - The model-based numbers of the labelled-meters rerun differ a little from D031 (3.8% against
     4.5% hour precision); the cause was not isolated.
 
+- **Alert prioritisation (T022, D044):** `wattwise.ml.prioritisation` ranks alerts by a documented
+  score: 0.4 impact (potential excess, T021) + 0.2 persistence + 0.2 severity + 0.2 confidence,
+  scaled 0-100.
+  - **It orders alerts for review; it is not a probability or a verified saving.** The weights
+    and caps are product assumptions, not fitted to labels.
+  - Meter problems and below-expected alerts have no impact component. Cost and carbon are not in
+    the score.
+  - On the 5,546 full-scale alerts the top 20 hold 22.3% of the potential excess, the top 200
+    hold 61.2%. Nothing yet shows that a higher rank means a real problem: that needs T025's
+    feedback.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -340,6 +351,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T044a | Downstream pipeline at full scale (evaluation model, intervals, detection, explanations, impact) | 2026-10-28 |
 | T044b | Detector benchmark at full scale | 2026-10-28 |
 | T044c | LEAD human-label check with a full-scale H1-2016 model | 2026-10-28 |
+| T022 | Alert prioritisation | 2026-10-28 |
 
 ## Current task
 
@@ -347,9 +359,11 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T022 — Alert prioritisation** (M8): a documented, transparent ranking of alerts that
-uses the potential-impact estimates (D038) without presenting them as verified savings. See
-[ROADMAP.md](ROADMAP.md#t022--alert-prioritisation).
+**T023 — Database foundation and readiness** (M9): SQLAlchemy models, an Alembic baseline
+migration, a PostgreSQL URL from the environment, `GET /api/v1/ready` (503 without a database, 200
+with one) and the test-database strategy. PostgreSQL 18 is installed locally (D007); the project
+role and databases are created in this task. See
+[ROADMAP.md](ROADMAP.md#t023--database-foundation-and-readiness).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -367,7 +381,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 5 / 5 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
-| M8 Business impact | T021a, T021, T022 | 2 / 3 |
+| M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 0 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |

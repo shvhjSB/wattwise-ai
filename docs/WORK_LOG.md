@@ -2140,3 +2140,23 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error`: **637 passed**, 2 new (635 before): the scale model trains on every meter and
   scores the labelled ones, and the default run is unchanged.
+
+---
+
+## 2026-10-28 — T022 Alert prioritisation
+
+**Done**
+- **`wattwise.ml.prioritisation`:** a weighted score over the evidence bundles (T020): 0.4 impact
+  (potential excess, T021), 0.2 persistence, 0.2 severity, 0.2 confidence, logarithmic to a cap,
+  `PriorityConfig` for the weights and caps, a deterministic tie-break, and a command line that
+  writes `priorities.json` and `priorities.md`.
+- **Caps from the real range.** A first impact cap of 2,000 kWh (the 99th percentile) made the
+  largest alerts indistinguishable on impact (a 17,889 kWh alert ranked fourth, below a 5,080 kWh
+  one); it is now 20,000 kWh, just above the largest seen (19,307), before any outcome was looked
+  at. The persistence and severity caps are 72 hours (99th percentile) and 100 (98th).
+- **Real alerts:** 5,546 ranked; the top 200 hold 61.2% of the potential excess (68.5% would be the
+  most any ordering could put there).
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error`: **659 passed**, 22 new (637 before).

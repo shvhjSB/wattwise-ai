@@ -1569,6 +1569,34 @@ links to the entry that replaces it.
   ones wherever they are quoted. Whether to offer the model detector as a more sensitive,
   noisier second alert source is a product question for the owner.
 
+## D044 — Alert prioritisation: a transparent weighted score, impact first, no cost in the score
+- **Date:** 2026-10-28 · **Task:** T022 · **Status:** Accepted
+- **Decision:** `wattwise.ml.prioritisation` ([EVALUATION.md](EVALUATION.md#alert-prioritisation-t022-d044)).
+  Score = 100 x (0.4 impact + 0.2 persistence + 0.2 severity + 0.2 confidence), components in
+  [0, 1] on a logarithmic scale up to a cap, with deterministic tie-breaking (rounded score,
+  potential excess, flagged hours, start, meter id, end).
+  - **Impact comes first** (the largest weight): the task is to rank by likely business impact, not
+    by anomaly score alone. It is the *potential* excess of T021 (D038), never verified.
+  - **Meter problems and below-expected alerts have no impact component** (D029, D040): they are
+    not excess consumption. They are marked by `kind` and still rank on the other components.
+  - **Cost and carbon are not in the score:** a tariff is optional and per geography.
+  - **Weights and caps are product assumptions**, set from the range of real alerts (impact cap
+    just above the largest seen; persistence and severity caps at the 99th and 98th
+    percentiles), not
+    fitted to labels or tuned to an outcome. They are a configuration (`PriorityConfig`).
+- **Alternatives considered:**
+  - **Ranking by potential excess alone:** simple, but a large excess from a short, uncorroborated
+    event would outrank a long, sharp one. The score gives up about seven points of the excess held
+    by the top 200 (68.5% to 61.2%) for that.
+  - **A learned ranking:** rejected; there are no outcome labels until T025, and a learned score
+    would be harder to explain.
+  - **A linear scale:** rejected; real peak scores reach 15 million.
+  - **Batch-relative scores (ranks or percentiles):** rejected; a score that changes when other
+    alerts arrive is hard to show or store.
+- **Consequences:** T025 can store the score with each alert; T031 can sort the queue by it. The
+  weights can be revisited once reviewers' feedback exists; until then the score makes no claim
+  about which alerts are real.
+
 ---
 
 ## Open decisions (tracked in tasks)

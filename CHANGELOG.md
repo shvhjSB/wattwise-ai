@@ -306,6 +306,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - LEAD check at full scale (T044c), D043: `lead_check --scale-from` trains the check's model
   at full scale (all raw meters, T043 settings) and reports the training scale; the default
   run is unchanged. No default detector changes.
+- Alert prioritisation (T022), D044: `wattwise.ml.prioritisation` ranks alerts by a documented
+  score (impact, persistence, severity, confidence) with deterministic ties; a product
+  assumption, not a probability or a verified saving.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

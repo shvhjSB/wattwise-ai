@@ -1133,3 +1133,60 @@ masking in T044a); **this was not isolated, so the cause is a hypothesis.**
   differences of a few points between the two model rows are not strong evidence.
 - Only labels whose LEAD reading equals BDG2's raw reading are scored (D022).
 - A check, not a tuning step: the T018 defaults were not changed (D030 and D033 stand).
+
+## Alert prioritisation (T022, D044)
+
+`wattwise.ml.prioritisation` ranks alerts for review. **The score orders alerts; it is not a
+probability, a verified saving or a measure of waste.** An anomaly is not confirmed waste, and
+the impact component is the *potential* excess of T021.
+
+**The formula.** Score = 100 x (0.4 impact + 0.2 persistence + 0.2 severity + 0.2 confidence),
+each component between 0 and 1.
+
+| Component | What it measures | 0 means | 1 means |
+|---|---|---|---|
+| impact | potential excess kWh above the upper bound (T021) | none | 20,000 kWh or more |
+| persistence | flagged hours | 1 hour | 72 hours or more |
+| severity | the detector's peak score | the threshold (4) | 100 or more |
+| confidence | half: whether the model interval agrees with the detector (1 yes, 0 no, 0.5 no interval); half: the share of the event's hours flagged | all against | all for |
+
+- **Impact, persistence and severity are logarithmic** (each doubling counts the same), because
+  real peak scores run from 4 to 15 million and potential excess from 0 to 19,307 kWh; a linear
+  scale would let one extreme alert fix the ordering.
+- **Meter problems** (`data_fault`, `flatline`) are not consumption (D029, D040): their impact
+  is 0, and they are marked `kind: meter_problem`. Alerts *below* the expected level have no
+  excess above the bound, so their impact is 0 too (`kind: below_expected`). Both still rank on
+  persistence, severity and confidence.
+- **Cost and carbon do not enter the score.** A tariff is optional and per geography; mixing
+  currencies would make the ordering depend on configuration.
+- **Ties:** the score rounded to 2 decimals, then larger potential excess, more flagged hours,
+  the earlier start, the meter id, then the later end. The order does not depend on the input
+  order (tested).
+- **The weights and caps are product assumptions, not fitted to labels.** They were set from
+  the range of real alerts, not tuned to any outcome: the impact cap is just above the largest
+  potential excess seen; the persistence cap is the 99th percentile of flagged hours (72)
+  and the severity cap the 98th percentile of peak scores (100).
+
+```bash
+uv run python -m wattwise.ml.prioritisation \
+    --explanations ../data/processed/fullscale-downstream/explanations-lean/explanations.json \
+    --output ../data/processed/fullscale-downstream/priorities
+```
+
+**On the 5,546 full-scale alerts (all 1,148 meters, rolling z-score, evaluation model):**
+
+- Scores run from 10.2 to 89.7 (median 33.9; 90th percentile 53.6).
+- Median score by kind: 39.0 above expected (3,141 alerts), 29.1 below expected (1,943), 37.5
+  meter problems (462).
+- **The top of the list concentrates the potential excess.** Of all potential excess, the top 20
+  alerts hold 22.3%, the top 100 hold 45.1%, the top 200 hold 61.2% and the top 500 hold 80.3%.
+  Ranking by excess alone would put 68.5% in the top 200 (D040), so the score gives up about
+  seven points of that to put persistent, sharp and corroborated alerts first.
+- The top 100 are all above-expected alerts across 76 different meters; 42 of the top 500 are
+  meter problems.
+- The ranking is for **review order**, and nothing here shows that a higher-ranked alert is
+  more likely to be a real problem: no labels were used, and the LEAD check (T044c) shows that
+  the detectors themselves agree with one annotator only in part.
+
+**Not done:** checking the order against human feedback (T025 adds the labels to do it);
+per-geography cost or carbon in the ranking; a per-building roll-up.

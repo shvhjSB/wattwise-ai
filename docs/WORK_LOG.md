@@ -2117,3 +2117,26 @@ model 70.0% at 0.735 (budget 0.5). **The model's recall advantage from the sampl
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error`: **635 passed**, 2 new (633 before): the indexed injection equals the
   original, and features on a history margin equal features on the whole series.
+
+---
+
+## 2026-10-28 — T044c LEAD human-label check with a full-scale model
+
+**Done**
+- **`lead_check --scale-from fullscale.json`:** a `ScaleModel` trains the T043 chosen settings
+  on a seeded 25% sample of the quality-checked January-May 2016 readings of all 1,171 raw
+  meters, with early stopping on June, then scores the labelled meters. The report records the
+  training scale; the default run is unchanged (a test checks that).
+- **Two runs, one after the other** (the machine fits one at a time): the default labelled-meters
+  rerun (187 s, 4.3 GB) and the full-scale check (268 s, 5.6 GB).
+
+**Result** (docs/EVALUATION.md, D043): the full-scale model forecasts better than seasonal-naive
+on the labelled meters (17.35 against 19.72) and finds more labelled segments than the rolling
+z-score (29.6% against 18.9%), but is less precise (event precision 9.3% against 22.7%). The
+rolling z-score reproduces D031 exactly. **The labelled-meters model detector differs from D031**
+(3.8% against 4.5% hour precision, MAE 21.20 against 22.08); not isolated.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error`: **637 passed**, 2 new (635 before): the scale model trains on every meter and
+  scores the labelled ones, and the default run is unchanged.

@@ -292,6 +292,16 @@ The application foundation runs end to end locally, and CI checks it automatical
     original on all seven patterns) and features rebuilt only for the rows used.
   - Nothing changes for users.
 
+- **LEAD check at full scale (T044c, D043):** **real data, human labels without measured
+  agreement.** A model trained at full scale on January-May 2016 (all 1,171 raw meters) forecasts
+  the labelled meters better than seasonal-naive (MAE 17.35 against 19.72).
+  - As a detector it finds more labelled segments than the rolling z-score (29.6% against
+    18.9%) and is less precise (event precision 9.3% against 22.7%, 3.4 times the events).
+  - It improves on the labelled-meters model on every measure. The rolling z-score stays the
+    default (D030, D033).
+  - The model-based numbers of the labelled-meters rerun differ a little from D031 (3.8% against
+    4.5% hour precision); the cause was not isolated.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -329,6 +339,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T043 | Best model at full scale | 2026-10-27 |
 | T044a | Downstream pipeline at full scale (evaluation model, intervals, detection, explanations, impact) | 2026-10-28 |
 | T044b | Detector benchmark at full scale | 2026-10-28 |
+| T044c | LEAD human-label check with a full-scale H1-2016 model | 2026-10-28 |
 
 ## Current task
 
@@ -336,15 +347,13 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T044c — LEAD human-label check with a full-scale H1-2016 model** (M5b):
-- The T018b check: a model trained at full scale on January-May 2016, scored on the trusted
-  LEAD labels for July-December 2016, for the rolling z-score and the model detector. It
-  trains a model inside the check and rebuilds features in memory; at full scale both must use
-  the store.
-- Open from T044a: the 5 November event cluster (check against the clock audit), and a few
-  meters whose intervals are still very wide.
+**T022 — Alert prioritisation** (M8): a documented, transparent ranking of alerts that
+uses the potential-impact estimates (D038) without presenting them as verified savings. See
+[ROADMAP.md](ROADMAP.md#t022--alert-prioritisation).
 
-See [ROADMAP.md](ROADMAP.md#t044b--detector-benchmark-at-full-scale).
+Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
+few meters whose intervals are still very wide, which artifact serves predictions (D039), and
+why the model detector's recall advantage on the sample reversed at full scale.
 
 ## Milestone progress
 
@@ -355,7 +364,7 @@ See [ROADMAP.md](ROADMAP.md#t044b--detector-benchmark-at-full-scale).
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
-| M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 4 / 5 |
+| M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 5 / 5 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 2 / 3 |

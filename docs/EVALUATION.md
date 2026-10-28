@@ -978,7 +978,8 @@ USD** over 652 events.
 ### Not done here
 
 - **T044b:** the injected-anomaly benchmark (the rule that decides the default detector).
-- **T044c:** the LEAD human-label check with a full-scale model.
+- **T044c:** the LEAD human-label check with a full-scale model (done, see
+  [below](#detector-check-against-lead-labels-at-full-scale-t044c-d043)).
 - **The 5 November cluster and the remaining very wide intervals** are open questions.
 
 ## Detector benchmark at full scale (T044b, D042)
@@ -1061,3 +1062,74 @@ At every alert rate the rolling z-score has the highest recall (or the only one 
 **Not done:** more replicates (one gives about 1,100 injections per phase); and the benchmark
 still does not say how the detectors do on *real* anomalies. T044c checks that with the LEAD
 human labels.
+
+## Detector check against LEAD labels at full scale (T044c, D043)
+
+The T018b check (D031), unchanged in procedure, with the model trained at full scale.
+**Real data, human labels without measured agreement (LEAD 1.0):** one annotator's judgement, on
+173 labelled meters, July-December 2016. Both detectors run with their T018 default settings;
+nothing is tuned on the labels.
+
+```bash
+uv run python -m wattwise.ml.lead_check --data ../data/processed/bdg2/raw \
+    --labels ../data/processed/lead/labels.parquet \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet \
+    --scale-from ../data/processed/evaluation/fullscale/fullscale.json \
+    --output ../data/processed/fullscale-downstream/lead-scale
+```
+
+- **The model.** The T043 chosen settings (L1 objective, 255 leaves, 3,000 trees with early
+  stopping), trained on a seeded 25% sample of the quality-checked January-May 2016 readings of
+  **all 1,171 raw meters** (838,771 rows, not only the 173 labelled ones), with early stopping
+  on June (187,918 rows). Training window strictly before the calibration month and the
+  detection window. Early stopping chose **76 trees** (of up to 3,000), on this single month.
+- **Forecast context** (the labelled meters, July-December 2016): MAE **17.354** against 19.719
+  for seasonal-naive (12.0% lower). The D031 labelled-meters model was *worse* than
+  seasonal-naive (21.197 against 19.719).
+- **Time.** 268 s and a 5.6 GB peak working set for the full-scale check, 187 s for the
+  labelled-meters rerun.
+
+| Detector | Hour precision | Hour recall | Event precision | Segment recall | Events per meter-week |
+|---|---|---|---|---|---|
+| rolling z-score | 11.5% | 13.8% | 22.7% | 18.9% | 0.431 |
+| model, full-scale model (T044c) | 4.2% | 27.1% | 9.3% | 29.6% | 1.465 |
+| model, labelled-meters model (rerun now) | 3.8% | 24.6% | 7.2% | 26.3% | 1.658 |
+| *model, labelled-meters model (D031, T018b)* | *4.5%* | | *7.1%* | *21.2%* | |
+
+The chance hour precision (the share of scored hours that are labelled) is 1.5%.
+
+**Labelled segments found, by length:**
+
+| Detector | 1-2 h (1,465) | 3-23 h (536) | 24 h or more (88) |
+|---|---|---|---|
+| rolling z-score | 13.0% | 31.9% | 36.4% |
+| model, full-scale | 23.2% | 42.7% | 55.7% |
+| model, labelled-meters (rerun) | 20.2% | 39.2% | 48.9% |
+
+**What the check says**
+- **The full-scale model is a better model detector, and it is still the less precise one.** It
+  finds more labelled segments (29.6% against 18.9% for the rolling z-score) at every length,
+  but fewer of its events touch a label (9.3% against 22.7%), and it raises 3.4 times the
+  events. Its hour precision is 2.8 times chance; the rolling z-score's is 7.7 times chance.
+- **The full-scale model improves on the labelled-meters model on every precision and recall
+  measure here**, and raises fewer events. A hypothesis, not tested: better forecasts leave
+  smaller residuals where nothing is wrong. The improvement is modest: 0.4 points of hour precision, 2.1 points of event precision.
+- **Both are low in absolute terms.** The rolling z-score finds about one labelled segment in
+  five, the full-scale model about three in ten. 70% of labelled segments last 1-2 hours,
+  which the persistence rules mostly ignore. Whether operators want 1-2 hour alerts is a
+  product question.
+- **The rolling z-score row is identical in all three runs** (it does not use the model).
+
+**Discrepancy to note.** The labelled-meters model detector, rerun now, gives 3.8% hour
+precision and 7.2% event precision (D031 recorded 4.5% and 7.1%), and its test MAE is 21.20
+(D031: 22.08). The rolling z-score reproduces D031 exactly. The model-based numbers moved
+because the pipeline changed after D031 (features and quality masking in T042, calibration
+masking in T044a); **this was not isolated, so the cause is a hypothesis.**
+
+**Limits**
+- One annotator, agreement unmeasured; the labels are partial (unlabelled hours are not known
+  to be normal), so **precision here is a lower bound** on the real share of useful alerts.
+- 173 meters from the labelled sites; with one model fit and one early-stopping month, the
+  differences of a few points between the two model rows are not strong evidence.
+- Only labels whose LEAD reading equals BDG2's raw reading are scored (D022).
+- A check, not a tuning step: the T018 defaults were not changed (D030 and D033 stand).

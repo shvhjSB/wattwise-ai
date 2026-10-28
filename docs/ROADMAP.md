@@ -73,7 +73,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
 | T044b | Detector benchmark at full scale | M5b | T044a, T018 | Done |
-| T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Not started |
+| T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Done |
 
 ---
 
@@ -487,6 +487,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 ### T044c — LEAD check with a full-scale H1-2016 model
 - **Scope:** the T018b check with a model trained at full scale on January–May 2016, scored on
   the trusted LEAD labels for July–December 2016.
+- **Done (2026-10-28, D043):** the full-scale model beats seasonal-naive on the labelled meters
+  (MAE 17.35 against 19.72) and finds more labelled segments than the rolling z-score (29.6%
+  against 18.9%), but is less precise (event precision 9.3% against 22.7%). No default changes
+  ([EVALUATION.md](EVALUATION.md#detector-check-against-lead-labels-at-full-scale-t044c-d043)).
 
 ## M6 — Anomaly detection and test scenarios
 

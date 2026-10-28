@@ -6,7 +6,7 @@ person's judgement, not ground truth. Only labels whose LEAD reading equals BDG2
 are used (D022): elsewhere the annotator saw different numbers from the ones scored here.
 
 LEAD's year lies inside the adopted model's training period, so a separate model is trained for
-this check, chronologically:
+this check, chronologically (on the labelled meters, or, with `ScaleModel`, at full scale):
 - **train:** January to May 2016
 - **calibration:** June 2016 (the model detector's median and MAD)
 - **detection:** July 2016 to the end of the year, where the labels are scored
@@ -14,10 +14,16 @@ this check, chronologically:
 Both detectors run with their standard settings (D030); nothing is tuned on the labels. The
 readings are BDG2's **raw** variant, which is what LEAD labelled.
 
+**At full scale (T044c, D043)** the model is the T043 chosen model's settings, trained on a
+seeded 25% sample of the quality-checked January-May 2016 readings of **all** raw meters (not
+only the labelled ones), with early stopping on June, as T043 did. It is then scored on the
+labelled meters.
+
     uv run python -m wattwise.data.bdg2_prepare --variant raw --sample-meters 0
     uv run python -m wattwise.ml.lead_check --data ../data/processed/bdg2/raw \\
         --labels ../data/processed/lead/labels.parquet \\
-        --enrichment ../data/processed/era5/weather_enrichment.parquet
+        --enrichment ../data/processed/era5/weather_enrichment.parquet \
+        --scale-from ../data/processed/evaluation/fullscale/fullscale.json
 """
 
 from __future__ import annotations
@@ -25,7 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -46,8 +52,10 @@ from wattwise.ml.detection import (
 )
 from wattwise.ml.evaluation import compute_metrics
 from wattwise.ml.features import build_features
-from wattwise.ml.models import overall
+from wattwise.ml.fullscale import SAMPLE_FRACTION, STOPPING_ROUNDS, sample_rows
+from wattwise.ml.models import Family, FeatureModel, Variant, overall
 from wattwise.ml.registry import train
+from wattwise.ml.scale import quality_mask
 from wattwise.ml.splits import Chronological, Role, SplitConfig, make_split
 
 CHECK_VERSION: Final = "1"
@@ -230,9 +238,52 @@ class Inputs:
     labels: pd.DataFrame
 
 
-def run_check(inputs: Inputs, split: SplitConfig = SPLIT) -> dict[str, Any]:
-    """Train on the split's training window, then score both detectors against the labels in
-    its test window."""
+@dataclass(frozen=True)
+class ScaleModel:
+    """Train the check's model at full scale (D043): `settings` (T043's chosen model), on a
+    seeded `fraction` of the quality-checked training-window readings of every meter, with
+    early stopping on the calibration month."""
+
+    settings: Mapping[str, float | str]
+    fraction: float = SAMPLE_FRACTION
+    stopping_rounds: int = STOPPING_ROUNDS
+    seed: int = 0
+
+
+def _fit_at_scale(
+    inputs: Inputs, time: Chronological, scale: ScaleModel, features: pd.DataFrame
+) -> tuple[FeatureModel, dict[str, Any]]:
+    """The scale model, bound to `features` (the labelled meters') for scoring."""
+    assert time.validation_start is not None
+    history = inputs.readings[inputs.readings["timestamp"] < time.test_start].reset_index(drop=True)
+    history_features = build_features(history, inputs.buildings, inputs.weather, inputs.enrichment)
+    usable = quality_mask(history) & history["value"].notna().to_numpy()
+    stamps = history["timestamp"]
+    training = ((stamps >= time.train_start) & (stamps < time.validation_start)).to_numpy()
+    stopping = (stamps >= time.validation_start).to_numpy()
+    train_ids = sample_rows(training & usable, scale.fraction, scale.seed)
+    stop_ids = sample_rows(stopping & usable, scale.fraction, scale.seed + 1)
+    model = FeatureModel(Family.LIGHTGBM, Variant.FULL, scale.settings, history_features)
+    model.fit(
+        history.loc[train_ids],
+        validation=history.loc[stop_ids],
+        stopping_rounds=scale.stopping_rounds,
+    )
+    model.features = features  # from here on it scores the labelled meters
+    return model, {
+        "meters_trained": int(history["meter_id"].nunique()),
+        "training_rows": len(train_ids),
+        "early_stopping_rows": len(stop_ids),
+        "best_iteration": model.best_iteration,
+        "settings": dict(scale.settings),
+    }
+
+
+def run_check(
+    inputs: Inputs, split: SplitConfig = SPLIT, scale: ScaleModel | None = None
+) -> dict[str, Any]:
+    """Train on the split's training window (the labelled meters, or all meters with `scale`),
+    then score both detectors against the labels in its test window."""
     time = split.time
     assert isinstance(time, Chronological) and time.validation_start is not None
     meters = sorted(set(inputs.labels["meter_id"]) & set(inputs.readings["meter_id"]))
@@ -242,14 +293,29 @@ def run_check(inputs: Inputs, split: SplitConfig = SPLIT) -> dict[str, Any]:
         inputs.readings["meter_id"].isin(meters) & (inputs.readings["timestamp"] < time.test_end)
     ].reset_index(drop=True)
     features = build_features(readings, inputs.buildings, inputs.weather, inputs.enrichment)
-    trained = train(readings, inputs.buildings, features, split)
+    model: FeatureModel
+    training: dict[str, Any]
+    if scale is None:
+        trained = train(readings, inputs.buildings, features, split)
+        model = trained.model
+        training = {
+            "meters_trained": len(meters),
+            "training_rows": trained.training.training_rows,
+            "at_scale": False,
+        }
+    else:
+        model, training = _fit_at_scale(inputs, time, scale, features)
+        training["at_scale"] = True
 
     split_rows = make_split(readings, split, inputs.buildings)
     naive = run(split_rows, [SeasonalNaive()], roles=(Role.TEST,))
-    model_test = trained.metrics["test"]
     naive_test = overall(naive, SeasonalNaive().name, Role.TEST)
     test_rows = split_rows.folds[0].rows(Role.TEST)
-    predicted = trained.model.predict(test_rows.drop(columns="value"), readings)
+    predicted = model.predict(test_rows.drop(columns="value"), readings)
+    scored = ~np.isnan(test_rows["value"].to_numpy(dtype=float)) & ~np.isnan(predicted.to_numpy())
+    model_test_mae = compute_metrics(
+        test_rows["value"].to_numpy(dtype=float)[scored], predicted.to_numpy()[scored]
+    ).mae
     lag = naive.predictions[SeasonalNaive().name][(split_rows.folds[0].fold.name, Role.TEST)]
     actual = test_rows["value"].to_numpy(dtype=float)
     common = ~(np.isnan(actual) | np.isnan(predicted.to_numpy()) | np.isnan(lag.to_numpy()))
@@ -271,7 +337,7 @@ def run_check(inputs: Inputs, split: SplitConfig = SPLIT) -> dict[str, Any]:
     for detector in CHECKED_DETECTORS:
         config = DetectorConfig(**DETECTOR_DEFAULTS[detector])  # type: ignore[arg-type]
         if detector is Detector.MODEL:
-            expected = trained.model.predict(readings.drop(columns="value"), readings)
+            expected = model.predict(readings.drop(columns="value"), readings)
             calibration = calibrate(readings, expected, calibration_rows, config)
             found = detect(readings, expected, calibration, detection_rows, config)
         else:
@@ -294,10 +360,11 @@ def run_check(inputs: Inputs, split: SplitConfig = SPLIT) -> dict[str, Any]:
         "untrusted_label_rows_in_detection_window": int(
             (~window_labels["lead_reading_matches_bdg2_raw"]).sum()
         ),
+        "model_training": training,
         "forecast_context": {
-            "model": trained.model.name,
-            "training_rows": trained.training.training_rows,
-            "test_mae_model": model_test["mae"],
+            "model": model.name,
+            "training_rows": training["training_rows"],
+            "test_mae_model": model_test_mae,
             "test_mae_seasonal_naive": naive_test["mae"],
             "common_rows": int(common.sum()),
             "common_rows_mae_model": common_model.mae,
@@ -329,6 +396,9 @@ def to_markdown(report: dict[str, Any]) -> str:
         f"{report['meters_with_labels_in_detection_window']} labelled in the detection window; "
         f"{report['label_rows_in_detection_window']:,} label rows there, of which "
         f"{report['untrusted_label_rows_in_detection_window']:,} are untrusted",
+        f"- Model: trained on {report['model_training']['meters_trained']} meters "
+        f"({'at full scale' if report['model_training']['at_scale'] else 'the labelled meters'}), "
+        f"{report['model_training']['training_rows']:,} training rows",
         f"- Forecast context ({f['model']}): test MAE {f['test_mae_model']} against "
         f"{f['test_mae_seasonal_naive']} for seasonal-naive; on {f['common_rows']:,} common rows "
         f"{f['common_rows_mae_model']} against {f['common_rows_mae_seasonal_naive']}",
@@ -368,8 +438,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--labels", type=Path, required=True, help="LEAD labels.parquet (T007c)")
     parser.add_argument("--enrichment", type=Path, help="weather_enrichment.parquet (T007d)")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--scale-from",
+        type=Path,
+        help="fullscale.json (T043): train that model's settings on all meters (D043)",
+    )
     args = parser.parse_args(argv)
     try:
+        scale = None
+        if args.scale_from:
+            chosen = json.loads(args.scale_from.read_text(encoding="utf-8"))["chosen"]
+            scale = ScaleModel(settings=chosen["settings"])
         inputs = Inputs(
             readings=pd.read_parquet(args.data / "readings.parquet"),
             buildings=pd.read_parquet(args.data / "buildings.parquet"),
@@ -377,8 +456,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             enrichment=_read(args.enrichment) if args.enrichment else None,
             labels=pd.read_parquet(args.labels),
         )
-        report = run_check(inputs)
-    except (FileNotFoundError, ValueError) as exc:
+        report = run_check(inputs, scale=scale)
+    except (FileNotFoundError, ValueError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
     args.output.mkdir(parents=True, exist_ok=True)

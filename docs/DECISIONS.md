@@ -1542,6 +1542,33 @@ links to the entry that replaces it.
 - **Consequences:** nothing changes for users. The model keeps its other jobs: expected
   consumption, intervals, impact and explanations.
 
+## D043 — The LEAD check at full scale: a better model detector, the same conclusion
+- **Date:** 2026-10-28 · **Task:** T044c · **Status:** Accepted
+- **Decision:** `lead_check --scale-from fullscale.json` trains the check's model at full scale:
+  the T043 chosen settings, a seeded 25% sample of the quality-checked January-May 2016 readings
+  of every raw meter, early stopping on June, then scores it on the labelled meters. The
+  procedure otherwise follows D031 (raw readings, trusted labels only, no tuning, reported
+  apart). The default run (labelled meters, small model) is kept for comparison.
+- **Evidence:** the full-scale model forecasts better than seasonal-naive on the labelled meters
+  (MAE 17.35 against 19.72; the labelled-meters model was worse, 21.20). As a detector it
+  finds more labelled segments than the rolling z-score (29.6% against 18.9%) and is less
+  precise (event precision 9.3% against 22.7%, 3.4 times the events). It improves on the
+  labelled-meters model on every precision and recall measure.
+- **No default changes.** The rolling z-score stays the alert source (D030, D033). D030's
+  rule is the injected-anomaly benchmark; a check against one annotator's labels is not a
+  tuning target (D031).
+- **Alternatives considered:**
+  - **Choosing the detector by this check:** rejected; with one annotator, agreement
+    unmeasured and partial labels, it should check a detector, not select it.
+  - **Training only on the 173 labelled meters:** kept as a comparison only; the full-scale
+    model is the one that matches the adopted one's recipe.
+- **Caveats:** the model-based numbers differ from D031 (3.8% against 4.5% hour precision for
+  the same labelled-meters setup); the cause was not isolated (pipeline changes since T018b are
+  the hypothesis). Early stopping picked 76 trees on one month.
+- **Consequences:** M5b's T044 is complete; the full-scale results replace the sample-scale
+  ones wherever they are quoted. Whether to offer the model detector as a more sensitive,
+  noisier second alert source is a product question for the owner.
+
 ---
 
 ## Open decisions (tracked in tasks)

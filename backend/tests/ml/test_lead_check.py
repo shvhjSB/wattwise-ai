@@ -12,6 +12,7 @@ from tests.ml.conftest import BUILDINGS, SPLIT, synthetic
 from wattwise.ml.lead_check import (
     LABEL,
     Inputs,
+    ScaleModel,
     flagged_hours,
     main,
     run_check,
@@ -154,3 +155,37 @@ def test_the_command_line_needs_prepared_raw_data(
 ) -> None:
     assert main(["--data", str(tmp_path), "--labels", str(tmp_path / "labels.parquet")]) == 1
     assert "error:" in capsys.readouterr().err
+
+
+SMALL_SETTINGS: dict[str, float | str] = {
+    "learning_rate": 0.1,
+    "n_estimators": 60,
+    "min_child_samples": 20,
+    "feature_fraction": 0.8,
+    "n_jobs": 1,
+    "objective": "regression_l1",
+    "num_leaves": 15,
+}
+
+
+def test_the_scale_model_trains_on_every_meter_and_scores_only_the_labelled_ones() -> None:
+    inputs = synthetic_inputs()
+    only_b = inputs.labels[inputs.labels["meter_id"] == "B-electricity"]
+    inputs = Inputs(inputs.readings, BUILDINGS, inputs.weather, None, only_b)
+
+    report = run_check(inputs, SPLIT, ScaleModel(SMALL_SETTINGS, fraction=0.5, stopping_rounds=10))
+
+    assert report["meters"] == 1  # scored: the labelled meter
+    training = report["model_training"]
+    assert training["at_scale"] is True and training["meters_trained"] == 3  # trained: all
+    assert 0 < training["best_iteration"] <= 60 and training["early_stopping_rows"] > 0
+    assert report["forecast_context"]["model"].endswith("objectiveregression_l1")
+    assert set(report["detectors"]) == {"rolling-z", "model"}
+    assert report["detectors"]["model"]["segments"]["count"] == 1  # the labelled surge exists
+
+
+def test_the_default_check_still_trains_on_the_labelled_meters_only() -> None:
+    report = run_check(synthetic_inputs(), SPLIT)
+
+    assert report["model_training"]["at_scale"] is False
+    assert report["model_training"]["meters_trained"] == report["meters"] == 3

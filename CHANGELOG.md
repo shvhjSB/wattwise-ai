@@ -316,6 +316,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - Read APIs (T024), D046: `GET /buildings`, `/buildings/{id}`, `/meters`, `/meters/{id}`,
   `/meters/{id}/series` and `/dashboard/summary`; `datasets` and `readings` tables (migration
   `0002`); `python -m wattwise.db.load`. Every response carries `data_kind`; timestamps are UTC.
+- Alerts and feedback API (T025), D047: `GET /alerts`, `GET /alerts/{id}`,
+  `POST /alerts/{id}/feedback`; `alerts` and `alert_feedback` (migration `0003`);
+  `python -m wattwise.db.alerts`. Labels: confirmed waste, expected behaviour, sensor or data
+  fault, needs investigation (a reviewer's judgement). Nothing is retrained from feedback.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

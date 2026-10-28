@@ -10,7 +10,7 @@ from sqlalchemy import Engine
 from sqlalchemy.exc import OperationalError
 
 from wattwise import __version__
-from wattwise.api.routes import catalog, dashboard, health, ready
+from wattwise.api.routes import alerts, catalog, dashboard, health, ready
 from wattwise.core.config import Settings, get_settings
 from wattwise.db.engine import create_db_engine
 
@@ -50,6 +50,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     app.include_router(ready.router, prefix=API_V1_PREFIX)
     app.include_router(catalog.router, prefix=API_V1_PREFIX)
     app.include_router(dashboard.router, prefix=API_V1_PREFIX)
+    app.include_router(alerts.router, prefix=API_V1_PREFIX)
     return app
 
 

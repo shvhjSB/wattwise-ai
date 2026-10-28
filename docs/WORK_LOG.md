@@ -2239,3 +2239,41 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **732 passed**, 45 new (687 before). Without a
   database: the 54 database tests skip, the rest pass.
+
+---
+
+## 2026-10-29 — T025 Alerts and feedback API
+
+**Done**
+- **Migration `0003`:** `alerts` (score, severity band, kind, potential excess, the whole evidence
+  bundle as JSONB, `review_status`, `reviewed_at`, `superseded`) and `alert_feedback`
+  (append-only; label, note, reviewer, `created_at`).
+- **`python -m wattwise.db.alerts`:** scores `explanations.json` bundles with the T022 formula;
+  reloads match on (meter, detector, start), keep ids and feedback, and keep reviewed alerts that
+  are no longer detected as `superseded`.
+- **Endpoints:** `GET /alerts` (highest priority first; filters for building, meter, dataset,
+  signature, severity, kind, review status and a time overlap), `GET /alerts/{id}` (evidence,
+  explanation, reviews, caveats, `retrained_from_feedback: false`) and
+  `POST /alerts/{id}/feedback` (201; 422 for unknown labels or fields, over-long text and control
+  characters).
+- **Label set (D047):** the spec's four labels, mapped onto the master instructions' three.
+- **Severity bands:** `high` from 60, `medium` from 40 (4.2%, 28.6%, 67.2% of full-scale alerts).
+- **Full-scale run on the local database:** BDG2 cleaned (1,148 buildings, 1,148 meters,
+  20,137,056 readings, 1,187,658 missing; local only, D014) loaded in 896 s, and its 5,546 real
+  alerts in 12 s.
+
+**Problems found by that run, fixed**
+- **A dataset with alerts could not be reloaded:** the T024 loader deleted and re-inserted
+  meters, which the alerts' foreign keys refuse. Buildings and meters are now updated in place,
+  readings replaced, and removing a meter that still has alerts is refused (tested).
+- **Slow `COPY`:** the first load wrote rows one at a time (896 s). It now sends CSV chunks
+  with numpy-formatted UTC timestamps: on 1M rows, formatting took 7.8 s against 26.5 s with
+  pandas' own timestamp formatting (both measured while other work ran). A full reload with the
+  new code was **not re-timed**; a reload also has to delete the old 20M rows first.
+- **Reload check at full scale** (fixed loader, but the earlier CSV formatting, while tests ran
+  alongside): the dataset reloaded with its alerts in place in 2,215 s, then the alerts reloaded
+  in 21 s: 0 inserted, 5,546 updated in place (same ids), 0 deleted.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **786 passed**, 54 new (732 before).

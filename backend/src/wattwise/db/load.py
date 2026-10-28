@@ -1,9 +1,11 @@
 """Load a dataset's canonical buildings and readings into the database (docs/DATABASE.md, T024).
 
 Both tables are validated against the data contract first; a table that violates it is not
-loaded at all. A dataset is replaced as a whole: loading it again removes its old buildings,
-meters and readings in the same transaction, so a reload never mixes two versions. A building
-that already belongs to *another* dataset is refused, never moved.
+loaded at all. A dataset is replaced as a whole, in one transaction, so a reload never mixes two
+versions: its buildings and meters are updated in place (alerts keep pointing at them), its
+readings are replaced, and buildings or meters no longer present are removed, unless a meter
+still has alerts (then nothing is loaded). A building or meter that already belongs to *another*
+dataset is refused, never moved.
 
 The meters come from the readings (each meter's building, type and unit, which the contract
 makes consistent), and every meter's building must be in the buildings table.
@@ -25,15 +27,19 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
-from sqlalchemy import Connection, delete, insert, select
+from sqlalchemy import Connection, delete, func, select
+from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from wattwise.core.config import get_settings
 from wattwise.data.contracts import BUILDINGS, READINGS, TableContract
 from wattwise.data.csv_io import read_csv
 from wattwise.data.validation import ContractViolationError, to_canonical
 from wattwise.db.engine import create_db_engine
-from wattwise.db.models import Building, DataKind, Dataset, Meter, Reading
+from wattwise.db.models import Alert, Building, DataKind, Dataset, Meter, Reading
+
+COPY_CHUNK_ROWS = 500_000  # rows per CSV chunk sent to COPY: bounded memory, few round trips
 
 
 @dataclass(frozen=True)
@@ -61,9 +67,11 @@ def load_dataset(
 ) -> LoadSummary:
     """Replace `info`'s dataset with these tables, inside the caller's transaction.
 
+    Buildings and meters are updated in place (so alerts that refer to them stay valid), the
+    readings are replaced, and buildings or meters the new tables no longer contain are removed.
     Raises `ContractViolationError` for a table that violates the contract, and `ValueError`
-    for tables that are valid alone but inconsistent together, or that claim another dataset's
-    buildings."""
+    for tables that are inconsistent together, that claim another dataset's buildings or
+    meters, or that would remove a meter that still has alerts."""
     buildings = to_canonical(buildings, BUILDINGS)
     readings = to_canonical(readings, READINGS)
     meters = (
@@ -74,44 +82,64 @@ def load_dataset(
     unknown = sorted(set(meters["building_id"]) - set(buildings["building_id"]))
     if unknown:
         raise ValueError(f"readings name buildings missing from the buildings table: {unknown[:5]}")
-    owners = connection.execute(
-        select(Building.building_id, Building.dataset_id).where(
-            Building.building_id.in_(buildings["building_id"].tolist()),
-            Building.dataset_id != info.dataset_id,
-        )
-    ).all()
-    if owners:
-        taken = [f"{b} (in {d})" for b, d in owners[:5]]
-        raise ValueError(f"buildings already belong to another dataset: {taken}")
+    _refuse_other_datasets(connection, info.dataset_id, buildings, meters)
+    owned = select(Building.building_id).where(Building.dataset_id == info.dataset_id)
+    old_meters = set(connection.scalars(select(Meter.meter_id).where(Meter.building_id.in_(owned))))
+    dropped = sorted(old_meters - set(meters["meter_id"]))
+    with_alerts = sorted(
+        connection.scalars(select(Alert.meter_id).where(Alert.meter_id.in_(dropped)).distinct())
+    )
+    if with_alerts:
+        raise ValueError(f"meters with alerts would be removed: {with_alerts[:5]}")
 
-    _remove(connection, info.dataset_id)
+    dataset = {"name": info.name, "kind": info.kind.value, "source": info.source}
     connection.execute(
-        insert(Dataset).values(
-            dataset_id=info.dataset_id, name=info.name, kind=info.kind.value, source=info.source
+        pg_insert(Dataset)
+        .values(dataset_id=info.dataset_id, **dataset)
+        .on_conflict_do_update(
+            index_elements=[Dataset.dataset_id], set_={**dataset, "loaded_at": func.now()}
         )
     )
+    connection.execute(delete(Reading).where(Reading.meter_id.in_(sorted(old_meters))))
+    building_rows = [
+        {
+            "building_id": row.building_id,
+            "dataset_id": info.dataset_id,
+            "site_id": row.site_id,
+            "timezone": row.timezone,
+            "primary_use": _text(row.primary_use),
+            "floor_area_m2": _number(row.floor_area_m2),
+            "latitude": _number(row.latitude),
+            "longitude": _number(row.longitude),
+        }
+        for row in buildings.itertuples(index=False)
+    ]
+    upsert_buildings = pg_insert(Building)
     connection.execute(
-        insert(Building),
-        [
-            {
-                "building_id": row.building_id,
-                "dataset_id": info.dataset_id,
-                "site_id": row.site_id,
-                "timezone": row.timezone,
-                "primary_use": _text(row.primary_use),
-                "floor_area_m2": _number(row.floor_area_m2),
-                "latitude": _number(row.latitude),
-                "longitude": _number(row.longitude),
-            }
-            for row in buildings.itertuples(index=False)
-        ],
+        upsert_buildings.on_conflict_do_update(
+            index_elements=[Building.building_id],
+            set_={c: upsert_buildings.excluded[c] for c in building_rows[0] if c != "building_id"},
+        ),
+        building_rows,
     )
+    upsert_meters = pg_insert(Meter)
     connection.execute(
-        insert(Meter),
+        upsert_meters.on_conflict_do_update(
+            index_elements=[Meter.meter_id],
+            set_={c: upsert_meters.excluded[c] for c in ("building_id", "meter_type", "unit")},
+        ),
         [
             {"meter_id": m, "building_id": b, "meter_type": t, "unit": u}
             for m, b, t, u in meters.itertuples(index=False)
         ],
+    )
+    # Removed last: a meter may have moved to a new building first.
+    connection.execute(delete(Meter).where(Meter.meter_id.in_(dropped)))
+    connection.execute(
+        delete(Building).where(
+            Building.dataset_id == info.dataset_id,
+            Building.building_id.not_in(buildings["building_id"].tolist()),
+        )
     )
     _copy_readings(connection, readings)
     return LoadSummary(
@@ -123,27 +151,48 @@ def load_dataset(
     )
 
 
-def _remove(connection: Connection, dataset_id: str) -> None:
-    owned = select(Building.building_id).where(Building.dataset_id == dataset_id)
-    meters = select(Meter.meter_id).where(Meter.building_id.in_(owned))
-    connection.execute(delete(Reading).where(Reading.meter_id.in_(meters)))
-    connection.execute(delete(Meter).where(Meter.building_id.in_(owned)))
-    connection.execute(delete(Building).where(Building.dataset_id == dataset_id))
-    connection.execute(delete(Dataset).where(Dataset.dataset_id == dataset_id))
+def _refuse_other_datasets(
+    connection: Connection, dataset_id: str, buildings: pd.DataFrame, meters: pd.DataFrame
+) -> None:
+    """A load may never take over another dataset's buildings or meters."""
+    owners = connection.execute(
+        select(Building.building_id, Building.dataset_id).where(
+            Building.building_id.in_(buildings["building_id"].tolist()),
+            Building.dataset_id != dataset_id,
+        )
+    ).all()
+    if owners:
+        taken = [f"{b} (in {d})" for b, d in owners[:5]]
+        raise ValueError(f"buildings already belong to another dataset: {taken}")
+    meter_owners = connection.execute(
+        select(Meter.meter_id, Building.dataset_id)
+        .join(Building)
+        .where(Meter.meter_id.in_(meters["meter_id"].tolist()), Building.dataset_id != dataset_id)
+    ).all()
+    if meter_owners:
+        taken = [f"{m} (in {d})" for m, d in meter_owners[:5]]
+        raise ValueError(f"meters already belong to another dataset: {taken}")
 
 
 def _copy_readings(connection: Connection, readings: pd.DataFrame) -> None:
-    """PostgreSQL COPY: one round trip for any number of rows (millions at full scale)."""
+    """PostgreSQL COPY in CSV chunks written by pandas (millions of rows at full scale).
+
+    In CSV, an unquoted empty field is NULL, which is what pandas writes for a missing value.
+    Timestamps are written as UTC strings with microseconds, formatted by numpy (pandas formats
+    zone-aware timestamps about 3 times slower). Identifiers cannot contain commas or quotes (the
+    contract), so no field needs quoting."""
     cursor = connection.connection.dbapi_connection.cursor()  # type: ignore[union-attr]
-    columns = zip(
-        readings["meter_id"].tolist(),
-        readings["timestamp"].dt.to_pydatetime().tolist(),
-        readings["value"].tolist(),
-        strict=True,
+    utc = readings["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
+    stamps = np.char.add(np.datetime_as_string(utc.to_numpy("datetime64[us]"), unit="us"), "Z")
+    frame = pd.DataFrame(
+        {"meter_id": readings["meter_id"], "timestamp": stamps, "value": readings["value"]}
     )
-    with cursor.copy('COPY readings (meter_id, "timestamp", value) FROM STDIN') as copy:
-        for meter_id, timestamp, value in columns:
-            copy.write_row((meter_id, timestamp, None if math.isnan(value) else value))
+    with cursor.copy(
+        'COPY readings (meter_id, "timestamp", value) FROM STDIN (FORMAT csv)'
+    ) as copy:
+        for first in range(0, len(frame), COPY_CHUNK_ROWS):
+            chunk = frame.iloc[first : first + COPY_CHUNK_ROWS]
+            copy.write(chunk.to_csv(index=False, header=False, lineterminator="\n"))
 
 
 def _missing(value: object) -> bool:

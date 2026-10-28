@@ -377,6 +377,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T022 | Alert prioritisation | 2026-10-28 |
 | T023 | Database foundation and readiness | 2026-10-28 |
 | T024 | Buildings, meters, series and summary APIs | 2026-10-28 |
+| T025 | Alerts and feedback API | 2026-10-29 |
 
 ## Current task
 
@@ -384,10 +385,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T025 — Alerts and feedback API** (M9): `GET /alerts` with pagination and filters,
-`GET /alerts/{id}` with the evidence bundle, and `POST /alerts/{id}/feedback`, persisted with
-timestamps. The feedback label set is decided in this task (D001). No automatic retraining. See
-[ROADMAP.md](ROADMAP.md#t025--alerts-and-feedback-api).
+**T026 — CSV upload and analysis endpoint** (M9): `POST /data/upload` (strict size limit, T005
+validation, safe filenames, no filesystem paths, a useful error report) and
+`POST /inference/analyze`. Open decision for it: which model artifact serves predictions (D039).
+See [ROADMAP.md](ROADMAP.md#t026--csv-upload-and-analysis-endpoint).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -406,7 +407,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
-| M9 API and persistence | T023–T027 | 2 / 5 |
+| M9 API and persistence | T023–T027 | 3 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |

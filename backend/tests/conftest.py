@@ -102,3 +102,22 @@ def migrated_client(migrated_engine: Engine) -> Iterator[TestClient]:
     app = create_app(Settings(environment="test", database_url=None), engine=migrated_engine)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture
+def alert_engine(sample_engine: Engine) -> Engine:
+    """`sample_engine` with the crafted `SAMPLE_BUNDLES` loaded as alerts."""
+    from tests.alert_bundles import SAMPLE_BUNDLES
+    from wattwise.db.alerts import load_alerts
+
+    with sample_engine.begin() as connection:
+        load_alerts(connection, SAMPLE_INFO.dataset_id, SAMPLE_BUNDLES)
+    return sample_engine
+
+
+@pytest.fixture
+def alert_client(alert_engine: Engine) -> Iterator[TestClient]:
+    """A test client over the synthetic sample and its crafted alerts."""
+    app = create_app(Settings(environment="test", database_url=None), engine=alert_engine)
+    with TestClient(app) as test_client:
+        yield test_client

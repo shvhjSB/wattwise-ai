@@ -13,6 +13,8 @@ Decisions: D045, D046.
 | `buildings` | `building_id` | `dataset_id` (foreign key), `site_id`, `timezone`, optional `primary_use`, `floor_area_m2` (> 0), `latitude` (-90 to 90), `longitude` (-180 to 180), `created_at` |
 | `meters` | `meter_id` | `building_id` (foreign key, `RESTRICT`), `meter_type`, `unit`, `created_at` |
 | `readings` | (`meter_id`, `timestamp`) | `value`: NULL means not measured, never 0 (T024) |
+| `alerts` | `alert_id` | one detected event: meter, detector, start/end, signature, kind, priority score and severity band (T022), potential excess (never verified), the whole evidence bundle (JSONB), `review_status`, `reviewed_at`, `superseded` (T025) |
+| `alert_feedback` | `feedback_id` | `alert_id`, `label`, optional `note` (at most 2,000 characters) and `reviewer` (at most 100), `created_at`; append-only (T025) |
 
 - **Every building belongs to a dataset whose kind is synthetic or observed**, so the API never
   serves data without that label.
@@ -24,7 +26,8 @@ Decisions: D045, D046.
   the API converts every timestamp it returns to UTC. The tests run on a non-UTC session to keep
   it so.
 - Migrations are in `backend/src/wattwise/db/migrations` (inside the package, so a built image
-  carries them): `0001` the baseline, `0002` datasets and readings. A test builds the schema from
+  carries them): `0001` the baseline, `0002` datasets and readings, `0003` alerts and
+  feedback. A test builds the schema from
   the migrations and fails if the models differ from it; each revision downgrades to the one
   before.
 
@@ -39,12 +42,30 @@ uv run --env-file .env python -m wattwise.db.load --source ../data/sample/synthe
   tables). Both are **validated against the contract first**; a violation loads nothing and
   prints every error.
 - **A dataset is replaced as a whole**, in one transaction: a reload never mixes two versions.
-- A building that belongs to **another** dataset is refused, never moved. Readings that name a
-  building missing from the buildings table are refused.
-- Readings go in with PostgreSQL `COPY`, so a full-scale table (millions of rows) loads in one
-  round trip.
+  Buildings and meters are updated in place, so alerts keep pointing at them; readings are
+  replaced; buildings and meters no longer present are removed, **unless a meter still has
+  alerts**, in which case nothing is loaded (T025).
+- A building or meter that belongs to **another** dataset is refused, never moved. Readings that
+  name a building missing from the buildings table are refused.
+- Readings go in with PostgreSQL `COPY`, in CSV chunks of 500,000 rows written by pandas; floats
+  round-trip exactly (tested).
 - BDG2 may be loaded into a **local** database (`--kind observed`); it is never redistributed
   (D014).
+
+## Loading alerts
+
+```bash
+uv run --env-file .env python -m wattwise.db.alerts --dataset-id bdg2-cleaned-all \
+    --explanations ../data/processed/fullscale-downstream/explanations-lean/explanations.json
+```
+
+- The input is `explanations.json` from `wattwise.ml.explanations`. Each bundle is scored with the
+  T022 formula and stored with its severity band and the whole bundle.
+- **Reloading keeps reviews.** Alerts are matched on (meter, detector, start): a match is updated
+  in place (same id, same feedback); an alert no longer detected is deleted, **unless it has
+  feedback**, in which case it is kept and marked `superseded`; new alerts are inserted.
+- A load touches only one dataset and the detectors in the file.
+- Feedback is never deleted (`RESTRICT`), and **no model is retrained from it** (D047).
 
 ## Readiness
 

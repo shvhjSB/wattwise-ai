@@ -94,6 +94,9 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | GET | `/api/v1/meters/{meter_id}` | One meter; 404 if unknown. |
 | GET | `/api/v1/meters/{meter_id}/series` | Readings in [`start`, `end`) (ISO 8601 with an offset), at most `limit` points, with `truncated`. Missing readings are `null`. |
 | GET | `/api/v1/dashboard/summary` | Counts per dataset and overall, meters by type, missing values and the time range. |
+| GET | `/api/v1/alerts` | Alerts, highest priority first, filtered by building, meter, dataset, `signature`, `severity`, `kind`, `review_status` and an overlap with [`start`, `end`); superseded ones only with `include_superseded=true`. |
+| GET | `/api/v1/alerts/{alert_id}` | One alert with its evidence bundle, explanation, every review and the caveats; 404 if unknown. |
+| POST | `/api/v1/alerts/{alert_id}/feedback` | A reviewer's verdict: `label` (`confirmed_waste`, `expected_behaviour`, `sensor_or_data_fault`, `needs_investigation`), optional `note` and `reviewer`. 201; 422 for anything invalid. Stored only: no model is retrained. |
 | GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 
 ## Database

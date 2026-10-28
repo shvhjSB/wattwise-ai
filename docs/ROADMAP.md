@@ -52,7 +52,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T022 | Alert prioritisation | M8 | T020, T021 | Done |
 | T023 | Database foundation and readiness | M9 | T002, T004 | Done |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Done |
-| T025 | Alerts and feedback API | M9 | T022, T023 | Not started |
+| T025 | Alerts and feedback API | M9 | T022, T023 | Done |
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Not started |
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Not started |
 | T028 | Design system and application shell | M10 | T003 | Not started |
@@ -674,6 +674,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - `POST /alerts/{id}/feedback`, persisted with timestamps. The label set is decided here (see D001).
   - No automatic retraining.
 - **Acceptance:** API tests, including rejection of invalid feedback.
+- **Done (2026-10-29, D047):** the three endpoints; `alerts` and `alert_feedback` (migration
+  `0003`); `python -m wattwise.db.alerts`, which scores bundles with T022 and keeps reviews across
+  reloads. Labels: the spec's four, mapped onto the master instructions' three. Feedback is an
+  append-only history; nothing is retrained from it.
 
 ### T026 — CSV upload and analysis endpoint
 - **Scope:**

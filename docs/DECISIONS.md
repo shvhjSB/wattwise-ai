@@ -23,7 +23,7 @@ links to the entry that replaces it.
   | Planning file | `IMPLEMENTATION_PLAN.md` | `docs/ROADMAP.md` and related records | `docs/ROADMAP.md`; no `IMPLEMENTATION_PLAN.md` |
   | Pace | Continue without waiting | One task per run, then stop | One task per run, then stop |
   | Chart library | Recharts or ECharts | Plotly or another suitable library | Open; decided in T030 against the actual chart needs |
-  | Feedback labels | confirmed waste / expected behaviour / sensor or data fault / needs investigation | useful / incorrect / needs investigation | Open; decided in T025 |
+  | Feedback labels | confirmed waste / expected behaviour / sensor or data fault / needs investigation | useful / incorrect / needs investigation | The spec's four, mapped onto the three (D047, T025) |
 - **Consequences:** future sessions read `CLAUDE.md` and `docs/PROJECT_STATUS.md` first. The
   open items are tracked in the roadmap tasks named above.
 
@@ -1669,6 +1669,50 @@ links to the entry that replaces it.
 - **Consequences:** T025 adds alerts as another table under a dataset. The frontend (T029, T030)
   can show the synthetic/observed label from every response.
 
+## D047 — Alerts and feedback: the spec's four labels, an append-only history, nothing retrained
+- **Date:** 2026-10-29 · **Task:** T025 · **Status:** Accepted
+- **Decision:** ([DATABASE.md](DATABASE.md), backend README)
+  - **The feedback label set (open since D001):** the product spec's four labels,
+    `confirmed_waste`, `expected_behaviour`, `sensor_or_data_fault` and `needs_investigation`. They
+    refine the master instructions' three without losing anything:
+
+    | Master instructions | Spec labels |
+    |---|---|
+    | useful | `confirmed_waste`, `sensor_or_data_fault` (the alert found something real) |
+    | incorrect | `expected_behaviour` |
+    | needs investigation | `needs_investigation` |
+
+    A `confirmed_waste` label is **a reviewer's judgement, recorded as given**. The system never
+    sets it, never shows an unreviewed alert as waste, and never turns a label into a verified
+    saving; every alert detail repeats those caveats.
+  - **Feedback is an append-only history** (`alert_feedback`): a new verdict is a new row; the
+    alert's `review_status` is the latest label and `reviewed_at` its time. Notes are at most 2,000
+    characters and reviewers 100; control characters (other than tab and line breaks) and unknown
+    fields are rejected (422). Text is stored as text, with bound parameters only.
+  - **No retraining from feedback.** Nothing reads the labels into a model; every alert detail says
+    `retrained_from_feedback: false`. A later retraining workflow would need vetted labels and its
+    own decision (CLAUDE.md).
+  - **Severity** is a band of the T022 priority score: `high` from 60, `medium` from 40, `low`
+    below (4.2%, 28.6% and 67.2% of the full-scale alerts). A product assumption, for filtering.
+  - **Alerts list highest priority first** (then by id), with filters for building, meter,
+    dataset, signature, severity, kind, review status and an overlap with [`start`, `end`).
+  - **Reloads keep reviews:** alerts are matched on (meter, detector, start); an alert a new run no
+    longer finds is deleted unless it was reviewed, and then kept as `superseded` (hidden unless
+    `include_superseded=true`).
+  - **Reloading a dataset keeps its alerts** (a change to T024's loader): buildings and meters are
+    now updated in place instead of deleted and re-inserted, which the alerts' foreign keys would
+    have refused; removing a meter that still has alerts is refused. Found while loading the
+    full-scale data with its alerts, before any reload had failed.
+- **Alternatives considered:**
+  - **The master instructions' three labels:** simpler, but "useful" would merge real excess and
+    meter faults, which the impact rules (D040) keep apart.
+  - **Overwriting the latest verdict:** loses the history of how a decision was reached.
+  - **Deleting all alerts on reload:** simple, but it would delete reviewers' work.
+  - **Authentication for reviewers:** not in this task; `reviewer` is a free-text name until the
+    security task (T037) decides how users are identified.
+- **Consequences:** the alert queue (T031) can sort by priority and filter by severity and review
+  status. A later evaluation can compare labels with the detectors, as the LEAD check does.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1677,7 +1721,6 @@ links to the entry that replaces it.
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Server-state library | T029 | Plain hooks (D009) vs TanStack Query |
-| Feedback label set | T025 | See D001 |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
 | Which artifact serves predictions: the refit (best accuracy) or the evaluation model (the calibrated tools) | T024/T026/T027 | One `CURRENT` pointer cannot be both (D039) |

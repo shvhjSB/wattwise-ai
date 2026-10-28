@@ -69,7 +69,10 @@ def test_stored_values_equal_the_source_and_missing_stays_missing(
         == pd.to_datetime(source["timestamp"], utc=True).tolist()
     )
     pd.testing.assert_series_equal(
-        stored["value"].astype(float), source["value"].astype(float), check_names=False
+        stored["value"].astype(float),
+        source["value"].astype(float),
+        check_names=False,
+        check_exact=True,  # COPY goes through text: floats must still round-trip exactly
     )
 
 
@@ -150,3 +153,81 @@ def test_the_command_line_needs_a_database_url(monkeypatch: pytest.MonkeyPatch) 
         get_settings.cache_clear()
 
     assert code == 1
+
+
+def test_a_dataset_with_alerts_can_be_reloaded_and_its_alerts_stay(
+    alert_engine: Engine, tables: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    from wattwise.db.models import Alert
+
+    buildings, readings = tables
+    with Session(alert_engine) as session:
+        before = sorted(session.scalars(select(Alert.alert_id)))
+
+    with alert_engine.begin() as connection:
+        load_dataset(connection, SAMPLE_INFO, buildings, readings)
+
+    with Session(alert_engine) as session:
+        assert sorted(session.scalars(select(Alert.alert_id))) == before
+    assert counts(alert_engine)["readings"] == len(readings)
+
+
+def test_a_meter_with_alerts_is_not_removed_and_nothing_changes(
+    alert_engine: Engine, tables: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    buildings, readings = tables
+    before = counts(alert_engine)
+    without_lab = readings[readings["building_id"] != "syn-lab-c"]
+
+    with (
+        pytest.raises(ValueError, match="meters with alerts would be removed"),
+        alert_engine.begin() as connection,
+    ):
+        load_dataset(connection, SAMPLE_INFO, buildings, without_lab)
+
+    assert counts(alert_engine) == before
+
+
+def test_a_meter_of_another_dataset_is_refused(
+    migrated_engine: Engine, tables: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    buildings, readings = tables
+    with migrated_engine.begin() as connection:
+        load_dataset(connection, SAMPLE_INFO, buildings, readings)
+    other_buildings = buildings.iloc[:1].assign(building_id="other-b")
+    other_readings = readings[readings["meter_id"] == "syn-lab-c:electricity"].assign(
+        building_id="other-b"
+    )
+    other = DatasetInfo("other", "another dataset", DataKind.OBSERVED, "tests")
+
+    with (
+        pytest.raises(ValueError, match="meters already belong to another dataset"),
+        migrated_engine.begin() as connection,
+    ):
+        load_dataset(connection, other, other_buildings, other_readings)
+
+
+def test_a_meter_can_move_to_a_new_building_on_reload(
+    migrated_engine: Engine, tables: tuple[pd.DataFrame, pd.DataFrame]
+) -> None:
+    buildings, readings = tables
+    with migrated_engine.begin() as connection:
+        load_dataset(connection, SAMPLE_INFO, buildings, readings)
+    moved_buildings = pd.concat(
+        [
+            buildings[buildings["building_id"] != "syn-lab-c"],
+            buildings[buildings["building_id"] == "syn-lab-c"].assign(building_id="syn-lab-new"),
+        ]
+    )
+    moved_readings = readings.assign(
+        building_id=readings["building_id"].replace({"syn-lab-c": "syn-lab-new"})
+    )
+
+    with migrated_engine.begin() as connection:
+        load_dataset(connection, SAMPLE_INFO, moved_buildings, moved_readings)
+
+    with Session(migrated_engine) as session:
+        meter = session.get(Meter, "syn-lab-c:electricity")
+        assert meter is not None
+        assert meter.building_id == "syn-lab-new"
+        assert session.get(Building, "syn-lab-c") is None

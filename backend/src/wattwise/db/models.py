@@ -2,22 +2,40 @@
 
 The columns, types and limits follow the contract, so data that validated as canonical can be
 stored. Every building belongs to a `Dataset`, which says whether its data is synthetic or
-observed, so nothing the API serves loses that label. Alert and analysis-run tables arrive with
-the tasks that serve them (T025, T027).
+observed, so nothing the API serves loses that label. Alerts (T025) carry their full evidence
+bundle and an append-only history of reviewers' feedback; the analysis-run table arrives with
+T027.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
 from enum import StrEnum
+from typing import Any
 
-from sqlalchemy import CheckConstraint, DateTime, Float, ForeignKey, String, Text, func
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    CheckConstraint,
+    DateTime,
+    Float,
+    ForeignKey,
+    Identity,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from wattwise.data.contracts import CANONICAL_UNIT, MeterType, Unit
 from wattwise.db.base import Base
 
 IDENTIFIER_LENGTH = 128  # the contract's identifier limit
+NOTE_LENGTH = 2000
+REVIEWER_LENGTH = 100
 
 
 class DataKind(StrEnum):
@@ -25,6 +43,22 @@ class DataKind(StrEnum):
 
     SYNTHETIC = "synthetic"  # generated, e.g. wattwise.data.synthetic
     OBSERVED = "observed"  # measured by real meters, e.g. BDG2
+
+
+class FeedbackLabel(StrEnum):
+    """A reviewer's verdict on an alert (D047). It is the reviewer's judgement, recorded as given;
+    the system never sets it and never treats it as a measurement."""
+
+    CONFIRMED_WASTE = "confirmed_waste"  # real excess consumption, worth acting on
+    EXPECTED_BEHAVIOUR = "expected_behaviour"  # a known, legitimate reason (an event, a schedule)
+    SENSOR_OR_DATA_FAULT = "sensor_or_data_fault"  # the meter or its data, not the building
+    NEEDS_INVESTIGATION = "needs_investigation"  # not decided yet
+
+
+#: `alerts.review_status`: the latest feedback label, or this when there is none.
+UNREVIEWED = "unreviewed"
+SEVERITIES = ("high", "medium", "low")
+ALERT_KINDS = ("above_expected", "below_expected", "meter_problem")
 
 
 def _quoted(values: list[str]) -> str:
@@ -112,3 +146,73 @@ class Reading(Base):
     )
     timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
     value: Mapped[float | None] = mapped_column(Float)
+
+
+class Alert(Base):
+    """One detected event, its priority (T022) and its evidence bundle (T020) as loaded."""
+
+    __tablename__ = "alerts"
+    __table_args__ = (
+        UniqueConstraint("meter_id", "detector", "start"),
+        CheckConstraint('"end" > start', name="end_after_start"),
+        CheckConstraint("direction IN ('high', 'low')", name="direction"),
+        CheckConstraint(f"kind IN ({_quoted(list(ALERT_KINDS))})", name="kind"),
+        CheckConstraint(f"severity IN ({_quoted(list(SEVERITIES))})", name="severity"),
+        CheckConstraint("priority_score BETWEEN 0 AND 100", name="priority_range"),
+        CheckConstraint(
+            f"review_status IN ({_quoted([UNREVIEWED, *(f.value for f in FeedbackLabel)])})",
+            name="review_status",
+        ),
+    )
+
+    alert_id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    meter_id: Mapped[str] = mapped_column(
+        ForeignKey("meters.meter_id", ondelete="RESTRICT"), index=True
+    )
+    detector: Mapped[str] = mapped_column(String(32))
+    start: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    duration_hours: Mapped[int] = mapped_column(Integer)
+    flagged_hours: Mapped[int] = mapped_column(Integer)
+    direction: Mapped[str] = mapped_column(String(8))
+    signature: Mapped[str] = mapped_column(String(32), index=True)
+    kind: Mapped[str] = mapped_column(String(16))
+    peak_score: Mapped[float | None] = mapped_column(Float)
+    priority_score: Mapped[float] = mapped_column(Float, index=True)
+    severity: Mapped[str] = mapped_column(String(8), index=True)
+    #: Potential, never verified (D038); NULL for meter problems (D040).
+    potential_excess_kwh: Mapped[float | None] = mapped_column(Float)
+    model_version: Mapped[str | None] = mapped_column(String(64))
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    review_status: Mapped[str] = mapped_column(String(32), server_default=UNREVIEWED, index=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: A later load no longer detected it, but it has feedback, so it is kept (D047).
+    superseded: Mapped[bool] = mapped_column(Boolean, server_default="false")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    feedback: Mapped[list[AlertFeedback]] = relationship(
+        back_populates="alert", order_by="AlertFeedback.feedback_id"
+    )
+
+
+class AlertFeedback(Base):
+    """One review of an alert. Append-only: a new verdict is a new row, so history is kept."""
+
+    __tablename__ = "alert_feedback"
+    __table_args__ = (
+        CheckConstraint(f"label IN ({_quoted([f.value for f in FeedbackLabel])})", name="label"),
+        CheckConstraint(f"char_length(note) <= {NOTE_LENGTH}", name="note_length"),
+        CheckConstraint(f"char_length(reviewer) <= {REVIEWER_LENGTH}", name="reviewer_length"),
+    )
+
+    feedback_id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    alert_id: Mapped[int] = mapped_column(
+        ForeignKey("alerts.alert_id", ondelete="RESTRICT"), index=True
+    )
+    label: Mapped[str] = mapped_column(String(32))
+    note: Mapped[str | None] = mapped_column(Text)
+    reviewer: Mapped[str | None] = mapped_column(String(REVIEWER_LENGTH))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    alert: Mapped[Alert] = relationship(back_populates="feedback")

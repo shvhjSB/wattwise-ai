@@ -26,6 +26,9 @@ of T021, never a verified figure.
   currencies would change the ordering depending on configuration.
 - **Deterministic ties:** the score rounded to 2 decimals, then larger potential excess, then
   more flagged hours, then the earlier start, then meter id, then the later end.
+- **Severity bands** (T025): `high` from 60, `medium` from 40, `low` below. On the 5,546
+  full-scale alerts that is 4.2%, 28.6% and 67.2%. A band is a coarser view of the same score,
+  for filtering, and says nothing more than the score does.
 
 The weights and caps are **product assumptions, not fitted to labels**. They were set from the
 range of real alerts at full scale (D044): the impact cap is just above the largest potential
@@ -56,6 +59,8 @@ from wattwise.ml.signatures import METER_PROBLEMS, Signature
 PRIORITY_VERSION: Final = "1"
 DEFAULT_OUTPUT: Final = Path("../data/processed/detection/priorities")
 THRESHOLD_SCORE: Final = 4.0  # the detector's alert threshold: peak score 0 on the scale below
+#: Lower score bounds of the severity bands, highest first (a product assumption, D047).
+SEVERITY_BANDS: Final = (("high", 60.0), ("medium", 40.0), ("low", 0.0))
 
 
 class PriorityConfig(BaseModel):
@@ -126,6 +131,11 @@ def components(bundle: Mapping[str, Any], config: PriorityConfig) -> dict[str, f
         "confidence": 0.5 * (0.5 if agree is None else float(bool(agree)))
         + 0.5 * (min(1.0, flagged / duration) if duration > 0 else 0.0),
     }
+
+
+def severity_of(score: float) -> str:
+    """The severity band of a 0-100 priority score."""
+    return next(name for name, low in SEVERITY_BANDS if score >= low)
 
 
 def score_of(parts: Mapping[str, float], config: PriorityConfig) -> float:

@@ -2277,3 +2277,40 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 **Validation** (Windows)
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **786 passed**, 54 new (732 before).
+
+### Follow-up: re-timing the faster `COPY` (2026-10-29)
+
+- **The first full reload with the vectorised timestamps failed:** formatting all 20,137,056
+  timestamps at once as numpy fixed-width strings needed 3.45 GB and ran out of memory after
+  305 s. The load is one transaction, so it rolled back; the database was checked afterwards
+  (20,142,432 readings, 5,546 alerts, unchanged). Timestamps are now formatted per 500,000-row
+  chunk.
+- **A clean full-scale timing is still missing:** the re-run with the chunked code was interrupted
+  by the machine sleeping, and PostgreSQL was also vacuuming the previous reload's 20M deleted
+  rows. What the runs did show: a reload's cost is dominated by PostgreSQL deleting and then
+  vacuuming the old rows, not by Python.
+
+---
+
+## 2026-10-29 — T026 CSV upload and analysis endpoint
+
+**Done**
+- **`POST /data/upload`:** validates one CSV file against the contract and returns the report
+  (200, or 422 with the same report). 10 MB limit (`WATTWISE_MAX_UPLOAD_BYTES`), checked against
+  the declared size and while reading (413). Safe display names; nothing written to disk under
+  the client's name; nothing stored.
+- **`POST /inference/analyze`:** `readings` + `buildings` (+ optional `weather`) CSV files; each
+  meter's readings with the evaluation model's expectation, and the default detector's alerts.
+  At most 200,000 readings and 50 meters. Works without a model (alerts only, with the reason).
+- **D039 settled for now (D048):** the evaluation model (`CURRENT`) serves predictions.
+- **Dependency:** `python-multipart` 0.0.32 (released 2026-06-04), for FastAPI file uploads.
+
+**Found while testing**
+- The model has no expectation for a meter's first 251 hours (lag features need history).
+- On the synthetic sample the default detector finds **1 of 6** injected anomalies (the
+  three-day sustained excess) and raises 3 other events. Consistent with the benchmark; recorded
+  in D048, and the tests check what it finds rather than what one might hope.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **816 passed**, 30 new (786 before).

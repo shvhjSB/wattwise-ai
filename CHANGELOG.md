@@ -320,6 +320,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   `POST /alerts/{id}/feedback`; `alerts` and `alert_feedback` (migration `0003`);
   `python -m wattwise.db.alerts`. Labels: confirmed waste, expected behaviour, sensor or data
   fault, needs investigation (a reviewer's judgement). Nothing is retrained from feedback.
+- CSV upload and analysis (T026), D048: `POST /data/upload` (validation report, 10 MB limit,
+  not stored) and `POST /inference/analyze` (expected consumption from the evaluation model and
+  the default detector's alerts; works without a model). Dependency: `python-multipart` 0.0.32.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -182,16 +182,22 @@ def _copy_readings(connection: Connection, readings: pd.DataFrame) -> None:
     zone-aware timestamps about 3 times slower). Identifiers cannot contain commas or quotes (the
     contract), so no field needs quoting."""
     cursor = connection.connection.dbapi_connection.cursor()  # type: ignore[union-attr]
-    utc = readings["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
-    stamps = np.char.add(np.datetime_as_string(utc.to_numpy("datetime64[us]"), unit="us"), "Z")
-    frame = pd.DataFrame(
-        {"meter_id": readings["meter_id"], "timestamp": stamps, "value": readings["value"]}
-    )
     with cursor.copy(
         'COPY readings (meter_id, "timestamp", value) FROM STDIN (FORMAT csv)'
     ) as copy:
-        for first in range(0, len(frame), COPY_CHUNK_ROWS):
-            chunk = frame.iloc[first : first + COPY_CHUNK_ROWS]
+        for first in range(0, len(readings), COPY_CHUNK_ROWS):
+            # Formatted one chunk at a time: numpy's fixed-width strings for all 20M timestamps
+            # at once needed 3.45 GB and ran out of memory.
+            part = readings.iloc[first : first + COPY_CHUNK_ROWS]
+            utc = part["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
+            stamps = np.datetime_as_string(utc.to_numpy("datetime64[us]"), unit="us")
+            chunk = pd.DataFrame(
+                {
+                    "meter_id": part["meter_id"].to_numpy(),
+                    "timestamp": np.char.add(stamps, "Z"),
+                    "value": part["value"].to_numpy(),
+                }
+            )
             copy.write(chunk.to_csv(index=False, header=False, lineterminator="\n"))
 
 

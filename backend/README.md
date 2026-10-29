@@ -78,6 +78,8 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 | `WATTWISE_ENVIRONMENT` | `development`, `test`, `production` | `development` |
 | `WATTWISE_DATABASE_URL` | `postgresql+psycopg://user:password@host:port/database` | unset (no database) |
 | `WATTWISE_TEST_DATABASE_URL` | the same form; **tests only** | unset (database tests skip) |
+| `WATTWISE_MAX_UPLOAD_BYTES` | the largest CSV file accepted, in bytes | `10000000` |
+| `WATTWISE_REGISTRY_ROOT` | the model registry `/inference/analyze` uses | `../artifacts/models` |
 
 The database URL carries a password: keep it in an untracked file, never in the repository.
 `backend/.env` is git-ignored; run commands with `uv run --env-file .env ...` to load it. See
@@ -97,6 +99,8 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | GET | `/api/v1/alerts` | Alerts, highest priority first, filtered by building, meter, dataset, `signature`, `severity`, `kind`, `review_status` and an overlap with [`start`, `end`); superseded ones only with `include_superseded=true`. |
 | GET | `/api/v1/alerts/{alert_id}` | One alert with its evidence bundle, explanation, every review and the caveats; 404 if unknown. |
 | POST | `/api/v1/alerts/{alert_id}/feedback` | A reviewer's verdict: `label` (`confirmed_waste`, `expected_behaviour`, `sensor_or_data_fault`, `needs_investigation`), optional `note` and `reviewer`. 201; 422 for anything invalid. Stored only: no model is retrained. |
+| POST | `/api/v1/data/upload?table=readings\|buildings\|weather` | Validate one CSV file (multipart field `file`) against the contract: 200 with the report, 422 with the same report if invalid, 413 above the size limit. Not stored. |
+| POST | `/api/v1/inference/analyze` | Multipart `readings`, `buildings` and optional `weather` CSV files: each meter's readings with the model's expectation, and the default detector's alerts. At most 200,000 readings and 50 meters. Not stored; nothing retrained. |
 | GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 
 ## Database

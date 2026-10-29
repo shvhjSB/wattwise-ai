@@ -53,7 +53,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T023 | Database foundation and readiness | M9 | T002, T004 | Done |
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Done |
 | T025 | Alerts and feedback API | M9 | T022, T023 | Done |
-| T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Not started |
+| T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Done |
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Not started |
 | T028 | Design system and application shell | M10 | T003 | Not started |
 | T029 | Energy overview page | M10 | T024, T028 | Not started |
@@ -687,6 +687,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Tests for oversize, malformed and valid uploads.
   - The analysis returns predictions and alerts.
+- **Done (2026-10-29, D048):** both endpoints. Uploads are validated in memory and not stored
+  (10 MB limit, 413; safe display names). The analysis uses the evaluation model for the
+  expectation (settling D039 for now) and the default detector for alerts, and still answers
+  without a model. On the synthetic sample the default detector finds 1 of 6 injected anomalies.
 
 ### T027 — Model metadata, metrics and monitoring records
 - **Scope:**

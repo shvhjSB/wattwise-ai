@@ -24,6 +24,7 @@ dependencies = [
     "sqlalchemy>=2.0,<2.1",
     "alembic>=1.14,<2",
     "psycopg[binary]>=3.2,<4",
+    "python-multipart>=0.0.32,<0.1",
 ]
 
 # Development-only tools (PEP 735). Not part of the published package. `uv sync` installs them.

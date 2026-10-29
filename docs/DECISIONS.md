@@ -1713,6 +1713,48 @@ links to the entry that replaces it.
 - **Consequences:** the alert queue (T031) can sort by priority and filter by severity and review
   status. A later evaluation can compare labels with the detectors, as the LEAD check does.
 
+## D048 — Uploads are validated, not stored; analysis uses the evaluation model and the default detector
+- **Date:** 2026-10-29 · **Task:** T026 · **Status:** Accepted
+- **Decision:** (backend README)
+  - **`POST /data/upload`** validates one CSV file against the contract (T005) and returns its
+    report: 200 when valid, 422 with the same report when not. **Nothing is stored**: a stored
+    upload would need a dataset, a provenance label and an owner, which no task has decided. The
+    file is read in memory (at most `WATTWISE_MAX_UPLOAD_BYTES`, default 10 MB; 413 above it,
+    checked both against the declared size and while reading). The client's file name is reduced
+    to a safe display name (no directories, `[A-Za-z0-9._-]`, at most 100 characters) and never
+    used to open or write a file.
+  - **`POST /inference/analyze`** takes `readings` and `buildings` CSV files (and optionally
+    `weather`), validates them, and returns each meter's observed readings with the model's
+    expectation, and the alerts. At most 200,000 readings and 50 meters (413 above).
+    - **Alerts** come from the default detector (D030), the rolling same-hour z-score, which needs
+      only the readings. Events are classified into signatures as usual.
+    - **Expected consumption** comes from the promoted model (`CURRENT`). **This settles the open
+      question from D039 for now: the evaluation model serves**, so an analysis uses the same model
+      the intervals, detector checks and benchmarks were measured with. The production refit stays
+      in the registry, unused.
+    - Uploaded data has no ERA5 enrichment and no holidays for unknown sites, and the model was
+      trained on BDG2 buildings, so the expectation for an uploaded building is **an extrapolation
+      that has not been validated**; the response says so. The lag features need history: on the
+      synthetic sample, each meter's first 251 hours have no expectation.
+    - **Without a model** the analysis still returns the alerts, with `model_version: null` and the
+      reason (the spec's "handle a missing model gracefully").
+    - Responses are labelled `data_label: "uploaded"`, `stored: false`, `retrained: false`.
+- **Found while testing:** on the synthetic sample (six injected anomalies) the default detector
+  finds **one**, the three-day sustained excess. It misses the 2-hour spike (shorter than its
+  persistence rule), the overnight baseload, the drift and the flatline, and raises three other
+  events on `syn-lab-c`, two of them just after its injected missing-data gap. This matches the
+  benchmark (spike recall 58%, flatline 43%, D042); it is the detector's behaviour, not the
+  endpoint's, and it is a reason not to present an empty alert list as "no problems".
+- **Alternatives considered:**
+  - **Storing uploads as datasets:** useful for the explorer, but it needs a provenance decision
+    (an upload is neither known synthetic nor known observed) and an owner; left for later.
+  - **The model detector for uploads:** it needs a calibration window and the model's
+    out-of-sample residuals, which an arbitrary upload does not have.
+  - **The production refit for predictions:** slightly better accuracy (test MAE 13.660 against 13.700 on common rows, T043),
+    but nothing downstream was measured with it.
+- **Consequences:** T027 records each analysis run (model version, timestamp, input range). The
+  frontend (T031) must show the caveats with the alerts.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1723,5 +1765,4 @@ links to the entry that replaces it.
 | Server-state library | T029 | Plain hooks (D009) vs TanStack Query |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
-| Which artifact serves predictions: the refit (best accuracy) or the evaluation model (the calibrated tools) | T024/T026/T027 | One `CURRENT` pointer cannot be both (D039) |
 

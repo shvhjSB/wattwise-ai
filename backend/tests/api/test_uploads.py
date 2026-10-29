@@ -7,11 +7,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from tests.conftest import SYNTHETIC_SAMPLE
-from tests.ml.conftest import BUILDINGS, SPLIT, features_of, synthetic
 from wattwise.api.main import create_app
 from wattwise.api.routes.uploads import safe_filename
 from wattwise.core.config import Settings
-from wattwise.ml.registry import promote, save, train
 
 API = "/api/v1"
 LIMIT = 50_000  # bytes, small so the oversize tests stay quick
@@ -20,15 +18,6 @@ HISTORY = pd.Timedelta(hours=251)  # the model's lag features need this much his
 
 def sample(name: str) -> bytes:
     return (SYNTHETIC_SAMPLE / f"{name}.csv").read_bytes()
-
-
-@pytest.fixture(scope="module")
-def model_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
-    """A registry with a small model promoted (trained on the ML tests' synthetic load)."""
-    readings, weather = synthetic()
-    root = tmp_path_factory.mktemp("models")
-    promote(save(train(readings, BUILDINGS, features_of(readings, weather), SPLIT), root), root)
-    return root
 
 
 def client_for(root: Path, limit: int = 10_000_000) -> TestClient:

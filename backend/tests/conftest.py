@@ -121,3 +121,17 @@ def alert_client(alert_engine: Engine) -> Iterator[TestClient]:
     app = create_app(Settings(environment="test", database_url=None), engine=alert_engine)
     with TestClient(app) as test_client:
         yield test_client
+
+
+@pytest.fixture(scope="session")
+def model_root(tmp_path_factory: pytest.TempPathFactory) -> Path:
+    """A registry with a small model promoted (trained on the ML tests' synthetic load)."""
+    from tests.ml.conftest import BUILDINGS as ML_BUILDINGS
+    from tests.ml.conftest import SPLIT, features_of, synthetic
+    from wattwise.ml.registry import promote, save, train
+
+    readings, weather = synthetic()
+    root = tmp_path_factory.mktemp("models")
+    trained = train(readings, ML_BUILDINGS, features_of(readings, weather), SPLIT)
+    promote(save(trained, root), root)
+    return root

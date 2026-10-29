@@ -1,6 +1,7 @@
 """CSV upload validation and the analysis of an uploaded dataset."""
 
 import io
+import logging
 import math
 import re
 from typing import Annotated, Any
@@ -8,8 +9,10 @@ from typing import Annotated, Any
 import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Request, UploadFile
 from fastapi.responses import JSONResponse
+from sqlalchemy import Engine, insert
+from sqlalchemy.exc import SQLAlchemyError
 
-from wattwise.api.dependencies import get_app_settings
+from wattwise.api.dependencies import get_app_settings, get_engine
 from wattwise.api.schemas.uploads import (
     AnalysisResponse,
     IssueOut,
@@ -19,9 +22,11 @@ from wattwise.api.schemas.uploads import (
 from wattwise.core.config import Settings
 from wattwise.data.contracts import CONTRACTS
 from wattwise.data.csv_io import read_csv
-from wattwise.ml.analysis import analyze, events_as_records
+from wattwise.db.models import AnalysisRun
+from wattwise.ml.analysis import Analysis, analyze, events_as_records
 
 router = APIRouter(tags=["data"])
+logger = logging.getLogger(__name__)
 
 #: Bounds on one analysis, so a request cannot occupy the server for long.
 MAX_ANALYSIS_ROWS = 200_000
@@ -32,7 +37,8 @@ CAVEATS = [
     "An alert is an anomaly to investigate, not confirmed waste.",
     "Expected consumption for an uploaded building is an extrapolation that has not been "
     "validated.",
-    "Nothing is stored, and no model is retrained.",
+    "The uploaded data is not stored (only a monitoring record of the run), and no model is "
+    "retrained.",
 ]
 
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
@@ -144,6 +150,7 @@ def analyze_upload(
     settings: SettingsDep,
     readings: Annotated[UploadFile, File(description="readings CSV")],
     buildings: Annotated[UploadFile, File(description="buildings CSV")],
+    engine: Annotated[Engine | None, Depends(get_engine)],
     weather: Annotated[UploadFile | None, File(description="optional weather CSV")] = None,
 ) -> AnalysisResponse:
     """Validate the files, then return each meter's readings with the model's expectation and the
@@ -196,8 +203,11 @@ def analyze_upload(
                 ],
             }
         )
+    run_id = _record(engine, table_readings, result)
     return AnalysisResponse.model_validate(
         {
+            "run_id": run_id,
+            "recorded": run_id is not None,
             "detector": result.detector.value,
             "model_version": result.model_version,
             "prediction_note": result.prediction_note,
@@ -207,6 +217,36 @@ def analyze_upload(
             "reports": reports,
         }
     )
+
+
+def _record(engine: Engine | None, readings: pd.DataFrame, result: Analysis) -> int | None:
+    """Write the run's monitoring record (T027): model version, time, input range and counts,
+    never the readings. Without a database, or if writing fails, the analysis is still returned,
+    unrecorded."""
+    if engine is None:
+        return None
+    predictions = 0 if result.expected is None else int(result.expected.notna().sum())
+    try:
+        with engine.begin() as connection:
+            run_id: int = connection.execute(
+                insert(AnalysisRun)
+                .values(
+                    model_version=result.model_version,
+                    detector=result.detector.value,
+                    input_start=readings["timestamp"].min().to_pydatetime(),
+                    input_end=readings["timestamp"].max().to_pydatetime(),
+                    meters=int(readings["meter_id"].nunique()),
+                    readings=len(readings),
+                    missing_values=int(readings["value"].isna().sum()),
+                    predictions=predictions,
+                    alerts=len(result.events),
+                )
+                .returning(AnalysisRun.run_id)
+            ).scalar_one()
+    except SQLAlchemyError as exc:
+        logger.warning("analysis run not recorded: %s", type(exc).__name__)
+        return None
+    return run_id
 
 
 def _number(value: Any) -> float | None:

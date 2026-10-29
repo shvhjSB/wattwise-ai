@@ -101,6 +101,9 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | POST | `/api/v1/alerts/{alert_id}/feedback` | A reviewer's verdict: `label` (`confirmed_waste`, `expected_behaviour`, `sensor_or_data_fault`, `needs_investigation`), optional `note` and `reviewer`. 201; 422 for anything invalid. Stored only: no model is retrained. |
 | POST | `/api/v1/data/upload?table=readings\|buildings\|weather` | Validate one CSV file (multipart field `file`) against the contract: 200 with the report, 422 with the same report if invalid, 413 above the size limit. Not stored. |
 | POST | `/api/v1/inference/analyze` | Multipart `readings`, `buildings` and optional `weather` CSV files: each meter's readings with the model's expectation, and the default detector's alerts. At most 200,000 readings and 50 meters. Not stored; nothing retrained. |
+| GET | `/api/v1/models/metadata` | The promoted model's verified metadata, or `available: false` with a reason. |
+| GET | `/api/v1/models/metrics` | Its validation and test metrics as recorded at training time, with windows and definitions, or `available: false`. |
+| GET | `/api/v1/analysis-runs` | One monitoring record per analysis, newest first (`model_version` filter). |
 | GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 
 ## Database

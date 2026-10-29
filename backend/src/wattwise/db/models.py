@@ -216,3 +216,26 @@ class AlertFeedback(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     alert: Mapped[Alert] = relationship(back_populates="feedback")
+
+
+class AnalysisRun(Base):
+    """A monitoring record of one `/inference/analyze` call (T027). Metadata only: the uploaded
+    readings themselves are never stored (D048)."""
+
+    __tablename__ = "analysis_runs"
+    __table_args__ = (CheckConstraint("input_end >= input_start", name="input_range"),)
+
+    run_id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+    #: The model that produced the expectation; NULL when no model was available.
+    model_version: Mapped[str | None] = mapped_column(String(64), index=True)
+    detector: Mapped[str] = mapped_column(String(32))
+    input_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    input_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    meters: Mapped[int] = mapped_column(Integer)
+    readings: Mapped[int] = mapped_column(Integer)
+    missing_values: Mapped[int] = mapped_column(Integer)
+    predictions: Mapped[int] = mapped_column(Integer)
+    alerts: Mapped[int] = mapped_column(Integer)

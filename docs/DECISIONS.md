@@ -1755,6 +1755,37 @@ links to the entry that replaces it.
 - **Consequences:** T027 records each analysis run (model version, timestamp, input range). The
   frontend (T031) must show the caveats with the alerts.
 
+## D049 — Model information and run records: recorded values only, "unavailable" said explicitly
+- **Date:** 2026-10-29 · **Task:** T027 · **Status:** Accepted
+- **Decision:** (backend README, DATABASE.md)
+  - **`GET /models/metadata`** returns the promoted model's verified metadata (name, settings,
+    feature columns, training window and rows, data fingerprint, split, code and library
+    versions) and what it serves (D048). **`GET /models/metrics`** returns the validation and test
+    metrics **exactly as recorded at training time**, with their windows, definitions and the
+    label "observed" (BDG2). A role that was not recorded is `null`; nothing is recomputed or
+    estimated in the API.
+  - **Unavailable is an answer, not an error:** with no promoted model, a model whose files do
+    not match their hashes, or one made for another artifact or feature-set version, both
+    endpoints answer 200 with `available: false` and a reason (`no_model_promoted`,
+    `model_invalid`, `model_incompatible`) and a message without file paths. A tampered model is
+    never described as if it were fine.
+  - **Verification is cached per version** (versions are immutable folders): the 51 MB hash check
+    runs once (0.21 s), then 0.01 s. Failures are not cached.
+  - **`analysis_runs`** (migration `0004`) holds one record per `/inference/analyze` call: the
+    time, model version (`null` without a model), detector, input range, meters, readings, missing
+    values, predictions and alerts. **Metadata only**: the uploaded readings are still not stored.
+    Listed by `GET /analysis-runs`, newest first, filterable by model version.
+  - **Recording never fails an analysis:** without a database, or if the write fails, the
+    analysis is returned with `recorded: false`.
+- **Alternatives considered:**
+  - **404 or 503 for a missing model:** the API itself is fine and the question has an answer;
+    an explicit `available: false` is easier to show truthfully in the model lab (T033).
+  - **Comparing with seasonal-naive in the API:** the comparison is in EVALUATION.md, but not
+    in the model's metadata; putting a number in the API that the registry does not record
+    would be a copy that can drift.
+- **Consequences:** the model lab (T033) can show the served model and its recorded metrics, and
+  monitoring can count runs per model version.
+
 ---
 
 ## Open decisions (tracked in tasks)

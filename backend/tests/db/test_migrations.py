@@ -5,7 +5,15 @@ from sqlalchemy import Engine, inspect
 from wattwise.db.base import Base
 from wattwise.db.migrate import current_revision, downgrade, head_revision, upgrade
 
-TABLES = {"datasets", "buildings", "meters", "readings", "alerts", "alert_feedback"}
+TABLES = {
+    "datasets",
+    "buildings",
+    "meters",
+    "readings",
+    "alerts",
+    "alert_feedback",
+    "analysis_runs",
+}
 
 
 def tables(engine: Engine) -> set[str]:
@@ -55,7 +63,7 @@ def test_the_models_match_the_migrated_schema(schema_engine: Engine) -> None:
 
 
 def test_there_is_a_single_head_revision() -> None:
-    assert head_revision() == "0003"
+    assert head_revision() == "0004"
 
 
 def test_each_revision_downgrades_to_the_one_before(schema_engine: Engine) -> None:

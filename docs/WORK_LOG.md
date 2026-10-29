@@ -2285,8 +2285,8 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   305 s. The load is one transaction, so it rolled back; the database was checked afterwards
   (20,142,432 readings, 5,546 alerts, unchanged). Timestamps are now formatted per 500,000-row
   chunk.
-- **A clean full-scale timing is still missing:** the re-run with the chunked code was interrupted
-  by the machine sleeping, and PostgreSQL was also vacuuming the previous reload's 20M deleted
+- **A clean full-scale timing is still missing:** the re-run with the chunked code completed
+  (no memory error) but its 39,225 s include the night the machine slept, and PostgreSQL was also vacuuming the previous reload's 20M deleted
   rows. What the runs did show: a reload's cost is dominated by PostgreSQL deleting and then
   vacuuming the old rows, not by Python.
 
@@ -2314,3 +2314,23 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 **Validation** (Windows)
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **816 passed**, 30 new (786 before).
+
+---
+
+## 2026-10-29 — T027 Model metadata, metrics and monitoring records
+
+**Done**
+- **`GET /models/metadata` and `/models/metrics`** from the promoted model's verified metadata;
+  metrics exactly as recorded, with windows and definitions. A missing, tampered or incompatible
+  model answers `available: false` with a reason and no file paths (all three tested).
+- **`analysis_runs`** (migration `0004`) and **`GET /analysis-runs`**: every `/inference/analyze`
+  call is recorded (time, model version, detector, input range, counts), never its readings;
+  recording failures do not fail the analysis.
+- **Checked on the real registry:** it serves the evaluation model
+  `20261027T121334Z-eeec81e9592c`; the endpoint's metrics equal the recorded ones (validation MAE
+  15.267402, test MAE 13.720335). Verification takes 0.21 s once, then 0.01 s (cached per version).
+- The local `wattwise` database is migrated to `0004`.
+
+**Validation** (Windows)
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **830 passed**, 14 new (816 before).

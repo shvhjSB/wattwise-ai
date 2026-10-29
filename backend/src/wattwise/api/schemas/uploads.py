@@ -71,5 +71,7 @@ class AnalysisResponse(BaseModel):
     alerts: list[AnalysisAlert]
     caveats: list[str]
     reports: list[UploadReport]
-    stored: Literal[False] = False
+    run_id: int | None = Field(description="The monitoring record of this run (T027), if any.")
+    recorded: bool = Field(description="False without a database, or if recording failed.")
+    stored: Literal[False] = Field(default=False, description="The uploaded data is not stored.")
     retrained: Literal[False] = False

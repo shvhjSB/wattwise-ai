@@ -14,6 +14,7 @@ Decisions: D045, D046.
 | `meters` | `meter_id` | `building_id` (foreign key, `RESTRICT`), `meter_type`, `unit`, `created_at` |
 | `readings` | (`meter_id`, `timestamp`) | `value`: NULL means not measured, never 0 (T024) |
 | `alerts` | `alert_id` | one detected event: meter, detector, start/end, signature, kind, priority score and severity band (T022), potential excess (never verified), the whole evidence bundle (JSONB), `review_status`, `reviewed_at`, `superseded` (T025) |
+| `analysis_runs` | `run_id` | one record per `/inference/analyze` call: `created_at`, `model_version` (NULL without a model), `detector`, input range, meters, readings, missing values, predictions, alerts; never the readings (T027) |
 | `alert_feedback` | `feedback_id` | `alert_id`, `label`, optional `note` (at most 2,000 characters) and `reviewer` (at most 100), `created_at`; append-only (T025) |
 
 - **Every building belongs to a dataset whose kind is synthetic or observed**, so the API never
@@ -27,7 +28,7 @@ Decisions: D045, D046.
   it so.
 - Migrations are in `backend/src/wattwise/db/migrations` (inside the package, so a built image
   carries them): `0001` the baseline, `0002` datasets and readings, `0003` alerts and
-  feedback. A test builds the schema from
+  feedback, `0004` analysis runs. A test builds the schema from
   the migrations and fails if the models differ from it; each revision downgrades to the one
   before.
 

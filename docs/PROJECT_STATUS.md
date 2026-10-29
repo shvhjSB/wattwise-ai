@@ -379,6 +379,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T024 | Buildings, meters, series and summary APIs | 2026-10-28 |
 | T025 | Alerts and feedback API | 2026-10-29 |
 | T026 | CSV upload and analysis endpoint | 2026-10-29 |
+| T027 | Model metadata, metrics and monitoring records | 2026-10-29 |
 
 ## Current task
 
@@ -386,9 +387,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T027 — Model metadata, metrics and monitoring records** (M9): `GET /models/metadata` and
-`/models/metrics`, and a record for every analysis run (model version, prediction time and input
-data range). See [ROADMAP.md](ROADMAP.md#t027--model-metadata-metrics-and-monitoring-records).
+**T028 — Design system and application shell** (M10, the frontend): design tokens, typography,
+light and dark themes, layout and navigation, a demo-data banner and a provenance badge, and
+shared loading, empty and error components. See
+[ROADMAP.md](ROADMAP.md#t028--design-system-and-application-shell).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -407,7 +409,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
-| M9 API and persistence | T023–T027 | 4 / 5 |
+| M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 0 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |

@@ -54,7 +54,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T024 | Buildings, meters, series and summary APIs | M9 | T023, T006 | Done |
 | T025 | Alerts and feedback API | M9 | T022, T023 | Done |
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Done |
-| T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Not started |
+| T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Done |
 | T028 | Design system and application shell | M10 | T003 | Not started |
 | T029 | Energy overview page | M10 | T024, T028 | Not started |
 | T030 | Building and meter explorer | M10 | T024, T028 | Not started |
@@ -699,6 +699,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - API tests.
   - Missing models and metrics return explicit "unavailable" responses, not fabricated values.
+- **Done (2026-10-29, D049):** `/models/metadata` and `/models/metrics` (recorded values only;
+  `available: false` with a reason for a missing, tampered or incompatible model) and
+  `analysis_runs` (migration `0004`) with `/analysis-runs`. Every analysis is recorded without
+  storing its readings.
 
 ## M10 — React investigation and analytics workflows
 

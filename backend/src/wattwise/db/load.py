@@ -92,7 +92,17 @@ def load_dataset(
     if with_alerts:
         raise ValueError(f"meters with alerts would be removed: {with_alerts[:5]}")
 
-    dataset = {"name": info.name, "kind": info.kind.value, "source": info.source}
+    kwh = readings["unit"] == "kWh"
+    dataset = {
+        "name": info.name,
+        "kind": info.kind.value,
+        "source": info.source,
+        "reading_count": len(readings),
+        "missing_count": int(readings["value"].isna().sum()),
+        "first_reading": readings["timestamp"].min().to_pydatetime(),
+        "last_reading": readings["timestamp"].max().to_pydatetime(),
+        "measured_kwh": float(readings.loc[kwh, "value"].sum()),
+    }
     connection.execute(
         pg_insert(Dataset)
         .values(dataset_id=info.dataset_id, **dataset)

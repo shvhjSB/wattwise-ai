@@ -67,13 +67,53 @@ class DatasetSummary(BaseModel):
     missing_values: int
     first_reading: UtcDatetime | None
     last_reading: UtcDatetime | None
+    measured_kwh: float = Field(description="Sum of recorded values of the dataset's kWh meters.")
+
+
+class AlertTotals(BaseModel):
+    """What the stored alerts add up to, for one kind of data. Alerts that a later detection no
+    longer finds (superseded) are not counted."""
+
+    alerts: int
+    open: int = Field(description="Unreviewed or marked needs investigation.")
+    high_severity: int = Field(description="Open alerts in the high severity band.")
+    by_review_status: dict[str, int]
+    by_kind: dict[str, int]
+    potential_excess_kwh: float = Field(
+        description="Estimate: kWh above the model's upper bound over the alerts' hours, for "
+        "consumption alerts. Potential, not verified; meter problems are not counted."
+    )
+    observed_kwh_in_alerts: float = Field(
+        description="Recorded kWh over the hours of consumption alerts that the model covers."
+    )
+    expected_kwh_in_alerts: float = Field(
+        description="The model's expected kWh over the same hours. Only alert windows have an "
+        "expectation stored; there is no portfolio-wide figure."
+    )
+
+
+class KindSummary(BaseModel):
+    """Totals for the datasets of one kind. Synthetic and observed data are never added together."""
+
+    kind: DataKindName
+    datasets: int
+    buildings: int
+    meters: int
+    readings: int
+    missing_values: int
+    missing_share: float | None = Field(description="Missing readings / readings; null if none.")
+    first_reading: UtcDatetime | None
+    last_reading: UtcDatetime | None
+    measured_kwh: float
+    alerts: AlertTotals
 
 
 class DashboardSummary(BaseModel):
-    """Totals of what is stored. No alerts, savings or costs: those come with later tasks."""
+    """Totals of what is stored. Potential figures are estimates, never verified savings."""
 
     datasets: list[DatasetSummary]
     data_kinds: list[DataKindName] = Field(description="The kinds of data present.")
+    by_kind: list[KindSummary] = Field(description="Observed first, then synthetic.")
     buildings: int
     meters: int
     meters_by_type: dict[str, int]

@@ -9,7 +9,7 @@ Decisions: D045, D046.
 
 | Table | Primary key | Contents |
 |---|---|---|
-| `datasets` | `dataset_id` | `name`, `kind` (`synthetic` or `observed`), `source` (provenance), `loaded_at` (T024) |
+| `datasets` | `dataset_id` | `name`, `kind` (`synthetic` or `observed`), `source` (provenance), `loaded_at` (T024); totals computed at load: `reading_count`, `missing_count`, `first_reading`, `last_reading`, `measured_kwh` (T029) |
 | `buildings` | `building_id` | `dataset_id` (foreign key), `site_id`, `timezone`, optional `primary_use`, `floor_area_m2` (> 0), `latitude` (-90 to 90), `longitude` (-180 to 180), `created_at` |
 | `meters` | `meter_id` | `building_id` (foreign key, `RESTRICT`), `meter_type`, `unit`, `created_at` |
 | `readings` | (`meter_id`, `timestamp`) | `value`: NULL means not measured, never 0 (T024) |
@@ -28,7 +28,7 @@ Decisions: D045, D046.
   it so.
 - Migrations are in `backend/src/wattwise/db/migrations` (inside the package, so a built image
   carries them): `0001` the baseline, `0002` datasets and readings, `0003` alerts and
-  feedback, `0004` analysis runs. A test builds the schema from
+  feedback, `0004` analysis runs, `0005` dataset totals. A test builds the schema from
   the migrations and fails if the models differ from it; each revision downgrades to the one
   before.
 
@@ -48,6 +48,8 @@ uv run --env-file .env python -m wattwise.db.load --source ../data/sample/synthe
   alerts**, in which case nothing is loaded (T025).
 - A building or meter that belongs to **another** dataset is refused, never moved. Readings that
   name a building missing from the buildings table are refused.
+- **Totals are stored at load time** (reading and missing counts, range and measured kWh), so the
+  dashboard summary never scans the readings (11 s at 20 million rows; now 0.19 s).
 - Readings go in with PostgreSQL `COPY`, in CSV chunks of 500,000 rows written by pandas; floats
   round-trip exactly (tested).
 - BDG2 may be loaded into a **local** database (`--kind observed`); it is never redistributed

@@ -328,6 +328,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - Design system and application shell (T028), D050: colour tokens with light, dark and system
   themes (contrast tested), main navigation across five pages, a demo-data banner, provenance
   badges and shared loading, empty and error components.
+- Energy overview (T029), D051: six figures per kind of data with definition and source tooltips;
+  the dashboard summary reads dataset totals stored at load time (migration `0005`; 11 s to
+  0.19 s at 20 million readings) and adds alert totals.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

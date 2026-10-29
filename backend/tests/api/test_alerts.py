@@ -239,3 +239,41 @@ def test_the_alert_endpoints_are_documented(client: TestClient) -> None:
     assert "get" in paths[f"{API}/alerts"]
     assert "get" in paths[f"{API}/alerts/{{alert_id}}"]
     assert "post" in paths[f"{API}/alerts/{{alert_id}}/feedback"]
+
+
+# -- the dashboard's alert totals -----------------------------------------------------------------
+
+
+def test_the_summary_adds_up_the_stored_alerts(alert_client: TestClient) -> None:
+    summary = alert_client.get(f"{API}/dashboard/summary").json()
+
+    (kind,) = summary["by_kind"]
+    totals = kind["alerts"]
+    consumption = [b for b in SAMPLE_BUNDLES if b["signature"]["primary"] not in ("flatline",)]
+    assert totals["alerts"] == len(SAMPLE_BUNDLES) == 5
+    assert totals["by_kind"] == {"above_expected": 3, "below_expected": 1, "meter_problem": 1}
+    assert totals["open"] == 5  # nothing is reviewed yet
+    # Potential excess counts consumption alerts only: the flatline (a meter problem) has none.
+    assert totals["potential_excess_kwh"] == pytest.approx(
+        sum(b["impact"]["potential_excess_kwh"] or 0 for b in consumption)
+    )
+    assert totals["observed_kwh_in_alerts"] == 0  # the crafted bundles carry no model energies
+    assert totals["expected_kwh_in_alerts"] == 0
+
+
+def test_reviews_move_alerts_out_of_the_open_count(alert_client: TestClient) -> None:
+    ids = [a["alert_id"] for a in alerts(alert_client)["items"]]
+    alert_client.post(f"{API}/alerts/{ids[0]}/feedback", json={"label": "expected_behaviour"})
+    alert_client.post(f"{API}/alerts/{ids[1]}/feedback", json={"label": "needs_investigation"})
+    alert_client.post(f"{API}/alerts/{ids[2]}/feedback", json={"label": "confirmed_waste"})
+
+    totals = alert_client.get(f"{API}/dashboard/summary").json()["by_kind"][0]["alerts"]
+
+    assert totals["alerts"] == 5
+    assert totals["open"] == 3  # two unreviewed and one needing investigation
+    assert totals["by_review_status"] == {
+        "unreviewed": 2,
+        "needs_investigation": 1,
+        "expected_behaviour": 1,
+        "confirmed_waste": 1,
+    }

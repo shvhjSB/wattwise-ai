@@ -2366,3 +2366,33 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - Frontend: `tsc -b`, ESLint (zero warnings), Prettier and the production build are clean;
   Vitest **106 passed** (21 before, 85 new).
 - Backend untouched this task (830 passed at T027).
+
+---
+
+## 2026-10-29 — T029 Energy overview page
+
+**Done**
+- **Backend:** migration `0005` stores each dataset's totals; the loader computes them; the summary
+  endpoint reads them and adds `by_kind` (observed, then synthetic) with alert totals (open, high
+  severity, potential excess, expected and observed kWh in alert windows, by review status and kind).
+- **Frontend:** `SummaryProvider` (one request for the banner and the page), `KpiCard` with an
+  accessible tooltip, number formatting, and the Overview page with six figures per kind.
+- **Checked on real data** in Edge, light and dark: the observed figures match the API, and the
+  potential excess (558.7 MWh) equals T044a's 558,722 kWh.
+
+**Problems and fixes**
+- **The summary took 11 s at full scale** (it aggregated 20.1 million readings, and the shell
+  calls it on every page). Found by timing it against the real database before building on it, not
+  by a test, because the tests only had 5,376 readings. Fixed with stored totals (0.19 s); a test
+  now truncates the readings table and checks the summary still answers.
+- A test that said "no error alert when the summary is unavailable" described the old page; the
+  overview now shows an explicit error with the fix, so the test was changed to say that the banner
+  stays silent and the overview explains.
+- I stopped the API and dev server I started (by process id, checking that the listener on 5173
+  was mine).
+
+**Validation** (Windows)
+- Frontend: `tsc -b`, ESLint (zero warnings), Prettier and the production build are clean; Vitest
+  **141 passed** (106 before, 35 new).
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **833 passed**, 3 new (830 before).

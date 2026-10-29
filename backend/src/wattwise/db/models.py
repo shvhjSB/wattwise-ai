@@ -81,6 +81,14 @@ class Dataset(Base):
     #: Where the data came from (a path, a URL or a generator and seed), for provenance.
     source: Mapped[str] = mapped_column(Text)
     loaded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    #: Totals computed once when the dataset is loaded, so the dashboard never aggregates the
+    #: readings table (20 million rows at full scale took 11 s per request).
+    reading_count: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    missing_count: Mapped[int] = mapped_column(BigInteger, server_default="0")
+    first_reading: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_reading: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    #: Sum of the recorded values of the dataset's kWh meters; missing readings add nothing.
+    measured_kwh: Mapped[float] = mapped_column(Float, server_default="0")
 
     buildings: Mapped[list[Building]] = relationship(back_populates="dataset")
 

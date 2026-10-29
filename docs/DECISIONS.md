@@ -1827,6 +1827,49 @@ links to the entry that replaces it.
 - **Consequences:** T029-T033 use these tokens, states and badges. The overview (T029) decides
   server-state handling (D009's open question).
 
+## D051 — The overview: per-kind figures, stored totals, plain hooks with one shared summary
+- **Date:** 2026-10-29 · **Task:** T029 · **Status:** Accepted
+- **Decision:** (frontend README, DATABASE.md)
+  - **Totals are stored when a dataset is loaded** (migration `0005`: reading and missing counts,
+    first and last reading, and measured kWh on `datasets`; the migration fills them for datasets
+    already loaded). `GET /dashboard/summary` read these instead of aggregating the readings
+    table: **11.0 s -> 0.19 s** on the 20.1 million readings in the local database. It had been
+    fast only on the 5,376-row sample, and the shell calls it on every page for the demo banner.
+  - **Figures are per kind of data and never added across kinds:** `by_kind` lists observed, then
+    synthetic. Adding synthetic kWh to measured kWh would be meaningless, so no total mixes them.
+  - **The six figures** (each with a definition and a source in its tooltip):
+
+    | Figure | What it is | What it is not |
+    |---|---|---|
+    | Measured energy | sum of recorded kWh over the period | missing readings are not zero |
+    | Model-expected energy, **in alert windows** | the model's expectation over the hours of consumption alerts, next to the recorded energy for those hours | not a portfolio-wide figure: no expectation is stored outside alert windows; above- and below-expected alerts net out |
+    | Potential excess energy (**Estimate**) | kWh above the model's upper bound in alert hours (558.7 MWh for the observed data, the T044a figure) | not a verified saving; meter problems are not counted |
+    | Open alerts | unreviewed or needs investigation, excluding superseded; with the high-severity count | not a count of real problems |
+    | Data quality | share of readings missing, and the number of meter-problem alerts | not a quality score |
+    | Coverage | buildings, meters, readings, datasets and the period | |
+
+  - **Dashes, not zeros**, where a figure needs alerts and there are none; an empty database says
+    "No data loaded" and how to load some; a missing database explains the setting and offers a
+    retry.
+  - **Server state: plain hooks, with one shared summary** (D009's open question). A
+    `SummaryProvider` loads the summary once for the demo banner and the overview (one request,
+    tested). A library such as TanStack Query earns its place with several resources, caching and
+    invalidation; the first such page is the alert queue (T031), so this is revisited there.
+  - **Tooltips follow WCAG 1.4.13:** they open on hover or focus, close on Escape or when the
+    pointer or focus leaves, and are always in the accessible description of their button.
+- **Not done, on purpose:** the spec's `start`, `end` and `building_id` filters for the summary.
+  The stored totals are whole-dataset; a filtered figure needs a per-day aggregate and belongs with
+  the explorer (T030).
+- **Alternatives considered:**
+  - **Caching the summary in memory:** hides the 11 s cost on all but the first request, and the
+    first request is the page load.
+  - **A materialised view:** stays correct when data changes underneath, but needs a refresh
+    policy; totals at load time are exact because a dataset is replaced as a whole.
+  - **Estimating a portfolio-wide expected energy** from the alert windows: rejected as invented.
+- **Consequences:** the explorer (T030) can add per-meter expectations; if portfolio-wide expected
+  energy is wanted, the model's predictions would have to be stored for every reading (20 million
+  rows), which is a separate decision.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1834,7 +1877,6 @@ links to the entry that replaces it.
 | Topic | Decide in | Notes |
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
-| Server-state library | T029 | Plain hooks (D009) vs TanStack Query |
 | Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
 

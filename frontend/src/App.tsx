@@ -1,15 +1,16 @@
 import { routeFor, usePath } from './design/routes';
-import { PageHeader } from './design/states';
 import { useTheme } from './design/theme';
-import { ApiHealthPanel } from './features/health/ApiHealthPanel';
-import { useDataKinds } from './features/provenance/useDataKinds';
+import { SummaryProvider } from './features/summary/SummaryProvider';
+import { useDataKinds, useSummary } from './features/summary/useSummary';
+import { OverviewPage } from './pages/OverviewPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
 import { AppShell } from './shell/AppShell';
 
-export function App() {
+function Routes() {
   const { path, navigate } = usePath();
   const { choice, setChoice } = useTheme();
   const dataKinds = useDataKinds();
+  const summary = useSummary();
   const route = routeFor(path);
 
   return (
@@ -27,17 +28,18 @@ export function App() {
           }}
         />
       ) : route.path === '/' ? (
-        <>
-          <PageHeader title={route.label} summary={route.summary} />
-          <p className="max-w-prose text-sm text-muted">
-            The overview’s energy figures arrive with roadmap task {route.task}. Until then this
-            page shows whether the API is reachable.
-          </p>
-          <ApiHealthPanel />
-        </>
+        <OverviewPage summary={summary} />
       ) : (
         <PlannedPage route={route} />
       )}
     </AppShell>
+  );
+}
+
+export function App() {
+  return (
+    <SummaryProvider>
+      <Routes />
+    </SummaryProvider>
   );
 }

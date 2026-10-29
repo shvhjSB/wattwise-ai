@@ -347,6 +347,17 @@ The application foundation runs end to end locally, and CI checks it automatical
     browser's behaviour.
   - Seen in a real browser (Edge) against the real API and local database, in both themes.
 
+- **Energy overview (T029, D051):** the Overview page shows six figures for each kind of data
+  (observed first, then synthetic; never added together), each with a definition and a source.
+  - **Observed data (BDG2, local):** 2,872.66 GWh measured by 1,148 meters; 5.9% of readings
+    missing; 5,546 open alerts (232 high severity, 462 meter problems); **558.7 MWh potential
+    excess, marked as an estimate and not a verified saving**.
+  - **The "expected energy" is only for alert windows** (6.76 GWh against 7.06 GWh recorded over
+    the same hours): the model's expectation is stored only there, so there is no portfolio-wide
+    expected figure, and the page says so.
+  - **The summary endpoint went from 11 s to 0.19 s** at 20 million readings, by storing dataset
+    totals at load time. It was only fast on the small sample before.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -392,6 +403,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T026 | CSV upload and analysis endpoint | 2026-10-29 |
 | T027 | Model metadata, metrics and monitoring records | 2026-10-29 |
 | T028 | Design system and application shell | 2026-10-29 |
+| T029 | Energy overview page | 2026-10-29 |
 
 ## Current task
 
@@ -399,10 +411,9 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T029 — Energy overview page** (M10): measured kWh, model-expected kWh, estimated excess kWh
-(marked as an estimate), active events, data-quality health and coverage, each KPI with a
-definition and source tooltip. It also decides how the frontend handles server state (D009). See
-[ROADMAP.md](ROADMAP.md#t029--energy-overview-page).
+**T030 — Building and meter explorer** (M10): browse buildings and meters and see each meter's
+readings against the model's expectation and interval. It also decides the chart library (D001).
+See [ROADMAP.md](ROADMAP.md#t030--building-and-meter-explorer).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -422,7 +433,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 1 / 6 |
+| M10 Frontend workflows | T028–T033 | 2 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

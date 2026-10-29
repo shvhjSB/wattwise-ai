@@ -56,7 +56,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Done |
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Done |
 | T028 | Design system and application shell | M10 | T003 | Done |
-| T029 | Energy overview page | M10 | T024, T028 | Not started |
+| T029 | Energy overview page | M10 | T024, T028 | Done |
 | T030 | Building and meter explorer | M10 | T024, T028 | Not started |
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Not started |
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Not started |
@@ -727,6 +727,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - KPIs: measured kWh, model-expected kWh, estimated excess kWh, active events, data-quality
     health and coverage.
   - Every KPI has a tooltip with its definition and source.
+- **Done (2026-10-29, D051):** the six figures per kind of data, each with a definition and source
+  tooltip; potential excess marked as an estimate; the expectation labelled "in alert windows".
+  The summary endpoint now reads totals stored at load time (migration `0005`): 11 s to 0.19 s
+  on the 20 million readings. Server state: plain hooks with one shared summary (D009 settled).
 
 ### T030 — Building and meter explorer
 - **Scope:**

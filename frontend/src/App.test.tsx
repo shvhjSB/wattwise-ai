@@ -5,11 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { THEME_STORAGE_KEY } from './design/theme';
 import { jsonResponse } from './test/http';
+import { kindSummary, summaryOf } from './test/summaryFixture';
 
 const HEALTH = { status: 'ok', service: 'wattwise-api', version: '0.1.0', environment: 'test' };
 
 /** Stub the API: health, and the dashboard summary with the given data kinds (or a failure). */
-function stubApi(kinds: string[] | 'unavailable') {
+function stubApi(kinds: ('synthetic' | 'observed')[] | 'unavailable') {
   vi.stubGlobal(
     'fetch',
     vi.fn((input: string | URL | Request) => {
@@ -19,7 +20,7 @@ function stubApi(kinds: string[] | 'unavailable') {
         return Promise.resolve(
           kinds === 'unavailable'
             ? jsonResponse({ detail: { database: 'not_configured' } }, 503)
-            : jsonResponse({ data_kinds: kinds }),
+            : jsonResponse(summaryOf(...kinds.map((kind) => kindSummary(kind)))),
         );
       }
       return Promise.reject(new Error(`unexpected request: ${url}`));
@@ -143,14 +144,15 @@ describe('demo-data banner', () => {
     });
   });
 
-  it('is absent, without an error, when the summary is unavailable', async () => {
+  it('is absent when the summary is unavailable, and the overview explains why', async () => {
     stubApi('unavailable');
 
     render(<App />);
 
     await screen.findByText('Online');
     expect(screen.queryByRole('note')).not.toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    // The banner stays silent; the overview page says what is wrong and how to fix it.
+    expect(await screen.findByText('The overview is unavailable')).toBeInTheDocument();
   });
 });
 

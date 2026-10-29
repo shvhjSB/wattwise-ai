@@ -3,6 +3,7 @@ from typing import Any
 import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine
 
 from tests.conftest import SAMPLE_INFO, SYNTHETIC_SAMPLE
 from wattwise.data.contracts import READINGS
@@ -218,6 +219,28 @@ def test_the_summary_counts_what_is_stored(
     assert dataset["dataset_id"] == SAMPLE_INFO.dataset_id
     assert dataset["kind"] == "synthetic"
     assert dataset["readings"] == len(readings)
+    kwh = readings["value"].sum()  # all four sample meters are kWh meters
+    assert dataset["measured_kwh"] == pytest.approx(kwh)
+    (kind,) = summary["by_kind"]
+    assert kind["kind"] == "synthetic"
+    assert kind["measured_kwh"] == pytest.approx(kwh)
+    assert kind["missing_share"] == pytest.approx(6 / len(readings))
+    assert kind["alerts"]["alerts"] == 0  # no alerts loaded
+
+
+def test_the_summary_never_scans_the_readings(
+    sample_client: TestClient, sample_engine: Engine
+) -> None:
+    """At 20 million readings an aggregate took 11 s per request, on every page. The totals are
+    stored when a dataset is loaded; the summary must work with the readings gone."""
+    from sqlalchemy import text
+
+    with sample_engine.begin() as connection:
+        connection.execute(text("TRUNCATE readings"))
+
+    summary = sample_client.get(f"{API}/dashboard/summary").json()
+
+    assert summary["readings"] == 5376  # from the stored totals, not from the table
 
 
 def test_the_summary_of_an_empty_database(migrated_client: TestClient) -> None:
@@ -226,6 +249,7 @@ def test_the_summary_of_an_empty_database(migrated_client: TestClient) -> None:
     assert summary == {
         "datasets": [],
         "data_kinds": [],
+        "by_kind": [],
         "buildings": 0,
         "meters": 0,
         "meters_by_type": {},

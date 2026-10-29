@@ -15,6 +15,8 @@ Decisions: D045, D046.
 | `readings` | (`meter_id`, `timestamp`) | `value`: NULL means not measured, never 0 (T024) |
 | `alerts` | `alert_id` | one detected event: meter, detector, start/end, signature, kind, priority score and severity band (T022), potential excess (never verified), the whole evidence bundle (JSONB), `review_status`, `reviewed_at`, `superseded` (T025) |
 | `analysis_runs` | `run_id` | one record per `/inference/analyze` call: `created_at`, `model_version` (NULL without a model), `detector`, input range, meters, readings, missing values, predictions, alerts; never the readings (T027) |
+| `expectation_sets` | `dataset_id` | which model produced a dataset's stored expectations, the window, the nominal interval and its measured coverage (T030) |
+| `expectations` | (`meter_id`, `timestamp`) | the model's `expected` value and `lower`/`upper` interval for one reading, NULL where there is none; single precision; evaluation windows only (T030) |
 | `alert_feedback` | `feedback_id` | `alert_id`, `label`, optional `note` (at most 2,000 characters) and `reviewer` (at most 100), `created_at`; append-only (T025) |
 
 - **Every building belongs to a dataset whose kind is synthetic or observed**, so the API never
@@ -28,7 +30,7 @@ Decisions: D045, D046.
   it so.
 - Migrations are in `backend/src/wattwise/db/migrations` (inside the package, so a built image
   carries them): `0001` the baseline, `0002` datasets and readings, `0003` alerts and
-  feedback, `0004` analysis runs, `0005` dataset totals. A test builds the schema from
+  feedback, `0004` analysis runs, `0005` dataset totals, `0006` expectations. A test builds the schema from
   the migrations and fails if the models differ from it; each revision downgrades to the one
   before.
 
@@ -69,6 +71,22 @@ uv run --env-file .env python -m wattwise.db.alerts --dataset-id bdg2-cleaned-al
   feedback**, in which case it is kept and marked `superseded`; new alerts are inserted.
 - A load touches only one dataset and the detectors in the file.
 - Feedback is never deleted (`RESTRICT`), and **no model is retrained from it** (D047).
+
+## Loading expectations
+
+```bash
+uv run --env-file .env python -m wattwise.db.expectations --dataset-id bdg2-cleaned-all \
+    --data ../data/processed/bdg2/cleaned-all \
+    --enrichment ../data/processed/era5/weather_enrichment.parquet \
+    --store ../data/processed/features-all
+```
+
+- Computes the promoted model's expectation and 90% interval with the same code that produces the
+  alerts' evidence, for the model's **validation and test windows only**, and stores it (with
+  `COPY`). At full scale: 4,665,493 rows for 1,124 meters in 508 s.
+- It replaces the dataset's stored expectations, and refuses meters that are not the dataset's.
+- Rows without an expectation are not stored. The model, window and the interval's measured
+  coverage are recorded in `expectation_sets`.
 
 ## Readiness
 

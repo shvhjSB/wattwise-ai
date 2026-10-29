@@ -22,7 +22,7 @@ links to the entry that replaces it.
   |---|---|---|---|
   | Planning file | `IMPLEMENTATION_PLAN.md` | `docs/ROADMAP.md` and related records | `docs/ROADMAP.md`; no `IMPLEMENTATION_PLAN.md` |
   | Pace | Continue without waiting | One task per run, then stop | One task per run, then stop |
-  | Chart library | Recharts or ECharts | Plotly or another suitable library | Open; decided in T030 against the actual chart needs |
+  | Chart library | Recharts or ECharts | Plotly or another suitable library | None: hand-written SVG components (D052, T030) |
   | Feedback labels | confirmed waste / expected behaviour / sensor or data fault / needs investigation | useful / incorrect / needs investigation | The spec's four, mapped onto the three (D047, T025) |
 - **Consequences:** future sessions read `CLAUDE.md` and `docs/PROJECT_STATUS.md` first. The
   open items are tracked in the roadmap tasks named above.
@@ -1870,6 +1870,62 @@ links to the entry that replaces it.
   energy is wanted, the model's predictions would have to be stored for every reading (20 million
   rows), which is a separate decision.
 
+## D052 — The explorer: stored expectations for the evaluation windows, and hand-written SVG charts
+- **Date:** 2026-10-29 · **Task:** T030 · **Status:** Accepted
+- **Decision:** (DATABASE.md, backend and frontend READMEs)
+  - **The model's expectation and interval are computed once and stored** (migration `0006`:
+    `expectation_sets` and `expectations`), by `python -m wattwise.db.expectations`, which uses the
+    same function the alerts' evidence uses (`expectation_bounds`, factored out of `explain`, so
+    the chart and an alert's evidence cannot disagree). Real run: **4,665,493 rows for 1,124 of the
+    1,148 meters, 508 s**, in single precision (display values).
+  - **Only the evaluation windows have an expectation** (2017-07-01 to 2018-01-02: the validation
+    and test windows, where the model was not trained on the readings). The API says so:
+    `GET /meters/{id}/expectation` answers `available: false` with `no_expectation_stored` or
+    `outside_evaluation_window` and the window, never invented values. An interval begins once
+    enough out-of-sample residuals exist: 2017-07-15 for a meter without gaps.
+  - **What the page shows:** the readings against the expectation and the 90% interval, readings
+    outside the interval marked, alert windows shaded, and below it the difference (observed minus
+    expected) on the same time axis. A summary line counts the hours with a reading and an interval
+    that fell outside it. The model version, the window, and **the interval's measured coverage
+    (87.2% on the test window, against 90% nominal)** are shown, not hidden.
+  - **Missing is a gap, never zero:** a missing reading ends the line; an hour with no expectation
+    or interval has no point on that line and no band. Tested on the line paths.
+  - **The chart library decision (open since D001): none; small hand-written SVG components.**
+    - **Why:** a missing value must be a gap, and a band must start and stop where the interval
+      does; those are the two things a generic chart most often gets subtly wrong. The charts are
+      about 400 lines in total, with the arithmetic (scales, ticks, runs, interval statistics) in a
+      pure module with its own tests. The whole app is 81 KB gzipped. No dependency means none to
+      keep within the two-week release rule or to audit.
+    - **Accessibility:** each chart is a labelled image whose label states the counts; an
+      "Inspect hour" slider reads out one hour in words (keyboard and screen-reader friendly); a
+      data table shows every hour; colour is never the only signal (markers, legends in words).
+    - **What it does not do** (and a library would): drag-to-zoom and brushing. The range is set
+      with buttons (3, 7, 14, 28 days, the whole window, the latest fortnight, the top alert) and
+      Earlier and Later. The whole window of a meter (about 4,400 hours, 0.06 s, 487 KB) is fetched
+      once, so zooming and panning are instant and need no further requests.
+    - **When to revisit:** if a later page needs many series, annotations or brushing.
+  - **The view opens on the meter's top-priority alert** (three days either side) if it has one, else the
+    latest fortnight. The selection (`?building=...&meter=...`) is in the address, so a meter can be
+    linked to (T031 will).
+  - **Buildings can be searched** (`q`, a case-insensitive match on id or primary use, with `%` and
+    `_` taken literally) and are shown 20 at a time, up to 200.
+- **Open and not investigated:**
+  - **24 of the 1,148 meters have no stored expectation** (the model has no prediction for them:
+    no usable scale or too little history). Not examined; the explorer shows their readings alone and
+    says there is no expectation.
+  - **The interval undercovers a little** (87.2% against 90%); T044a measured the same for the
+    pipeline and kept rolling intervals under D032, which says "measured, never calibrated".
+- **Alternatives considered:**
+  - **Computing the expectation per request:** needs the weather and ERA5 data, which the API does
+    not hold, and the model's features; slow and heavy for a page that is mostly browsing.
+  - **Storing the expectation for every reading, training period included:** 20 million rows, and
+    in-sample expectations would look better than the model is.
+  - **Recharts, ECharts, Plotly, uPlot:** see above. uPlot is the closest (small, bands); it is a
+    canvas, which is harder to make accessible than SVG with a table beside it.
+- **Consequences:** the alert detail (T031) can reuse the chart, and the overview's missing "expected
+  energy" (T029) could now be computed for the evaluation windows from the stored expectations;
+  that is a product decision (below), not done here.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -1877,6 +1933,5 @@ links to the entry that replaces it.
 | Topic | Decide in | Notes |
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
-| Chart library | T030 | See D001; needs interval bands, synchronised zoom and accessibility |
 | Browser E2E tooling | T035 | Only if justified |
 

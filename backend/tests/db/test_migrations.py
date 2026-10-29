@@ -13,6 +13,8 @@ TABLES = {
     "alerts",
     "alert_feedback",
     "analysis_runs",
+    "expectation_sets",
+    "expectations",
 }
 
 
@@ -63,7 +65,7 @@ def test_the_models_match_the_migrated_schema(schema_engine: Engine) -> None:
 
 
 def test_there_is_a_single_head_revision() -> None:
-    assert head_revision() == "0005"
+    assert head_revision() == "0006"
 
 
 def test_each_revision_downgrades_to_the_one_before(schema_engine: Engine) -> None:

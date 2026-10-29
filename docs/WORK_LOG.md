@@ -2396,3 +2396,42 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   **141 passed** (106 before, 35 new).
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **833 passed**, 3 new (830 before).
+
+---
+
+## 2026-10-29 — T030 Building and meter explorer
+
+**Done**
+- **Design first:** the spec wants an expectation and interval, but the database held only readings,
+  and computing them per request would need weather and ERA5 data the API does not hold. Decided
+  (D052) to compute them once and store them for the evaluation windows, using the same function as
+  the alerts' evidence (`expectation_bounds`, factored out of `explain`; its tests unchanged).
+- **Backend:** migration `0006`, `wattwise.db.expectations` (compute and `COPY`), `GET
+  /meters/{id}/expectation` (`available: false` with a reason where there is none), building search
+  `q` with literal wildcards.
+- **Real run:** 4,665,493 expectations (3,992,445 with an interval) for 1,124 of 1,148 meters in
+  508 s; an endpoint call for a full window takes 0.06 s and 487 KB; measured coverage of the 90%
+  interval 87.2%; the training period correctly answers "outside the evaluation window".
+- **Frontend:** a building browser, the time-series and difference charts, range buttons, an hour
+  slider with a spoken readout, a data table, URL-held selection, and `useApi`, a small loading hook.
+  Both charts and their arithmetic are tested (gaps, band starts, outside markers, clipping, nearest
+  point, pointer events).
+- **Seen in Edge** on the real top-alert meter (`Hog_education_Caridad`), light and dark.
+
+**Problems and fixes**
+- My first `niceTicks` gave a single tick for 3 to 97 (the smallest step at least the rough one); it
+  now picks the nearest nice step, with exact expected arrays in the test.
+- `useApi` set state synchronously in an effect, which the React compiler lint rejects; the state is
+  now derived from the settled key, so a changed key never shows the previous meter's data.
+- A comment of mine said intervals begin "about five weeks" into the window; the real first interval
+  is two weeks in (2017-07-15). Found by looking at the real response and corrected.
+- Two test expectations of mine were wrong, not the page (a duplicated "Observed" text, and a slider
+  position that landed inside the spike); the page's answers were right.
+- I stopped the API and dev server I started, by process id and after checking the listener on 5173
+  was mine.
+
+**Validation** (Windows)
+- Frontend: `tsc -b`, ESLint (zero warnings), Prettier and the production build are clean; Vitest
+  **231 passed** (141 before, 90 new).
+- `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
+- `pytest -W error` with the local test database: **863 passed**, 30 new (833 before).

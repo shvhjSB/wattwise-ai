@@ -57,7 +57,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Done |
 | T028 | Design system and application shell | M10 | T003 | Done |
 | T029 | Energy overview page | M10 | T024, T028 | Done |
-| T030 | Building and meter explorer | M10 | T024, T028 | Not started |
+| T030 | Building and meter explorer | M10 | T024, T028 | Done |
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Not started |
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Not started |
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Not started |
@@ -737,6 +737,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - Building and meter navigation.
   - An expected-vs-observed chart with the interval band and residual view.
   - The chart-library decision is recorded in DECISIONS.md.
+- **Done (2026-10-29, D052):** a searchable building and meter browser, and for a meter the readings
+  against the model's expectation and 90% interval with a difference view, alert windows, an hour
+  readout and a data table. The model's expectation is now stored for the evaluation windows
+  (migration `0006`; 4.67 million rows). No chart library: hand-written SVG (81 KB gzipped for the
+  whole app). The interval's measured coverage (87.2% against 90%) is shown.
 
 ### T031 — Anomaly investigation queue and alert detail
 - **Scope:**

@@ -8,6 +8,7 @@ Tooling choices and version constraints are recorded in
 src/
   api/          typed HTTP client (runtime-validated responses) and one module per API resource
   design/       colour-token themes, routes, provenance badge and demo banner, shared states (D050)
+  design/chart/ hand-written SVG charts and their tested arithmetic (D052)
   features/     feature folders: components, hooks and their tests, side by side
                 (`summary/` loads the dashboard summary once and shares it, D051)
   pages/        pages that are not built yet, and the not-found page

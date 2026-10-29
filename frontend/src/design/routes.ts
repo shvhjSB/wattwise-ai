@@ -72,3 +72,38 @@ export function usePath(): { path: string; navigate: (path: string) => void } {
 
   return { path, navigate };
 }
+
+/**
+ * The query string as parameters, kept in step with the browser's history. `setParams` changes
+ * parameters (a `null` value removes one) and adds a history entry, so Back returns to the previous
+ * selection. Used for what a person may want to link to, such as the selected meter.
+ */
+export function useSearch(): {
+  params: URLSearchParams;
+  setParams: (updates: Record<string, string | null>) => void;
+} {
+  const [search, setSearch] = useState(() => window.location.search);
+
+  useEffect(() => {
+    const onPop = () => {
+      setSearch(window.location.search);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+    };
+  }, []);
+
+  const setParams = useCallback((updates: Record<string, string | null>) => {
+    const next = new URLSearchParams(window.location.search);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value === null) next.delete(key);
+      else next.set(key, value);
+    }
+    const text = next.toString();
+    window.history.pushState(null, '', `${window.location.pathname}${text ? `?${text}` : ''}`);
+    setSearch(window.location.search);
+  }, []);
+
+  return { params: new URLSearchParams(search), setParams };
+}

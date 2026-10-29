@@ -147,6 +147,40 @@ def _finite(value: Any) -> Any:
     return value
 
 
+def expectation_bounds(
+    model: Any,
+    readings: pd.DataFrame,
+    features: pd.DataFrame,
+    calibration_window: tuple[Any, Any],
+    detection_window: tuple[Any, Any],
+) -> tuple[pd.DataFrame, float | None]:
+    """The model's expectation and its rolling 90% interval for every reading from the start of
+    the calibration window, indexed like `readings` (columns expected, lower, upper), and the share
+    of readings inside the interval in the detection window (None if there are none to check).
+
+    The intervals are the ones `wattwise.ml.intervals` reports: calibrated on quality rows only
+    (D035) and only where the recent level is a usable scale (D041)."""
+    times = readings["timestamp"]
+    since = (times >= calibration_window[0]).to_numpy()
+    part = readings[since]
+    predicted_part = model.predict(part.drop(columns="value"), readings)
+    level = features["rolling_mean_168h"].reindex(part.index).to_numpy(dtype=float)
+    level = usable_level(part, level, *calibration_window)
+    lower, upper = rolling_bounds(
+        part, predicted_part.to_numpy(dtype=float), level, INTERVAL_ALPHA,
+        first_score_time=calibration_window[0], usable=quality_mask(readings)[since],
+    )  # fmt: skip
+    window = (
+        (part["timestamp"] >= detection_window[0]) & (part["timestamp"] < detection_window[1])
+    ).to_numpy()
+    held, _ = coverage(part["value"].to_numpy(dtype=float)[window], lower[window], upper[window])
+    bounds = pd.DataFrame(
+        {"expected": predicted_part.to_numpy(dtype=float), "lower": lower, "upper": upper},
+        index=part.index,
+    )
+    return bounds, held
+
+
 def explain(
     run: Run,
     readings: pd.DataFrame,
@@ -159,24 +193,8 @@ def explain(
     (D035) and only where the recent level is a usable scale (D041). With `top=0` the
     influences (TreeSHAP, the slow part at full scale) are not computed."""
     model = run.model.model
-    times = readings["timestamp"]
-    since = (times >= run.calibration_window[0]).to_numpy()
-    part = readings[since]
-    predicted_part = model.predict(part.drop(columns="value"), readings)
-    level = features["rolling_mean_168h"].reindex(part.index).to_numpy(dtype=float)
-    level = usable_level(part, level, *run.calibration_window)
-    lower, upper = rolling_bounds(
-        part, predicted_part.to_numpy(dtype=float), level, INTERVAL_ALPHA,
-        first_score_time=run.calibration_window[0], usable=quality_mask(readings)[since],
-    )  # fmt: skip
-    window = (
-        (part["timestamp"] >= run.detection_window[0])
-        & (part["timestamp"] < run.detection_window[1])
-    ).to_numpy()
-    held, _ = coverage(part["value"].to_numpy(dtype=float)[window], lower[window], upper[window])
-    bounds = pd.DataFrame(
-        {"expected": predicted_part.to_numpy(dtype=float), "lower": lower, "upper": upper},
-        index=part.index,
+    bounds, held = expectation_bounds(
+        model, readings, features, run.calibration_window, run.detection_window
     )
     position = pd.Series(
         readings.index, index=pd.MultiIndex.from_frame(readings[["meter_id", "timestamp"]])

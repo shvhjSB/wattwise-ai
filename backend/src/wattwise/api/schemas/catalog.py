@@ -121,3 +121,46 @@ class DashboardSummary(BaseModel):
     missing_values: int
     first_reading: UtcDatetime | None
     last_reading: UtcDatetime | None
+
+
+ExpectationUnavailable = Literal["no_expectation_stored", "outside_evaluation_window"]
+
+
+class ExpectationMeta(BaseModel):
+    """What produced the expectation and where it exists."""
+
+    model_version: str
+    interval_nominal: float = Field(description="Nominal coverage of the interval, e.g. 0.9.")
+    measured_coverage: float | None = Field(
+        description="Share of readings inside the interval in the test window; null if unmeasured."
+    )
+    window_start: UtcDatetime = Field(description="First hour with an expectation (inclusive).")
+    window_end: UtcDatetime = Field(description="End of the window (exclusive).")
+    detection_start: UtcDatetime = Field(description="Start of the test window.")
+    first_interval: UtcDatetime | None = Field(
+        description="This meter's first hour with an interval; earlier hours have only the "
+        "expectation (the interval needs weeks of out-of-sample residuals)."
+    )
+
+
+class ExpectationPoint(BaseModel):
+    timestamp: UtcDatetime
+    observed: float | None = Field(description="null means not measured, never zero.")
+    expected: float | None
+    lower: float | None
+    upper: float | None
+
+
+class ExpectationSeries(BaseModel):
+    """A meter's readings with the model's expectation and interval, for a time range."""
+
+    meter_id: str
+    unit: str
+    data_kind: DataKindName
+    available: bool
+    reason: ExpectationUnavailable | None = Field(description="Why not, when unavailable.")
+    message: str | None
+    meta: ExpectationMeta | None
+    points: list[ExpectationPoint]
+    truncated: bool
+    caveats: list[str]

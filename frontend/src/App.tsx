@@ -2,6 +2,7 @@ import { routeFor, usePath } from './design/routes';
 import { useTheme } from './design/theme';
 import { SummaryProvider } from './features/summary/SummaryProvider';
 import { useDataKinds, useSummary } from './features/summary/useSummary';
+import { ExplorerPage } from './pages/ExplorerPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
 import { AppShell } from './shell/AppShell';
@@ -29,6 +30,8 @@ function Routes() {
         />
       ) : route.path === '/' ? (
         <OverviewPage summary={summary} />
+      ) : route.path === '/explorer' ? (
+        <ExplorerPage summary={route.summary} />
       ) : (
         <PlannedPage route={route} />
       )}

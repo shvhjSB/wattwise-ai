@@ -358,6 +358,18 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **The summary endpoint went from 11 s to 0.19 s** at 20 million readings, by storing dataset
     totals at load time. It was only fast on the small sample before.
 
+- **Building and meter explorer (T030, D052):** search a building, open one of its meters, and see
+  its readings against what the model expected, with the 90% interval, readings outside it marked,
+  alert windows shaded and the difference below.
+  - **The model's expectation is stored for the evaluation windows only** (July 2017 to January
+    2018, where it was not trained on the readings): 4.67 million rows for 1,124 of 1,148 meters.
+    Outside them, and for datasets without one, the page says there is none.
+  - **Honest about the interval:** it shows that the 90% interval held for 87.2% of readings on the
+    test window, and that a missing reading is a gap, never zero.
+  - **No chart library:** small SVG components with an hour readout and a data table for
+    accessibility; the whole app is 81 KB gzipped.
+  - **Not done:** 24 meters have no stored expectation (not investigated); no drag-to-zoom.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -404,6 +416,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T027 | Model metadata, metrics and monitoring records | 2026-10-29 |
 | T028 | Design system and application shell | 2026-10-29 |
 | T029 | Energy overview page | 2026-10-29 |
+| T030 | Building and meter explorer | 2026-10-29 |
 
 ## Current task
 
@@ -411,9 +424,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T030 — Building and meter explorer** (M10): browse buildings and meters and see each meter's
-readings against the model's expectation and interval. It also decides the chart library (D001).
-See [ROADMAP.md](ROADMAP.md#t030--building-and-meter-explorer).
+**T031 — Anomaly investigation queue and alert detail** (M10): the alert queue (priority,
+filters, review status), an alert's evidence and explanation with the chart, and reviewer feedback
+with the caveats. It reuses the explorer's chart and the feedback API (T025). See
+[ROADMAP.md](ROADMAP.md#t031--anomaly-investigation-queue-and-alert-detail).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -433,7 +447,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 2 / 6 |
+| M10 Frontend workflows | T028–T033 | 3 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

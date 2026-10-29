@@ -27,7 +27,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
 )
-from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.dialects.postgresql import JSONB, REAL
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from wattwise.data.contracts import CANONICAL_UNIT, MeterType, Unit
@@ -247,3 +247,41 @@ class AnalysisRun(Base):
     missing_values: Mapped[int] = mapped_column(Integer)
     predictions: Mapped[int] = mapped_column(Integer)
     alerts: Mapped[int] = mapped_column(Integer)
+
+
+class ExpectationSet(Base):
+    """Which model produced a dataset's stored expectations, and over which window (T030)."""
+
+    __tablename__ = "expectation_sets"
+
+    dataset_id: Mapped[str] = mapped_column(
+        ForeignKey("datasets.dataset_id", ondelete="CASCADE"), primary_key=True
+    )
+    model_version: Mapped[str] = mapped_column(String(64))
+    #: Nominal coverage of the interval (0.9) and the share of readings that fell inside it in
+    #: the detection window (the measured value; None if it could not be measured).
+    interval_nominal: Mapped[float] = mapped_column(Float)
+    measured_coverage: Mapped[float | None] = mapped_column(Float)
+    window_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    window_end: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    #: The part of the window in which the model's residuals are out-of-sample (it was not
+    #: trained on it): validation and test. An interval begins once enough out-of-sample
+    #: residuals exist: two weeks in, for a meter without gaps.
+    detection_start: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    row_count: Mapped[int] = mapped_column(BigInteger)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Expectation(Base):
+    """The model's expectation for one reading, with its interval (NULL where there is none).
+    Single precision: these are for display, and halve the table's size."""
+
+    __tablename__ = "expectations"
+
+    meter_id: Mapped[str] = mapped_column(
+        ForeignKey("meters.meter_id", ondelete="CASCADE"), primary_key=True
+    )
+    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), primary_key=True)
+    expected: Mapped[float | None] = mapped_column(REAL)
+    lower: Mapped[float | None] = mapped_column(REAL)
+    upper: Mapped[float | None] = mapped_column(REAL)

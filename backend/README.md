@@ -90,10 +90,11 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/health` | Liveness only: the process is up. It does **not** check dependencies. |
-| GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id` or `dataset_id`. |
+| GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id`, `dataset_id` or `q` (a case-insensitive match on id or primary use). |
 | GET | `/api/v1/buildings/{building_id}` | One building; 404 if unknown. |
 | GET | `/api/v1/meters` | Meters, a page at a time, filtered by `building_id` or `meter_type`. |
 | GET | `/api/v1/meters/{meter_id}` | One meter; 404 if unknown. |
+| GET | `/api/v1/meters/{meter_id}/expectation` | A meter's readings with the model's expectation and 90% interval (and the model, window and measured coverage), for the evaluation windows only; `available: false` with a reason elsewhere. Readings of hours with no expectation have `expected: null`. |
 | GET | `/api/v1/meters/{meter_id}/series` | Readings in [`start`, `end`) (ISO 8601 with an offset), at most `limit` points, with `truncated`. Missing readings are `null`. |
 | GET | `/api/v1/dashboard/summary` | Per dataset and per kind of data (observed and synthetic are never added together): counts, measured kWh, missing values, time range, and alert totals (open, high severity, potential excess as an estimate, expected and observed kWh in alert windows). Read from stored totals, not scanned. |
 | GET | `/api/v1/alerts` | Alerts, highest priority first, filtered by building, meter, dataset, `signature`, `severity`, `kind`, `review_status` and an overlap with [`start`, `end`); superseded ones only with `include_superseded=true`. |

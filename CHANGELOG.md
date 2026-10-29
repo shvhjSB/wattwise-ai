@@ -331,6 +331,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - Energy overview (T029), D051: six figures per kind of data with definition and source tooltips;
   the dashboard summary reads dataset totals stored at load time (migration `0005`; 11 s to
   0.19 s at 20 million readings) and adds alert totals.
+- Building and meter explorer (T030), D052: the model's expectation and 90% interval stored for the
+  evaluation windows (`wattwise.db.expectations`, migration `0006`), `GET /meters/{id}/expectation`,
+  building search (`q`), and hand-written SVG charts (readings against expectation and interval, and
+  the difference) with an hour readout and a data table.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

@@ -336,6 +336,17 @@ The application foundation runs end to end locally, and CI checks it automatical
   - The local database holds the synthetic sample (4 buildings, 4 meters, 5,376 readings, 6
     missing), labelled synthetic.
 
+- **Design system and shell (T028, D050):** the frontend now has colour tokens with light, dark and
+  system themes, a header with skip link and main navigation, and five pages (Overview, Buildings &
+  meters, Alerts, Cost impact, Model lab). Pages that later tasks build say "Not built yet" and name
+  the task; no page shows invented data.
+  - **Provenance is always visible:** a demo-data banner appears on every page while synthetic data
+    is stored, and badges mark Synthetic, Observed and Uploaded in words, not colour alone.
+  - **Accessibility is tested:** every text/background pair meets 4.5:1 contrast in both themes, and
+    control borders 3:1; the navigation marks the current page and a modified click keeps the
+    browser's behaviour.
+  - Seen in a real browser (Edge) against the real API and local database, in both themes.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -380,6 +391,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T025 | Alerts and feedback API | 2026-10-29 |
 | T026 | CSV upload and analysis endpoint | 2026-10-29 |
 | T027 | Model metadata, metrics and monitoring records | 2026-10-29 |
+| T028 | Design system and application shell | 2026-10-29 |
 
 ## Current task
 
@@ -387,10 +399,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T028 — Design system and application shell** (M10, the frontend): design tokens, typography,
-light and dark themes, layout and navigation, a demo-data banner and a provenance badge, and
-shared loading, empty and error components. See
-[ROADMAP.md](ROADMAP.md#t028--design-system-and-application-shell).
+**T029 — Energy overview page** (M10): measured kWh, model-expected kWh, estimated excess kWh
+(marked as an estimate), active events, data-quality health and coverage, each KPI with a
+definition and source tooltip. It also decides how the frontend handles server state (D009). See
+[ROADMAP.md](ROADMAP.md#t029--energy-overview-page).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -410,7 +422,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 0 / 6 |
+| M10 Frontend workflows | T028–T033 | 1 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

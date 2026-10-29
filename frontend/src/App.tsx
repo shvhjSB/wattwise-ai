@@ -1,24 +1,43 @@
+import { routeFor, usePath } from './design/routes';
+import { PageHeader } from './design/states';
+import { useTheme } from './design/theme';
 import { ApiHealthPanel } from './features/health/ApiHealthPanel';
+import { useDataKinds } from './features/provenance/useDataKinds';
+import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
+import { AppShell } from './shell/AppShell';
 
 export function App() {
-  return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-      <header className="border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
-        <div className="mx-auto flex max-w-5xl items-baseline gap-3 px-6 py-4">
-          <h1 className="text-lg font-semibold tracking-tight">WattWise AI</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Explainable energy-waste detection for commercial buildings
-          </p>
-        </div>
-      </header>
+  const { path, navigate } = usePath();
+  const { choice, setChoice } = useTheme();
+  const dataKinds = useDataKinds();
+  const route = routeFor(path);
 
-      <main className="mx-auto max-w-5xl space-y-6 px-6 py-10">
-        <p className="max-w-prose text-sm text-slate-600 dark:text-slate-400">
-          This is the application foundation. Energy analytics, anomaly investigation and model
-          evaluation arrive in later milestones. No energy data is shown yet.
-        </p>
-        <ApiHealthPanel />
-      </main>
-    </div>
+  return (
+    <AppShell
+      path={route?.path ?? path}
+      navigate={navigate}
+      dataKinds={dataKinds}
+      theme={choice}
+      onThemeChange={setChoice}
+    >
+      {route === undefined ? (
+        <NotFoundPage
+          onHome={() => {
+            navigate('/');
+          }}
+        />
+      ) : route.path === '/' ? (
+        <>
+          <PageHeader title={route.label} summary={route.summary} />
+          <p className="max-w-prose text-sm text-muted">
+            The overview’s energy figures arrive with roadmap task {route.task}. Until then this
+            page shows whether the API is reachable.
+          </p>
+          <ApiHealthPanel />
+        </>
+      ) : (
+        <PlannedPage route={route} />
+      )}
+    </AppShell>
   );
 }

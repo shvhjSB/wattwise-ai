@@ -55,7 +55,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T025 | Alerts and feedback API | M9 | T022, T023 | Done |
 | T026 | CSV upload and analysis endpoint | M9 | T005, T015, T023 | Done |
 | T027 | Model metadata, metrics and monitoring records | M9 | T015, T023 | Done |
-| T028 | Design system and application shell | M10 | T003 | Not started |
+| T028 | Design system and application shell | M10 | T003 | Done |
 | T029 | Energy overview page | M10 | T024, T028 | Not started |
 | T030 | Building and meter explorer | M10 | T024, T028 | Not started |
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Not started |
@@ -717,6 +717,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - Design tokens, typography, light and dark themes, layout and navigation.
   - A demo-data banner and a provenance badge.
   - Shared loading, empty and error components.
+- **Done (2026-10-29, D050):** colour tokens with light, dark and system themes (contrast tested in
+  both), a shell with skip link and main navigation, five pages that say which task builds them, a
+  demo-data banner driven by the stored data kinds, provenance badges, and shared loading, empty and
+  error components. Seen in a real browser in both themes.
 
 ### T029 — Energy overview page
 - **Scope:**

@@ -325,6 +325,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   the default detector's alerts; works without a model). Dependency: `python-multipart` 0.0.32.
 - Model information and monitoring (T027), D049: `GET /models/metadata`, `/models/metrics`
   (recorded values, or `available: false` with a reason) and `/analysis-runs`; migration `0004`.
+- Design system and application shell (T028), D050: colour tokens with light, dark and system
+  themes (contrast tested), main navigation across five pages, a demo-data banner, provenance
+  badges and shared loading, empty and error components.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

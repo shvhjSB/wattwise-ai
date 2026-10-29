@@ -1786,6 +1786,47 @@ links to the entry that replaces it.
 - **Consequences:** the model lab (T033) can show the served model and its recorded metrics, and
   monitoring can count runs per model version.
 
+## D050 — Frontend design system: colour tokens, themes, a history-API router, provenance everywhere
+- **Date:** 2026-10-29 · **Task:** T028 · **Status:** Accepted
+- **Decision:** (frontend README)
+  - **Every colour is a token** (`--color-surface`, `raised`, `sunken`, `line`, `edge`, `ink`, `muted`,
+    `accent`, `success`, `danger`, and a soft/strong pair for each data provenance), declared in
+    `index.css` with Tailwind's `@theme`, so components use `bg-surface`, `text-muted` and never raw
+    palette colours. A theme is a set of token values.
+  - **Light, dark and system:** light is the default; dark applies under `data-theme='dark'`, and
+    follows the operating system's preference when no theme has been chosen. The choice (System,
+    Light, Dark) is in the header and remembered in `localStorage`; unavailable storage is not an
+    error. The dark values are written twice in CSS (chosen and system), and a test fails if the two
+    copies differ.
+  - **Contrast is tested, not asserted:** a test reads the stylesheet's source and computes WCAG
+    contrast for every text/background pair the components use, in both themes: at least 4.5:1 for
+    text and 3:1 for the borders of controls (WCAG 1.4.11). Decorative borders (`line`) are exempt
+    and are not used for controls.
+  - **Shell:** a skip link, a labelled main navigation with `aria-current` on the current page, the
+    theme switch and a main landmark. Five pages in navigation order (Overview, Buildings & meters,
+    Alerts, Cost impact, Model lab), each naming the roadmap task that builds it; until then it
+    says "Not built yet" and shows no data. An unknown address shows "Page not found".
+  - **A small history-API router** (`usePath`), not a router library: five fixed pages and no route
+    parameters yet. Modified clicks (Ctrl, Shift, middle) keep the browser's behaviour; back and
+    forward work. Revisit when T030/T031 need route parameters.
+  - **Provenance is always visible:** `ProvenanceBadge` (Synthetic, Observed, Uploaded) is text, never
+    colour alone. `DemoBanner` appears on every page when the stored data includes synthetic data
+    (from `data_kinds` in the dashboard summary), with a stronger message when only synthetic data is
+    stored and a pointer to the badges when it is mixed. If the summary is unavailable it shows
+    nothing and no error (the health panel reports the API).
+  - **Shared states:** `LoadingState` (polite status, motion-reduced), `EmptyState`, `ErrorState`
+    (alert, optional retry) and `PageHeader`; the existing API panel uses them.
+- **Alternatives considered:**
+  - **A router library** (React Router, TanStack Router): more than five fixed pages need.
+  - **Class-based dark mode only** (`dark:` variants everywhere): scatters colours through
+    components; tokens keep a theme in one place and make contrast testable.
+  - **A component library:** the product needs a specific provenance and caveat vocabulary; a few
+    small components cover the shell.
+- **Found while building:** the first border for the theme selector reused the decorative `line`
+  colour (about 1.2:1 on white), too faint to identify a control; it now uses `edge`.
+- **Consequences:** T029-T033 use these tokens, states and badges. The overview (T029) decides
+  server-state handling (D009's open question).
+
 ---
 
 ## Open decisions (tracked in tasks)

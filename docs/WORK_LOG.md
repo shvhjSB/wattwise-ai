@@ -2334,3 +2334,35 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 **Validation** (Windows)
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **830 passed**, 14 new (816 before).
+
+---
+
+## 2026-10-29 — T028 Design system and application shell
+
+**Done**
+- **Tokens and themes:** colour tokens in `index.css`; light, dark (chosen) and system; the
+  header's theme switch is remembered and survives unavailable storage.
+- **Shell and pages:** skip link, labelled navigation with `aria-current`, a small history-API
+  router (back and forward, modified clicks), five pages that name the task that builds them, and a
+  not-found page.
+- **Provenance:** `ProvenanceBadge` and `DemoBanner` (fed by `data_kinds` from the dashboard
+  summary); shared loading, empty and error states; the API panel uses them.
+- **Tested contrast** rather than asserted: 31 checks over the stylesheet's source plus 2 for
+  control borders; all pass.
+- **Seen in a real browser:** Edge (headless) against the real API and the local database (which
+  holds the synthetic sample and BDG2, so the banner shows the "mixed" message), in light and dark.
+
+**Problems and fixes**
+- The theme selector's border reused the decorative `line` colour (about 1.2:1 on white); added an
+  `edge` token (3:1) and a test.
+- A first token test imported the CSS with `?raw`, but Tailwind's plugin compiled the `@theme` block
+  away; it now reads the source file (Node types scoped to that one test file).
+- Edge's `preferredColorScheme` flag has 0 as dark and 1 as light, so my first two screenshots were
+  swapped; each was judged by what it showed.
+- The dev server listens on `localhost`, so a probe of `127.0.0.1` looked like a failure.
+- I stopped the API and dev server I had started (by process id) when done.
+
+**Validation** (Windows)
+- Frontend: `tsc -b`, ESLint (zero warnings), Prettier and the production build are clean;
+  Vitest **106 passed** (21 before, 85 new).
+- Backend untouched this task (830 passed at T027).

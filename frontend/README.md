@@ -7,11 +7,26 @@ Tooling choices and version constraints are recorded in
 ```
 src/
   api/          typed HTTP client (runtime-validated responses) and one module per API resource
+  design/       colour-token themes, routes, provenance badge and demo banner, shared states (D050)
   features/     feature folders: components, hooks and their tests, side by side
+  pages/        pages that are not built yet, and the not-found page
+  shell/        the application frame: header, navigation, theme switch
   test/         test setup and shared test helpers
-  App.tsx       application shell
+  App.tsx       routing and composition
   main.tsx      entry point
 ```
+
+## Design system
+
+Colours are tokens declared in [`src/index.css`](src/index.css) (D050). Use the token utilities
+(`bg-surface`, `bg-raised`, `text-ink`, `text-muted`, `border-line`, `border-edge`, `bg-accent`,
+`text-danger`, ...), never raw palette colours: a theme is a set of token values. `border-line` is for
+decorative dividers; controls use `border-edge`. A test (`design/tokens.test.ts`) checks WCAG
+contrast for every pair in both themes, so a new pair is added to its list.
+
+Every page marks where its data comes from with `ProvenanceBadge`, and the shell shows
+`DemoBanner` while synthetic data is stored. Show loading, empty and error states with the shared
+`LoadingState`, `EmptyState` and `ErrorState`. Pages are listed in `design/routes.ts`.
 
 ## Setup
 

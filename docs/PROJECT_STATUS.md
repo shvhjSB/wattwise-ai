@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-28 · **Current milestone:** M5b — Scale-up and model quality (M1–M5, M7 complete)
+**Last updated:** 2026-10-30 · **Current milestone:** M10 — Frontend workflows
 
 ## Summary
 
@@ -370,6 +370,16 @@ The application foundation runs end to end locally, and CI checks it automatical
     accessibility; the whole app is 81 KB gzipped.
   - **Not done:** 24 meters have no stored expectation (not investigated); no drag-to-zoom.
 
+- **Alert investigation (T031, D053):** a priority-ordered queue with severity, review, kind,
+  pattern, date, building and meter filters opens each alert's complete evidence and review record.
+  - **Evidence stays synchronized:** the detail reuses the explorer's stored expectation and
+    difference charts, then shows the recorded explanation, detector/model evidence, model
+    influences, suggested check, assumptions and caveats.
+  - **Review is append-only:** all four API labels are available with an optional reviewer and note;
+    saving refreshes the queue and history but does not retrain a model.
+  - **State is linkable:** filters, page and selected alert live in the URL. Loading, empty, API
+    failure and stale-link states are explicit, and observed/synthetic provenance stays visible.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -417,6 +427,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T028 | Design system and application shell | 2026-10-29 |
 | T029 | Energy overview page | 2026-10-29 |
 | T030 | Building and meter explorer | 2026-10-29 |
+| T031 | Anomaly investigation queue and alert detail | 2026-10-30 |
 
 ## Current task
 
@@ -424,10 +435,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T031 — Anomaly investigation queue and alert detail** (M10): the alert queue (priority,
-filters, review status), an alert's evidence and explanation with the chart, and reviewer feedback
-with the caveats. It reuses the explorer's chart and the feedback API (T025). See
-[ROADMAP.md](ROADMAP.md#t031--anomaly-investigation-queue-and-alert-detail).
+**T032 — Cost-impact analysis and tariff configuration** (M10): tariff and carbon-factor
+configuration, with impact estimates and their assumptions. Missing configuration must be shown as
+"not configured", never filled with an invented value. See
+[ROADMAP.md](ROADMAP.md#t032--cost-impact-analysis-and-tariff-configuration).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -447,7 +458,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 3 / 6 |
+| M10 Frontend workflows | T028–T033 | 4 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

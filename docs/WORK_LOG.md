@@ -2435,3 +2435,36 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   **231 passed** (141 before, 90 new).
 - `uv lock --check`: exit 0. ruff, format and strict mypy: clean.
 - `pytest -W error` with the local test database: **863 passed**, 30 new (833 before).
+
+---
+
+## 2026-10-30 — T031 Anomaly investigation queue and alert detail
+
+**Done**
+- **Queue:** priority order from the alerts API, 25 per page, with severity, review status, kind,
+  pattern, date, building and meter filters. Filters, page and selection are linkable query state.
+- **Detail:** event context reuses T030's stored expectation and synchronized expectation/difference
+  charts; recorded explanation, suggested check, detector/model evidence, influences, assumptions,
+  caveats and review history are shown without inventing confidence or causes.
+- **Review:** the four D047 labels, optional reviewer and note, append-only save, then queue/detail
+  refresh. The page states that feedback does not retrain a model.
+- **API client:** validated alert page/detail/feedback guards and a shared validated JSON POST path.
+- **Seen on real data:** Chrome/Edge headless against the local API and PostgreSQL, with 5,546 alerts,
+  in light, dark, desktop and narrow layouts. No feedback was written to the real database.
+
+**Problems and fixes**
+- Native controls and the two-column filter form made the first narrow capture look clipped. The form
+  now uses one column below `sm`, the queue has a bounded mobile height, and the shell navigation has
+  an explicit narrow-screen basis. Windows headless Chromium also enforces a 500 px CSS viewport even
+  when asked for 390 px; that mismatch was measured with `innerWidth`, then the real viewport was
+  captured rather than treating a cropped image as the layout.
+- The preferred computer-use runtime failed twice before opening an app (runtime path unavailable),
+  so visual verification used the installed headless browsers and screenshots instead.
+- The npm wrapper produced no streamed output during a combined check; the same local project
+  binaries completed successfully and gave the expected results.
+
+**Validation** (Windows)
+- Frontend: `tsc -b`, ESLint (zero warnings), Prettier and the production build are clean; Vitest
+  **242 passed** (231 before, 11 new).
+- Focused alert/client run: **19 passed**.
+- Backend untouched this task (863 passed at T030).

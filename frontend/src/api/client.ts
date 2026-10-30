@@ -36,21 +36,21 @@ function isAbortError(error: unknown): boolean {
   );
 }
 
-/**
- * GET a JSON resource and validate its shape.
- *
- * Throws {@link ApiError} for network failures, non-2xx responses and unexpected payloads.
- * Aborted requests re-throw the original `AbortError` so callers can ignore them.
- */
-export async function getJson<T>(
+/** Send a JSON request and validate its response. */
+async function requestJson<T>(
   path: string,
   isExpected: (value: unknown) => value is T,
-  options: { signal?: AbortSignal } = {},
+  options: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
   let response: Response;
   try {
     response = await fetch(apiUrl(path), {
-      headers: { Accept: 'application/json' },
+      method: options.method ?? 'GET',
+      headers: {
+        Accept: 'application/json',
+        ...(options.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+      },
+      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
       signal: options.signal ?? null,
     });
   } catch (cause) {
@@ -92,4 +92,28 @@ export async function getJson<T>(
     );
   }
   return body;
+}
+
+/**
+ * GET a JSON resource and validate its shape.
+ *
+ * Throws {@link ApiError} for network failures, non-2xx responses and unexpected payloads.
+ * Aborted requests re-throw the original `AbortError` so callers can ignore them.
+ */
+export function getJson<T>(
+  path: string,
+  isExpected: (value: unknown) => value is T,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
+  return requestJson(path, isExpected, options);
+}
+
+/** POST a JSON body and validate the JSON response with the same rules as {@link getJson}. */
+export function postJson<T>(
+  path: string,
+  body: unknown,
+  isExpected: (value: unknown) => value is T,
+  options: { signal?: AbortSignal } = {},
+): Promise<T> {
+  return requestJson(path, isExpected, { ...options, method: 'POST', body });
 }

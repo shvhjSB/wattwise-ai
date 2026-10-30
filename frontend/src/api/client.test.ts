@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { jsonResponse } from '../test/http';
-import { ApiError, apiUrl, getJson } from './client';
+import { ApiError, apiUrl, getJson, postJson } from './client';
 
 interface Greeting {
   hello: string;
@@ -90,5 +90,24 @@ describe('getJson', () => {
     const error = await rejectionOf(getJson('/api/v1/greeting', isGreeting));
 
     expect(error).toBe(abort);
+  });
+});
+
+describe('postJson', () => {
+  it('sends and validates a JSON body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ hello: 'saved' }, 201));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(postJson('/api/v1/greeting', { name: 'WattWise' }, isGreeting)).resolves.toEqual({
+      hello: 'saved',
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/v1/greeting',
+      expect.objectContaining({
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: 'WattWise' }),
+      }),
+    );
   });
 });

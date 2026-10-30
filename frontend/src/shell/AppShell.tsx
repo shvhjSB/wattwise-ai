@@ -47,7 +47,7 @@ export function AppShell({
             <p className="text-xs text-muted">Explainable energy-waste detection</p>
           </div>
 
-          <nav aria-label="Main">
+          <nav aria-label="Main" className="min-w-0 basis-full md:basis-auto">
             <ul className="flex flex-wrap gap-1 text-sm">
               {ROUTES.map((route) => {
                 const current = route.path === path;

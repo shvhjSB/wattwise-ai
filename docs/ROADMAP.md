@@ -58,7 +58,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T028 | Design system and application shell | M10 | T003 | Done |
 | T029 | Energy overview page | M10 | T024, T028 | Done |
 | T030 | Building and meter explorer | M10 | T024, T028 | Done |
-| T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Not started |
+| T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Done |
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Not started |
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Not started |
 | T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Not started |
@@ -748,6 +748,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - A queue ordered by priority, with filters.
   - An alert detail view with the evidence and explanation panel, assumptions, suggested checks
     and feedback buttons.
+- **Done (2026-10-30, D053):** a URL-backed, priority-ordered queue with API-supported filters and
+  pagination; an alert detail with synchronized expectation and difference charts, explanation,
+  detector and model evidence, influences, assumptions and caveats; and the four append-only review
+  choices with reviewer, note and history. Every response is runtime-validated, provenance is
+  visible, and feedback refreshes the queue without retraining anything.
 
 ### T032 — Cost-impact analysis and tariff configuration
 - **Scope:**

@@ -335,6 +335,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   evaluation windows (`wattwise.db.expectations`, migration `0006`), `GET /meters/{id}/expectation`,
   building search (`q`), and hand-written SVG charts (readings against expectation and interval, and
   the difference) with an hour readout and a data table.
+- Alert investigation workflow (T031), D053: a priority-ordered, filtered and paginated queue; an
+  alert detail with synchronized expectation/difference charts, explanation, evidence, influences,
+  assumptions and caveats; and append-only reviewer feedback with all four API labels and history.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

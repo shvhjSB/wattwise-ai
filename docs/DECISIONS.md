@@ -1928,10 +1928,40 @@ links to the entry that replaces it.
 
 ---
 
+## D053 — Alert investigation: URL-backed queue state, recorded evidence, append-only reviews
+- **Date:** 2026-10-30 · **Task:** T031 · **Status:** Accepted
+- **Decision:**
+  - **Filters, pagination and the selected alert live in the query string.** A copied URL opens the
+    same queue context and alert; changing filters or page clears a stale selection. The page sends
+    only filters already supported by `GET /alerts` and displays 25 alerts at a time in the API's
+    priority order.
+  - **The detail renders recorded evidence without deriving new confidence or causes.** It shows the
+    stored explanation, detector and model comparison, signature evidence, influences explicitly
+    labelled as associations, suggested check, assumptions and caveats. It reuses T030's stored
+    expectation endpoint and hand-written SVG charts for the event context, so the explorer and an
+    alert cannot present different expected values.
+  - **Feedback remains the append-only judgement defined by D047.** The UI exposes exactly the four
+    API labels, optional reviewer and note, then refreshes the detail and queue after saving. It says
+    that no model is retrained from feedback and does not add client-side status shortcuts.
+  - **Every alert and feedback response is runtime-validated.** Invalid bodies use the same explicit
+    error path as other API resources. Queue loading, empty, failed and stale-link states are shown;
+    synthetic or observed provenance remains visible on both queue and detail.
+- **Alternatives considered:**
+  - **A route per alert:** unnecessary while the small router intentionally uses one route per
+    workflow; query state preserves linkability without adding route matching (D050).
+  - **Computing a chart from evidence totals:** rejected because totals cannot reconstruct hourly
+    context and could disagree with the stored expectation series.
+  - **Optimistically changing review status:** rejected because the append-only feedback response is
+    not the complete refreshed alert; the server remains authoritative.
+- **Consequences:** the same alert URL can be shared for investigation, and T035 can exercise the
+  queue-to-feedback flow without introducing a second state model. The queue still relies on the
+  API's offset pagination; live updates and reviewer authentication remain outside T031.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Browser E2E tooling | T035 | Only if justified |
-

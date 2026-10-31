@@ -59,7 +59,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T029 | Energy overview page | M10 | T024, T028 | Done |
 | T030 | Building and meter explorer | M10 | T024, T028 | Done |
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Done |
-| T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Not started |
+| T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Done |
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Not started |
 | T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Not started |
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Not started |
@@ -759,6 +759,12 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - Tariff and carbon-factor configuration.
   - The impact view shows estimates with their assumptions.
   - With no tariff or factor configured, it shows "not configured" rather than invented values.
+- **Done (2026-10-31, D054):** a read-only impact summary keeps observed and synthetic data
+  separate, excludes meter problems, applies only sourced carbon factors, and accepts one explicit
+  URL-backed tariff scenario without persisting it. The page shows per-kind totals, regional
+  breakdowns, factor provenance and assumptions; missing cost or carbon configuration remains
+  visibly "not configured". Published reference prices can be selected explicitly but are never
+  applied automatically.
 
 ### T033 — Model evaluation lab, dataset and model information
 - **Scope:**

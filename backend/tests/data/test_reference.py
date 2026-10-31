@@ -8,6 +8,7 @@ from wattwise.data.reference import (
     geography_for_site,
     load_carbon_factors,
     load_prices,
+    price_geography_for_site,
     prices,
     site_carbon_factor,
     site_prices,
@@ -153,6 +154,13 @@ def test_site_prices_resolves_the_site_first() -> None:
     assert site_prices("Bobcat", 2016, PRICE) == []
 
 
+def test_price_geography_uses_us_state_not_carbon_subregion() -> None:
+    assert geography_for_site("Hog") == "US-MROW"
+    assert price_geography_for_site("Hog") == "US-MN"
+    assert price_geography_for_site("Mouse") == "GB"
+    assert price_geography_for_site("Crow") is None
+
+
 # -- the committed tables themselves (T021a acceptance: checked by a recorded checksum) ------
 
 
@@ -175,6 +183,7 @@ def test_the_committed_price_table_loads_and_matches_its_recorded_checksums() ->
         "US-AZ", "US-CA", "US-DC", "US-FL", "US-MN", "US-NJ", "US-NY", "US-TX", "GB", "IE",
     }  # fmt: skip
     assert (frame["value"] > 0).all()
+    assert set(frame.loc[frame["geography"].str.startswith("US-"), "tax_basis"]) == {"n/a"}
     for recorded in frame["file_sha256"].unique():
         assert len(recorded) == 64
 

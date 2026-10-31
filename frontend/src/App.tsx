@@ -4,6 +4,7 @@ import { SummaryProvider } from './features/summary/SummaryProvider';
 import { useDataKinds, useSummary } from './features/summary/useSummary';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { AlertsPage } from './pages/AlertsPage';
+import { ImpactPage } from './pages/ImpactPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
 import { AppShell } from './shell/AppShell';
@@ -35,6 +36,8 @@ function Routes() {
         <ExplorerPage summary={route.summary} />
       ) : route.path === '/alerts' ? (
         <AlertsPage summary={route.summary} />
+      ) : route.path === '/impact' ? (
+        <ImpactPage summary={route.summary} />
       ) : (
         <PlannedPage route={route} />
       )}

@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-30 · **Current milestone:** M10 — Frontend workflows
+**Last updated:** 2026-10-31 · **Current milestone:** M10 — Frontend workflows
 
 ## Summary
 
@@ -380,6 +380,16 @@ The application foundation runs end to end locally, and CI checks it automatical
   - **State is linkable:** filters, page and selected alert live in the URL. Loading, empty, API
     failure and stale-link states are explicit, and observed/synthetic provenance stays visible.
 
+- **Cost impact (T032, D054):** a read-only scenario shows potential excess energy, sourced carbon
+  and an explicitly configured tariff cost, by observed or synthetic kind and by region.
+  - **No invented values:** absent factors and tariffs stay "not configured"; meter/data problems
+    are excluded. Carbon uses the alert site's factor and year, with source, vintage and provenance.
+  - **Tariffs are explicit and linkable:** geography, currency and rate live in the URL and are not
+    saved. Published reference rates are offered for explicit selection, never silently applied.
+  - **Real portfolio check:** 5,084 counted observed events total 558.7 MWh potential excess and
+    220.1 t CO2e; 462 meter problems are excluded. The optimized endpoint responds in about 0.15 s
+    after warm-up instead of scanning full alert evidence into Python.
+
 ## Completed tasks
 
 | ID | Title | Completed |
@@ -428,6 +438,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T029 | Energy overview page | 2026-10-29 |
 | T030 | Building and meter explorer | 2026-10-29 |
 | T031 | Anomaly investigation queue and alert detail | 2026-10-30 |
+| T032 | Cost-impact analysis and tariff configuration | 2026-10-31 |
 
 ## Current task
 
@@ -435,10 +446,10 @@ None. Waiting for the owner to continue.
 
 ## Next task
 
-**T032 — Cost-impact analysis and tariff configuration** (M10): tariff and carbon-factor
-configuration, with impact estimates and their assumptions. Missing configuration must be shown as
-"not configured", never filled with an invented value. See
-[ROADMAP.md](ROADMAP.md#t032--cost-impact-analysis-and-tariff-configuration).
+**T033 — Model evaluation lab, dataset and model information** (M10): baseline comparisons,
+evaluation windows, per-building metrics, training metadata, dataset health and recent uploads,
+with explicit warnings where metrics are unavailable. See
+[ROADMAP.md](ROADMAP.md#t033--model-evaluation-lab-dataset-and-model-information).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -458,7 +469,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 4 / 6 |
+| M10 Frontend workflows | T028–T033 | 5 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

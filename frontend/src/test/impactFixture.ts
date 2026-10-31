@@ -1,0 +1,86 @@
+import type { ImpactSummary } from '../api/impact';
+
+export function impactSummary(overrides: Partial<ImpactSummary> = {}): ImpactSummary {
+  return {
+    status: 'potential',
+    tariff: { geography: 'US-MN', currency: 'USD', rate_per_kwh: 0.1048 },
+    by_kind: [
+      {
+        kind: 'observed',
+        events: 12,
+        events_counted: 10,
+        meter_problem_events: 2,
+        total_potential_excess_kwh: 1800,
+        total_potential_carbon_kg: 860.051,
+        carbon_configured_events: 7,
+        carbon_unconfigured_events: 3,
+        total_cost: { value: 159.296, currency: 'USD', events: 6 },
+        by_geography: [
+          {
+            carbon_geography: 'US-MROW',
+            tariff_geography: 'US-MN',
+            sites: ['Hog'],
+            years: [2017],
+            events: 6,
+            potential_excess_kwh: 1520,
+            potential_carbon_kg: 860.051,
+            carbon_configured_events: 6,
+            carbon_unconfigured_events: 0,
+            cost: { value: 159.296, currency: 'USD', events: 6 },
+            carbon_factors: [
+              {
+                geography: 'US-MROW',
+                geography_name: 'MRO West (eGRID subregion MROW)',
+                requested_year: 2017,
+                vintage_year: 2016,
+                kg_co2e_per_kwh: 0.565823,
+                scope: 'total output emission rate',
+                source_name: 'EPA eGRID2016 Summary Tables Table 1',
+                source_url: 'https://example.com/egrid',
+                retrieved: '2026-10-26',
+                licence: 'Public domain',
+              },
+            ],
+            price_references: [
+              {
+                geography: 'US-MN',
+                geography_name: 'Minnesota',
+                year: 2017,
+                period: 'annual',
+                sector: 'commercial',
+                band: null,
+                tax_basis: 'n/a',
+                rate_per_kwh: 0.1048,
+                currency: 'USD',
+                source_name: 'EIA-861 2017 commercial average',
+                source_url: 'https://example.com/eia',
+                retrieved: '2026-10-26',
+                licence: 'Public domain',
+              },
+            ],
+          },
+          {
+            carbon_geography: null,
+            tariff_geography: null,
+            sites: ['Eagle'],
+            years: [2017],
+            events: 4,
+            potential_excess_kwh: 280,
+            potential_carbon_kg: null,
+            carbon_configured_events: 1,
+            carbon_unconfigured_events: 3,
+            cost: null,
+            carbon_factors: [],
+            price_references: [],
+          },
+        ],
+      },
+    ],
+    caveats: [
+      'Every figure is potential, not verified savings or avoided emissions.',
+      'Meter and data problems are excluded from energy, cost and carbon totals.',
+      'A tariff scenario applies only to its named geography and is not saved.',
+    ],
+    ...overrides,
+  };
+}

@@ -338,6 +338,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 - Alert investigation workflow (T031), D053: a priority-ordered, filtered and paginated queue; an
   alert detail with synchronized expectation/difference charts, explanation, evidence, influences,
   assumptions and caveats; and append-only reviewer feedback with all four API labels and history.
+- Cost-impact workflow (T032), D054: `GET /impact/summary` aggregates potential excess, sourced
+  carbon and one explicit URL-backed tariff scenario without persistence; the page shows per-kind
+  and regional totals, source provenance, published reference choices, assumptions and explicit
+  "not configured" states. US price lookup now uses state geography rather than eGRID geography.
 - `docs/DATASETS.md`: BDG2 provenance, pin rationale, download instructions, verified data
   conventions (local timestamps that are not daylight-saving wall-clock time; units; raw vs
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)

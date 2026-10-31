@@ -1959,6 +1959,38 @@ links to the entry that replaces it.
 
 ---
 
+## D054 — Cost impact is a read-only, source-backed scenario
+- **Date:** 2026-10-31 · **Task:** T032 · **Status:** Accepted
+- **Decision:**
+  - **The API aggregates stored alert estimates without changing them.** Observed and synthetic
+    data remain separate, and meter/data problems are excluded from energy, cost and carbon totals.
+    The query projects only the alert fields needed for impact rather than loading complete evidence
+    JSON, keeping the full-scale response fast.
+  - **Carbon follows the alert site's geography and event year.** US factors use eGRID subregions;
+    GB and IE use country factors. A value is returned only when a committed sourced factor covers
+    that year; otherwise the result says "not configured" and reports the affected event count.
+  - **A tariff is one explicit URL-backed scenario, not stored configuration.** All of geography,
+    ISO currency and a non-negative rate per kWh are required together. US prices use state
+    geography, not the carbon eGRID subregion; GB and IE use country geography. Cost is calculated
+    only for the selected geography, so currencies and regions are never combined.
+  - **Published price references are choices, not defaults.** The API exposes applicable committed
+    source records and the page can copy one into the scenario, but no reference rate is silently
+    applied. Its source, period, tax basis and retrieval metadata remain visible.
+- **Alternatives considered:**
+  - **Persisting tariffs in PostgreSQL:** rejected for this task because there is no owner, effective
+    period or authorization model for organization-wide settings yet. A shareable scenario is
+    reversible and does not present a temporary input as durable configuration.
+  - **Using one US geography for price and carbon:** rejected because the sources publish at
+    different levels (state prices and eGRID carbon subregions). Reusing the carbon geography had
+    made valid US price records unreachable.
+  - **Applying the newest published rate automatically:** rejected because a source period, tax
+    basis and currency are assumptions the user must choose, not hidden defaults.
+- **Consequences:** T032 can compare explicit scenarios without a migration or configuration side
+  effects. Durable tariff administration, multiple simultaneous currencies and time-varying tariff
+  schedules require a later product decision and data model.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

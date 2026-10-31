@@ -10,8 +10,8 @@ src/
   design/       colour-token themes, routes, provenance badge and demo banner, shared states (D050)
   design/chart/ hand-written SVG charts and their tested arithmetic (D052)
   features/     feature folders: components, hooks and their tests, side by side
-                (`summary/` shares the dashboard summary; `alerts/` is the investigation workflow)
-  pages/        overview, explorer and alert workflows, planned pages and the not-found page
+                (`summary/` shares dashboard data; `alerts/` investigates; `impact/` configures a scenario)
+  pages/        overview, explorer, alert and impact workflows, planned pages and the not-found page
   shell/        the application frame: header, navigation, theme switch
   test/         test setup and shared test helpers
   App.tsx       routing and composition
@@ -29,6 +29,10 @@ contrast for every pair in both themes, so a new pair is added to its list.
 Every page marks where its data comes from with `ProvenanceBadge`, and the shell shows
 `DemoBanner` while synthetic data is stored. Show loading, empty and error states with the shared
 `LoadingState`, `EmptyState` and `ErrorState`. Pages are listed in `design/routes.ts`.
+
+The impact page keeps its optional tariff scenario in the URL (`tariff_geography`, `currency`,
+`rate_per_kwh`) and does not save it. Published rates are explicit choices, while missing tariff or
+carbon factors remain labelled "not configured" rather than receiving a client-side default.
 
 ## Setup
 

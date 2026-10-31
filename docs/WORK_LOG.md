@@ -2468,3 +2468,36 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   **242 passed** (231 before, 11 new).
 - Focused alert/client run: **19 passed**.
 - Backend untouched this task (863 passed at T030).
+
+---
+
+## 2026-10-31 — T032 Cost-impact analysis and tariff configuration
+
+**Done**
+- **Backend:** `GET /api/v1/impact/summary` aggregates stored alerts by data kind and region,
+  excludes meter/data problems, applies sourced carbon factors by site and event year, and evaluates
+  one optional all-or-none tariff scenario without storing it. It also exposes published price
+  references for explicit selection.
+- **Frontend:** the Impact page has URL-backed geography, currency and rate fields, reference-rate
+  selection, per-kind KPI cards, a regional breakdown, sourced carbon-factor provenance, assumptions
+  and explicit loading, empty, failure and "not configured" states.
+- **Real data:** 5,084 counted observed events total 558,721.9 kWh potential excess and 220,140.0 kg
+  CO2e; 462 meter problems are excluded. Carbon is configured for 4,379 events and absent for 705.
+  A US-MN scenario at 0.1048 USD/kWh gives USD 12,606.65 across 652 events.
+- **Seen in headless Edge/Chromium:** desktop and the actual 500 CSS px Windows minimum viewport,
+  against the local API and PostgreSQL. The form, references, KPIs and regional table do not clip.
+
+**Problems and fixes**
+- US price lookup reused the site's eGRID carbon geography, although EIA prices are state-level.
+  Added a separate price geography mapping and a test that prevents the two from being conflated.
+- pandas treated the literal tax basis `n/a` as missing and blank bands as NaN. Reference loading now
+  preserves `n/a` while converting only a blank band to `None`, with regression coverage.
+- The first endpoint loaded every alert's full evidence JSON and took about 1.9–2.4 s. Projecting
+  only kind, potential excess, start, site and data kind reduced warm full-scale responses to about
+  0.15 s (0.68 s on the first request).
+
+**Validation** (Windows)
+- Frontend: Prettier, ESLint (zero warnings), `tsc -b` and the production build are clean; Vitest
+  **250 passed** (242 before, 8 new).
+- Backend: `uv lock --check`, ruff format/check and strict mypy are clean; `pytest -W error`
+  **868 passed** (863 before, 5 new).

@@ -86,8 +86,10 @@ def load_carbon_factors(directory: Path = DEFAULT_REFERENCE_DIR) -> pd.DataFrame
 
 def load_prices(directory: Path = DEFAULT_REFERENCE_DIR) -> pd.DataFrame:
     """The committed price table, one row per geography, year, period, band and tax basis."""
-    frame = pd.read_csv(directory / "electricity_prices.csv", keep_default_na=True)
-    return frame.astype({"band": "object"}).where(frame.notna(), None)
+    frame = pd.read_csv(directory / "electricity_prices.csv", keep_default_na=False)
+    frame["band"] = frame["band"].astype("object")
+    frame.loc[frame["band"] == "", "band"] = None
+    return frame
 
 
 def geography_for_site(site_id: str) -> str | None:
@@ -102,6 +104,22 @@ def geography_for_site(site_id: str) -> str | None:
     if region.country in ("GB", "IE"):
         return region.country
     return None  # e.g. CA: no committed geography yet (see the module docstring)
+
+
+def price_geography_for_site(site_id: str) -> str | None:
+    """The price-table geography for a BDG2 site.
+
+    US carbon uses an eGRID subregion, while EIA prices use a state. GB and IE use the same
+    country code in both tables. Unknown and unsupported regions remain unconfigured.
+    """
+    region = SITE_REGIONS.get(site_id)
+    if region is None:
+        return None
+    if region.country == "US" and region.subdivision is not None:
+        return f"US-{region.subdivision}"
+    if region.country in ("GB", "IE"):
+        return region.country
+    return None
 
 
 def carbon_factor(
@@ -175,5 +193,5 @@ def prices(
 def site_prices(
     site_id: str, year: int, table: pd.DataFrame | None = None
 ) -> list[ElectricityPrice]:
-    """`prices` for a BDG2 site, via `geography_for_site`."""
-    return prices(geography_for_site(site_id), year, table)
+    """`prices` for a BDG2 site, via its price geography (state for US sites)."""
+    return prices(price_geography_for_site(site_id), year, table)

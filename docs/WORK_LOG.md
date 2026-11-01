@@ -2538,3 +2538,36 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - Implementation and project records remain local, uncommitted and unpushed. T033 remains
   In progress under the roadmap's committed-and-pushed completion rule. A browser visual review
   remains open; T034 is the next implementation task after the T033 checkpoint.
+
+### T033 checkpoint completed (2026-11-01)
+- At the owner's request, committed as `f22989c95030a2105f5f36ad9abc2938f33d2e45` and pushed to
+  `origin/main`. `git ls-remote` matched the local hash. GitHub attributes author and committer to
+  `shvhjSB`. Backend and frontend CI both passed in
+  [run 41318517157](https://github.com/shvhjSB/wattwise-ai/actions/runs/41318517157).
+- The browser visual-review limit above remains recorded and is carried into T035. T033's
+  implementation and automated acceptance are complete; M10 now has six completed tasks.
+
+---
+
+## 2026-11-01 — T034 API integration and pipeline end-to-end tests
+
+**Implemented**
+- One integration test starts from an empty PostgreSQL schema, applies migrations and reads the
+  committed synthetic CSV fixture through the real validator into canonical Parquet. It trains,
+  saves, promotes and reloads a temporary model, runs the default rolling detector, explains its
+  events and computes interval expectations. No pipeline functions are mocked.
+- The same test stores readings, expectations and alerts, then verifies readiness, summary totals,
+  synthetic provenance, buildings/meters, recorded model metrics, UTC timestamps, null readings,
+  priority order and exact evidence through the API. It checks that the known sustained injection
+  overlaps an alert and that API feedback survives an idempotent alert reload.
+- CI keeps the existing PostgreSQL service and runs the pipeline with all backend tests. A JUnit
+  guard requires exactly one passing pipeline record and rejects a skipped/missing/error result.
+  No new dependencies, production data or model artifacts are needed (D056).
+
+**Local validation**
+- Focused PostgreSQL integration test: **1 passed** in 4.09 s.
+- Ruff check/format and strict mypy pass after explicitly narrowing the optional validation
+  timestamp and comparing parsed datetimes. The full backend suite passed **877 tests** in
+  292.21 s (876 before, 1 added); the JUnit CI guard passed against that run's report.
+- Frontend source is unchanged from T033, whose complete checks passed locally and on GitHub.
+- GitHub CI verification of the new pipeline and its guard is the remaining acceptance check.

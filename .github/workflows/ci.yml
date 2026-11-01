@@ -78,7 +78,17 @@ jobs:
         run: uv run --locked mypy
 
       - name: Test (pytest)
-        run: uv run --locked pytest
+        run: uv run --locked pytest --junitxml=test-results/pytest.xml
+
+      - name: Require the PostgreSQL pipeline test to run
+        run: >-
+          uv run --locked python -c
+          "import xml.etree.ElementTree as ET;
+          cases = [case for case in ET.parse('test-results/pytest.xml').iter('testcase')
+          if case.get('name') == 'test_fixture_to_persisted_analysis_and_api'];
+          assert len(cases) == 1, 'The pipeline integration test must be collected exactly once';
+          assert not any(case.find(tag) is not None for case in cases
+          for tag in ('skipped', 'failure', 'error')), 'The pipeline test must pass, not skip'"
 
   frontend:
     name: Frontend (Node)

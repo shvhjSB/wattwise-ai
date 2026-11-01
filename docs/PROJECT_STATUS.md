@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-01 · **Current milestone:** M10 — Frontend workflows
+**Last updated:** 2026-11-01 · **Current milestone:** M11 — Integration and end-to-end testing
 
 ## Summary
 
@@ -439,21 +439,24 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T030 | Building and meter explorer | 2026-10-29 |
 | T031 | Anomaly investigation queue and alert detail | 2026-10-30 |
 | T032 | Cost-impact analysis and tariff configuration | 2026-10-31 |
+| T033 | Model evaluation lab, dataset and model information | 2026-11-01 |
 
 ## Current task
 
-**T033 — Model evaluation lab, dataset and model information:** implemented locally. The Model
-lab shows recorded errors, baseline coverage, building metrics, metadata, dataset missingness and
-analysis history. Backend validation passed (876 tests); all 259 frontend tests, lint, formatting,
-type checks and the production build pass. Browser visual verification and a commit/push
-checkpoint remain outstanding. No new model
-training is needed. See WORK_LOG for the final check results and verification limits.
+**T034 — API integration and pipeline end-to-end tests:** the synthetic fixture now runs through
+preparation, model training, detection, explanations, persistence and API verification in one test,
+using a fresh PostgreSQL schema and a temporary registry. All **877 backend tests**, lint,
+formatting, strict type checks and the JUnit guard pass locally. GitHub CI verification remains
+before closing the task.
+
+T033 is committed and pushed as `f22989c`, with successful GitHub CI run `41318517157`. All five
+frontend workflows are implemented and automated checks pass. Visual browser verification is
+still unconfirmed; T035 covers the browser-flow review.
 
 ## Next task
 
-After the T033 checkpoint: **T034 — API integration and pipeline end-to-end tests** (M11): a
-fixture-to-persistence-to-API pipeline test against a clean PostgreSQL schema, running in CI. Then
-T035 evaluates browser end-to-end coverage for the key frontend flows.
+**T035 — Browser end-to-end tests for key flows** (M11): decide the appropriate browser coverage
+for overview → alert → feedback and Model lab rendering, then implement and verify it if justified.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -473,7 +476,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033 | 5 / 6 |
+| M10 Frontend workflows | T028–T033 | 6 / 6 |
 | M11 Integration | T034–T035 | 0 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 

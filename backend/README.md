@@ -58,6 +58,20 @@ uv run --locked ruff format --check .
 uv run --locked mypy
 ```
 
+`tests/integration/test_pipeline.py` runs the committed synthetic CSV fixture through validation,
+Parquet preparation, training and safe model reload, default detection, explanations, PostgreSQL
+persistence and API reads/review feedback. It starts from an empty schema, applies the real
+migrations, and uses temporary model files. No production dataset or model registry is touched.
+To run just this path against the configured test database:
+
+```bash
+uv run --locked --env-file .env pytest tests/integration/test_pipeline.py
+```
+
+CI runs it with the rest of pytest against its PostgreSQL service, then checks the JUnit result
+to ensure the pipeline test was collected exactly once and passed without skipping. Locally,
+`WATTWISE_TEST_DATABASE_URL` is required to run it rather than skip it.
+
 ## Changing dependencies
 
 ```bash

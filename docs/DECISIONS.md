@@ -2018,6 +2018,25 @@ links to the entry that replaces it.
 
 ---
 
+## D056 — Test the real pipeline in a fresh PostgreSQL schema
+- **Date:** 2026-11-01 · **Task:** T034 · **Status:** Accepted
+- **Decision:** one integration test connects the existing production functions using the
+  committed synthetic CSV fixture, canonical Parquet files and a temporary model registry. It
+  begins with an empty schema, applies the real migrations, trains and safely reloads the model,
+  detects and explains anomalies, then persists readings, expectations and alerts. API assertions
+  check provenance, null readings, metric identity, evidence, interval values, priority ordering
+  and reviewer feedback surviving an alert reload.
+- **CI:** keep the existing PostgreSQL 18 service and full pytest job. Write JUnit results and
+  explicitly require exactly one passing pipeline-test record, so collection changes or a skipped
+  integration test cannot silently satisfy the task. No new dependencies or production fixtures.
+- **Alternatives considered:** mocks would miss serialization, migration, COPY, foreign-key and
+  API-boundary failures; production-sized datasets would slow the test and require private local
+  data. The synthetic fixture gives a small, labelled signal without implying real-world accuracy.
+- **Consequences:** the test uses the existing isolated-schema cleanup in `tests/conftest.py` and
+  only the configured test database. Browser coverage is a separate decision in T035.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

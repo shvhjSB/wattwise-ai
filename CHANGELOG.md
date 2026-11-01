@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- PostgreSQL pipeline integration test from the committed synthetic fixture through preparation,
+  training/reload, default detection, explanations, stored readings/expectations/alerts and API
+  checks, including feedback surviving reload. CI requires the test to pass without skipping. (T034)
 - Model lab with recorded validation/test metrics, UTC evaluation windows, training metadata,
   baseline row coverage, searchable per-building errors, dataset missingness and recent upload
   analysis records. Resources load independently with explicit missing/error/retry states. (T033)

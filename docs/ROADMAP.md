@@ -60,8 +60,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T030 | Building and meter explorer | M10 | T024, T028 | Done |
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Done |
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Done |
-| T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | In progress |
-| T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Not started |
+| T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Done |
+| T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | In progress |
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Not started |
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Not started |
 | T037 | Security hardening | M12 | T026 | Not started |
@@ -776,8 +776,8 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   upload analysis records. Saved evaluation reports must match the served artifact's data,
   split, settings and test metrics. Missing quality audits and upload contents are explicitly
   unavailable. D055 records these boundaries.
-- **Checkpoint:** implementation is local; final validation is recorded in WORK_LOG. Commit/push
-  and browser visual verification remain outstanding. Kept In progress under the status rule above.
+- **Checkpoint:** committed and pushed as `f22989c`; GitHub CI passed in run `41318517157`.
+  Browser visual verification remains unconfirmed and is carried into T035's browser-flow review.
 
 ## M11 — Integration and end-to-end testing
 
@@ -786,6 +786,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - PostgreSQL-backed API tests in CI.
   - A pipeline test: fixture → prepare → train → detect → persist → API.
 - **Acceptance:** the pipeline test passes in CI from a clean database.
+- **Implementation:** the committed synthetic CSV fixture is validated and prepared, a model is
+  trained and reloaded from a temporary registry, and the default detector's real explanations
+  and interval expectations are persisted in a fresh, migrated PostgreSQL schema. API checks cover
+  data provenance, missing values, metrics, priority order, evidence and feedback surviving reload.
+  CI requires a JUnit record for this test with no skip/failure/error. Final CI verification pending.
 
 ### T035 — Browser end-to-end tests for key flows
 - **Scope:** browser automation for overview → alert → feedback, plus model-lab rendering.

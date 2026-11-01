@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "node scripts/e2e.mjs",
-    "test:e2e:compose": "node scripts/compose-smoke.mjs browser"
+    "test:e2e:compose": "node scripts/compose-smoke.mjs browser",
+    "test:deployment": "node scripts/deployment-smoke.mjs"
   },
   "dependencies": {
     "react": "^19.3.1",

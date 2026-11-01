@@ -2730,3 +2730,52 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   public deployment, hard computation cancellation or zero-vulnerability claim is implied.
 - Removed only the separately labelled disposable security-check project and its two volumes;
   the owner's loopback demo remains healthy with its existing PostgreSQL/model volumes.
+
+---
+
+## 2026-11-01 — T038 Private deployment recipe and guide
+
+**Previous checkpoint:** T037 completion `c70e213`; CI run `41327777769` passed all four jobs.
+
+**Approach and implementation**
+- The owner selected a private Docker host rather than Render. A separate Compose recipe binds
+  only loopback and requires explicit images, model version/data kind, secret paths and external
+  volume names. No remote infrastructure, registry publication or hosted deployment is claimed.
+- Mounted-secret settings fail on missing/conflicting URL sources. A fresh PostgreSQL volume
+  creates a separate bootstrap admin and schema-owning non-superuser app role. Application
+  containers/filesystems and served artifacts are read-only; mutable state has explicit volumes.
+- One-shot serialized migrations never seed data or downgrade. A model/report/schema preflight
+  gates API startup. DEPLOYMENT.md covers digest-pinned releases, SSH access, health distinctions,
+  offline model bundles, backup/restore, schema-aware rollback and operational/security limits.
+- A new synthetic verifier exercises the actual recipe using random isolated project/volume names,
+  temporary secrets and immutable local image IDs. CI invokes it after existing browser checks.
+
+**Verification in progress**
+- Sixteen focused configuration/deployment tests pass; Ruff, format, strict mypy, workflow
+  actionlint and both container image builds pass. Full backend and deployment checks are running.
+- The first verifier run correctly refused a missing model before API startup. Fixture seeding
+  then failed because Compose preserved the production read-only volume flag despite the run
+  override. Kept production services read-only; changed only the disposable fixture initializer
+  to an explicit writable-volume container. Its secrets/network/storage are confined to the
+  verifier's own project. The initial failed run cleaned up its owned resources.
+- The corrected verifier passed all deployment gates, least-privilege checks, read-only mounts,
+  missing/wrong-model refusal and container recreation. It then restored a real `pg_dump` archive
+  and artifact tarball into two fresh external volumes, confirming the same model, readings and
+  saved review. It exited 0 and removed its own labelled containers/volumes and temporary secrets.
+- Frontend Prettier/ESLint/TypeScript/build checks pass. Final verifier adds an immediate ownership
+  check before using each created volume, as well as its existing guard before cleanup.
+
+**Completion (Claude Code, at the owner's request)**
+- The work above was left uncommitted by another agent whose session was still open. After 9+
+  minutes with no file changes, the owner chose to have Claude Code take over. Every changed and
+  new file was read before adopting it; the images were confirmed to contain the final code (no
+  source changed after they were built).
+- **Verified, not assumed:** `uv lock --check`, ruff, format and strict mypy clean; `pytest -W error`
+  **928 passed** (920 at T037); frontend type check, ESLint, Prettier, build and Vitest **259
+  passed**; actionlint clean; `npm run test:deployment` passed in 217 s, and afterwards no
+  verifier volume or container remained and the owner's 8080 demo was still healthy.
+- **A latent flaky test found and fixed:** the explorer's data-table test (from T030) failed once
+  while the backend suite loaded the machine. Measured: it took **4.7 s unloaded** against the 5 s
+  limit, because role queries over ~3,000 table cells are slow. It now finds the table by its
+  accessible name and counts rows and cells with DOM queries: **1.1 s**, and it asserts exactly 500
+  rows instead of "more than 100".

@@ -2114,10 +2114,36 @@ links to the entry that replaces it.
 
 ---
 
+## D060 — A private, immutable Docker-host recipe with rehearsed recovery
+- **Date:** 2026-11-01 · **Task:** T038 · **Status:** Accepted
+- **Hosting choice:** the owner selected a private Docker host rather than Render. The separate
+  deployment Compose file binds only loopback; SSH/VPN access is required. No cloud resources,
+  registry pushes or remote deployment are performed or claimed. Public identity/TLS design is
+  not implied by a private operational recipe.
+- **Releases:** explicit image digests and a per-release model/report volume, plus a pinned model
+  version and truthful data-kind label. Migrations are serialized and never seed data or downgrade.
+  Database head, model integrity and matching evaluation reports gate new API startup. A failed
+  later check does not undo earlier migrations; upgrades require a backup/maintenance window.
+- **Secrets/storage:** mounted files rather than URL/password container environment values;
+  missing/conflicting sources fail closed. PostgreSQL has separate bootstrap-admin/application
+  passwords. The schema-owning app role cannot create databases/roles, replicate or act as a
+  superuser. Application filesystems and the served artifact bundle are read-only. External
+  volumes remain outside Compose's deletion lifecycle; persistence is not an off-host backup.
+- **Recovery:** a paired custom-format database dump, artifact archive and saved release record,
+  restored into fresh volumes. Image-only rollback requires schema compatibility; otherwise use
+  the matching backup and obtain approval for losing/reconciling post-backup writes. No automatic
+  migration downgrade, live model promotion or deletion of retained production volumes.
+- **Evidence:** an isolated synthetic verifier exercises startup refusal, exact model pins,
+  least-privileged role, read-only artifacts, recreation and real backup/restore. It checks resource
+  ownership before cleanup. These checks do not establish public deployment, full-scale capacity,
+  historical application-image rollback, an accuracy result or a recovery SLA.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Browser E2E tooling | Resolved in D057 | Playwright, real API fixture, desktop and mobile Chromium |
-| Public deployment security | T038 | Authentication/access controls and the documented moderate tooling advisory (D059) |
+| Public deployment security | Before public exposure | Private SSH-only recipe selected for T038 (D060); authentication/access controls and the tooling advisory (D059) remain prerequisites for public hosting |

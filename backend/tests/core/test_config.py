@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
@@ -65,3 +67,56 @@ def test_a_database_url_for_another_driver_is_rejected_without_echoing_it(
         Settings()
 
     assert "hunter2" not in str(raised.value)
+
+
+def test_database_url_can_come_from_a_mounted_secret(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("WATTWISE_DATABASE_URL", raising=False)
+    monkeypatch.setenv("WATTWISE_SECRETS_DIR", str(tmp_path))
+    (tmp_path / "WATTWISE_DATABASE_URL").write_text(
+        "postgresql+psycopg://u:private-test-value@db/w\n",
+        encoding="utf-8",
+    )
+    get_settings.cache_clear()
+    try:
+        settings = get_settings()
+        assert settings.database_url == SecretStr("postgresql+psycopg://u:private-test-value@db/w")
+        assert "private-test-value" not in repr(settings)
+    finally:
+        get_settings.cache_clear()
+
+
+@pytest.mark.parametrize("existing_directory", [True, False])
+def test_configured_missing_secret_fails_closed(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    existing_directory: bool,
+) -> None:
+    monkeypatch.setenv(
+        "WATTWISE_SECRETS_DIR", str(tmp_path if existing_directory else tmp_path / "missing")
+    )
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="must contain"):
+            get_settings()
+    finally:
+        get_settings.cache_clear()
+
+
+def test_environment_and_secret_database_urls_cannot_conflict(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("WATTWISE_SECRETS_DIR", str(tmp_path))
+    monkeypatch.setenv("WATTWISE_DATABASE_URL", "postgresql+psycopg://u:environment-password@db/w")
+    (tmp_path / "WATTWISE_DATABASE_URL").write_text("unused-private-value", encoding="utf-8")
+    get_settings.cache_clear()
+    try:
+        with pytest.raises(ValueError, match="not both") as raised:
+            get_settings()
+        assert "password" not in str(raised.value)
+        assert "unused-private-value" not in str(raised.value)
+    finally:
+        get_settings.cache_clear()

@@ -26,6 +26,9 @@ database and prepares a clearly labelled synthetic demo. Named volumes preserve 
 reviews. No real datasets, local database credentials or existing model artifacts are used.
 See [docs/CONTAINERS.md](docs/CONTAINERS.md) for startup order, ports, persistence and verification.
 
+For private-host operation without automatic synthetic seeding, see the separate
+[deployment recipe](docs/DEPLOYMENT.md). It is verified locally/in CI, not a remotely deployed service.
+
 ## The problem
 
 Commercial buildings waste a meaningful share of their energy through HVAC running after hours,

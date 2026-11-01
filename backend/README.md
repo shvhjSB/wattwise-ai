@@ -106,6 +106,7 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 |---|---|---|
 | `WATTWISE_ENVIRONMENT` | `development`, `test`, `production` | `development` |
 | `WATTWISE_DATABASE_URL` | `postgresql+psycopg://user:password@host:port/database` | unset (no database) |
+| `WATTWISE_SECRETS_DIR` | directory containing a mounted `WATTWISE_DATABASE_URL` secret; mutually exclusive with the URL environment variable | unset |
 | `WATTWISE_TEST_DATABASE_URL` | the same form; **tests only** | unset (database tests skip) |
 | `WATTWISE_MAX_UPLOAD_BYTES` | the largest CSV file accepted, in bytes | `10000000` |
 | `WATTWISE_CORS_ORIGINS` | JSON array of explicit HTTP(S) origins, no wildcard or trailing slash | `[]` |
@@ -118,6 +119,9 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 The database URL carries a password: keep it in an untracked file, never in the repository.
 `backend/.env` is git-ignored; run commands with `uv run --env-file .env ...` to load it. See
 [docs/DATABASE.md](../docs/DATABASE.md) for creating the local role and databases.
+
+The private deployment recipe uses mounted secrets and one-shot `python -m wattwise.operations`
+commands for migrations and pinned model/report checks. See [DEPLOYMENT.md](../docs/DEPLOYMENT.md).
 
 ## Endpoints
 

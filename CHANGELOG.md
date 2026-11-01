@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Private Docker-host deployment recipe with mounted secrets, external persistent volumes,
+  migration/model-version gates, read-only application containers and loopback access. Includes
+  upgrade/rollback, backup/restore instructions and an isolated deployment verification workflow.
+  No remote deployment is claimed. (T038)
 - Environment-based CORS allowlist, streaming request-size limits, response deadlines and bounded
   in-flight work; safe validation/server errors, request IDs and privacy-preserving JSON access
   logs. CI audits Python/npm dependencies and scans full Git history for secrets. Security limits

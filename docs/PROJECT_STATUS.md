@@ -444,10 +444,21 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T035 | Browser end-to-end tests for key flows | 2026-11-01 |
 | T036 | Dockerfiles and Docker Compose | 2026-11-01 |
 | T037 | Security hardening | 2026-11-01 |
+| T038 | Deployment recipe and guide | 2026-11-01 |
 
 ## Current task
 
-None. T037 implementation is pushed as `e8756fe`; [CI run 41327343407](https://github.com/shvhjSB/wattwise-ai/actions/runs/41327343407)
+None. T038 is complete: a private Docker-host recipe (D060), verified locally. Locally, static
+checks, **928 backend tests**, **259 frontend tests**, actionlint and the deployment verifier pass;
+the verifier rehearsed missing-model refusal, the pinned-model gate, a non-superuser role,
+read-only artifacts, recreation and a real backup restored into fresh volumes (217 s), then
+removed only its own resources. **The application is not deployed anywhere**: no registry,
+remote host or public endpoint exists, and the recipe has no authentication (SECURITY.md).
+
+T038 was started by another agent and finished by Claude Code at the owner's request; the
+uncommitted work was reviewed in full before it was adopted.
+
+T037 implementation is pushed as `e8756fe`; [CI run 41327343407](https://github.com/shvhjSB/wattwise-ai/actions/runs/41327343407)
 passed all four jobs: **920 backend tests**, **259 frontend tests**, nine container browser
 scenarios, both image builds, restart persistence, dependency audits and full-history secret
 scanning. Locally, static checks, 916 backend tests plus the final 33-case security suite,
@@ -466,10 +477,10 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T038 — Deployment recipe and guide** (M12): persistent-storage deployment configuration,
-health checks, rollback/model-version notes and `docs/DEPLOYMENT.md`. Do not describe the app
-as deployed unless an actual deployment is verified. Reassess the documented tooling advisory
-and authentication/access controls before exposing a service beyond loopback.
+**T039 — Final documentation** (M12): the README (architecture diagram, features, quickstart,
+ML methodology and limitations), `docs/ARCHITECTURE.md`, `docs/MODEL_CARD.md`, a finalised
+`docs/DATASETS.md` and `LICENSES.md`. Then T040 (LBNL Building 59) and T041 (HKUST), which need
+new datasets. See [ROADMAP.md](ROADMAP.md#t039--final-documentation).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -491,7 +502,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 6 / 6 |
 | M11 Integration | T034–T035 | 2 / 2 |
-| M12 Operations and docs | T036–T039 | 2 / 4 |
+| M12 Operations and docs | T036–T039 | 3 / 4 |
 
 ## Blockers
 

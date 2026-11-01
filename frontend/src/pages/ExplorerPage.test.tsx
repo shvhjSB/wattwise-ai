@@ -250,10 +250,10 @@ describe('Explorer: a meter', () => {
     await userEvent.click(within(region).getByRole('button', { name: 'Whole window' }));
 
     const table = within(region).getByRole('table', { name: /Hourly readings/ });
-    expect(within(table).getAllByRole('row').length).toBeGreaterThan(100);
-    const cells = within(table)
-      .getAllByRole('cell')
-      .map((c) => c.textContent);
+    // Counted with DOM queries: role queries over ~3,000 cells took 4.7 s, close to the 5 s test
+    // limit, and failed once under load. The table itself is still found by its accessible name.
+    expect(table.querySelectorAll('tbody tr')).toHaveLength(500);
+    const cells = Array.from(table.querySelectorAll('tbody td'), (c) => c.textContent);
     expect(cells).toContain('—'); // the missing reading and the early hours with no interval
     expect(within(region).getByText(/The first 500 of 720 hours/)).toBeInTheDocument();
   });

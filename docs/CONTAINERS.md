@@ -108,6 +108,9 @@ PostgreSQL pipeline tests run in their own jobs.
 
 ## Implementation references
 
+For a private host deployment without automatic synthetic seeding, use the separate
+[DEPLOYMENT.md](DEPLOYMENT.md) recipe. It is not the demo configuration above.
+
 Security controls, audit policy and remaining public-deployment prerequisites are described in
 [SECURITY.md](SECURITY.md). The demo has no authentication; do not publish it as a private-data
 service merely by changing its port binding.

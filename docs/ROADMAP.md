@@ -65,7 +65,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Done |
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Done |
 | T037 | Security hardening | M12 | T026 | Done |
-| T038 | Deployment recipe and guide | M12 | T036 | Not started |
+| T038 | Deployment recipe and guide | M12 | T036 | Done |
 | T039 | Final documentation | M12 | T034, T038 | Not started |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
@@ -839,6 +839,13 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - Health checks, plus rollback and model-version notes.
   - `docs/DEPLOYMENT.md`.
   - The app is never described as deployed unless it actually is.
+- **Done (2026-11-01, D060):** the owner chose a private Docker host over Render. `deploy/compose.yaml`
+  (loopback only, digest-pinned images, mounted secrets, external volumes, read-only containers and
+  artifacts), `python -m wattwise.operations` (serialized migrations; a release gate on the schema
+  head, the pinned model and its evaluation reports) and `docs/DEPLOYMENT.md` (release, secrets,
+  monitoring, backup/restore, schema-aware rollback). An isolated verifier rehearses the recipe,
+  including a real backup restored into fresh volumes. **Not deployed anywhere**: no registry,
+  remote host or public endpoint exists.
 
 ### T039 — Final documentation
 - **Scope:**

@@ -1,5 +1,6 @@
 """Application settings, loaded from environment variables prefixed with ``WATTWISE_``."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -70,4 +71,14 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return the process-wide settings, read once from the environment."""
-    return Settings()
+    directory = os.environ.get("WATTWISE_SECRETS_DIR")
+    if directory is None:
+        return Settings()
+    root = Path(directory)
+    if not root.is_dir() or not (root / "WATTWISE_DATABASE_URL").is_file():
+        raise ValueError("The configured secrets directory must contain WATTWISE_DATABASE_URL")
+    if "WATTWISE_DATABASE_URL" in os.environ:
+        raise ValueError(
+            "Configure the database URL through either environment or secrets, not both"
+        )
+    return Settings(_secrets_dir=root)

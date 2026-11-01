@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { createServer } from 'node:net';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -13,9 +14,28 @@ const project = `wattwise-deploy-check-${randomUUID().slice(0, 8)}`;
 const label = 'com.wattwise.deployment-verifier';
 const volumes = [];
 const environment = { ...process.env };
-const port = process.env.WATTWISE_DEPLOY_CHECK_PORT ?? '8082';
+/** A loopback port nothing listens on: the system picks a free one, then releases it. */
+async function freePort() {
+  const server = createServer();
+  await new Promise((done, fail) => {
+    server.once('error', fail);
+    server.listen(0, '127.0.0.1', done);
+  });
+  const { port: chosen } = server.address();
+  await new Promise((done) => server.close(done));
+  return String(chosen);
+}
+
+// A fixed default (8082) was answered by something else on the CI runner: the requests never
+// reached this project's Nginx. Default to a free port, and refuse to start if anything answers.
+const port = process.env.WATTWISE_DEPLOY_CHECK_PORT ?? (await freePort());
 assert(/^\d+$/.test(port) && Number(port) > 1024 && Number(port) < 65536);
 const origin = `http://127.0.0.1:${port}`;
+const occupied = await fetch(origin, { signal: AbortSignal.timeout(3_000) }).then(
+  (response) => response.status,
+  () => null,
+);
+assert.equal(occupied, null, `Port ${port} already answers HTTP (${occupied}); choose another`);
 const recipe = join(workspace, 'deploy/compose.yaml');
 
 function docker(args, allowFailure = false) {

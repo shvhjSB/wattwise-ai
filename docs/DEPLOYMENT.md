@@ -272,7 +272,8 @@ npm run test:deployment
 ```
 
 The verifier uses a random `wattwise-deploy-check-*` project, separate labelled external volumes,
-temporary random mounted secrets and loopback port 8082 (override `WATTWISE_DEPLOY_CHECK_PORT`).
+temporary random mounted secrets and a free loopback port chosen at run time (override with
+`WATTWISE_DEPLOY_CHECK_PORT`; it refuses a port that already answers HTTP).
 It checks the actual recipe: non-superuser app role, missing-model startup refusal, valid pinned
 startup, read-only artifacts, absent URL/password environment values, wrong-pin refusal, review
 persistence after recreation, and logical database/artifact restore into **fresh** volumes.

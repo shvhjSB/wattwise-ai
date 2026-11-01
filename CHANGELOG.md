@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Final documentation (T039): a rewritten README (architecture diagram, the application,
+  quickstart, ML method, results linked to their records, limitations), `docs/ARCHITECTURE.md`,
+  `docs/MODEL_CARD.md` and `LICENSES.md`; `docs/DATASETS.md` updated to what is acquired.
 - Private Docker-host deployment recipe with mounted secrets, external persistent volumes,
   migration/model-version gates, read-only application containers and loopback access. Includes
   upgrade/rollback, backup/restore instructions and an isolated deployment verification workflow.

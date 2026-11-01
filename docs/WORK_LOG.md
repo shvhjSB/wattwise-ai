@@ -2779,3 +2779,42 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   limit, because role queries over ~3,000 table cells are slow. It now finds the table by its
   accessible name and counts rows and cells with DOM queries: **1.1 s**, and it asserts exactly 500
   rows instead of "more than 100".
+
+---
+
+## 2026-11-01 — T039 Final documentation
+
+**Done**
+- **README** rewritten: it said "early development" and "no energy data, models or analytics exist
+  yet". Now it describes what exists, the application's pages, a Mermaid diagram, the quickstart,
+  the ML method, a results table in which every figure links to the EVALUATION.md section that
+  produced it, and limitations (one dataset, the detector's recall on human labels, one annotator,
+  no authentication).
+- **`docs/ARCHITECTURE.md`:** the system and request diagrams, the pipeline step by step with its
+  decisions, storage tables, the API (taken from the app's own OpenAPI schema, not from memory),
+  the pages and the verification layers.
+- **`docs/MODEL_CARD.md`:** the served model (the evaluation model, D039), intended and out-of-scope
+  uses, training data and splits, test results against seasonal-naive including unseen buildings
+  and sites, interval coverage, the LEAD check, limitations and how to reproduce it. Every figure
+  is from the artifact's metadata or a named EVALUATION.md section.
+- **`LICENSES.md`:** the code (MIT), each dataset's declared terms and how WattWise honours them,
+  and the licence of every runtime dependency shipped in the images, **read from each installed
+  package's metadata** (the Linux-only uvloop from inside the API image). It flags psycopg's
+  **LGPL-3.0**. The image holds exactly the 42 locked runtime packages plus uvloop and wattwise.
+- **`docs/DATASETS.md`:** the summary table now lists what is actually acquired (LEAD, ERA5, the
+  reference tables), the owner's three decisions are recorded as decided, and the supplementary
+  buildings are marked not yet acquired.
+
+**Corrections found while writing**
+- `DATASETS.md` said `carbon_factors.csv` has 9 rows; it has 11 (7 US subregions for 2016, GB and
+  IE for 2016 and 2017). My error from T021a; corrected, with a note.
+- A LEAD URL written from memory was checked against the recorded source before keeping it.
+- Two README phrasings were tightened to match the records (the detector's design is an alert
+  budget, not "tuned for long alerts"; 5,084 *counted* alerts).
+
+**Validation**
+- A link checker (relative files and GitHub heading anchors) over README, LICENSES, ARCHITECTURE,
+  MODEL_CARD, DATASETS and DEPLOYMENT: 0 problems. It was first shown to catch a deliberately
+  broken file link and anchor.
+- No code changed in this task; the backend and frontend suites are unaffected (928 and 259 at
+  T038).

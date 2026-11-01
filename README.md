@@ -1,126 +1,162 @@
 # WattWise AI
 
-**Explainable energy-waste intelligence for commercial buildings.**
+**Explainable energy-waste detection for commercial buildings.**
 
-> **Status: early development.** The backend API skeleton, the frontend shell, the data pipeline,
-> leakage-safe evaluation splits, two simple baselines, leakage-safe features, a first ML model
-> and a versioned model registry are in place. LightGBM beats the seasonal baseline on a
-> 20-meter BDG2 sample for buildings it was trained on, but not yet for unseen buildings.
-> Anomaly detection is benchmarked on injected anomalies. A simple rolling z-score is the
-> default alert source for now, because the model-based detector over-alerts out of season.
-> Nothing in this repository should be read as a measured result until it appears in
-> [docs/EVALUATION.md](docs/EVALUATION.md) or [docs/DETECTION.md](docs/DETECTION.md) with the
-> command that produced it.
-> See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
+WattWise compares what each meter recorded with what a model expected under the same weather and
+calendar, raises alerts where they differ, shows the evidence, estimates the **potential** excess
+energy, cost and carbon, and lets an operator review each alert. It is built on real data, the
+[Building Data Genome Project 2](#data-and-licences) (1,148 meters, 2016–2017), and says plainly
+what it does not know.
 
-## Run the synthetic demo
+> **Status.** Roadmap tasks T001–T039 are done; two supplementary-data studies (T040, T041)
+> remain ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
+> has **no authentication**. Every result quoted below links to the section of
+> [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.
 
-With Docker Desktop's Linux engine running, from this directory:
+## What it does
+
+An operator gets answers to five questions:
+
+1. **What should this meter have used?** A LightGBM model's expected consumption, with a 90%
+   interval whose coverage is measured, not assumed.
+2. **When is consumption abnormal?** Alerts from a rolling same-hour z-score, chosen by a
+   pre-stated benchmark rule, each labelled with a signature: spike, sustained excess, overnight
+   base load, drift, flatlined meter or data fault.
+3. **How much might it have cost?** Energy above the interval's upper bound, priced only with a
+   tariff the user chooses and converted to carbon only with a sourced factor. Always "potential".
+4. **What is the evidence?** For each alert: the readings against the expectation, the signature's
+   evidence, the model's largest influences (associations, not causes) and things to check.
+5. **What first?** A transparent priority score (impact, persistence, severity, confidence).
+
+**What it will not say:** that an anomaly is confirmed waste, that a potential saving is verified,
+or that an influence is a cause. Synthetic data is labelled synthetic everywhere it appears.
+
+## The application
+
+| Page | What you see |
+|---|---|
+| **Overview** | Measured energy, open alerts, potential excess (marked as an estimate), data quality and coverage, kept separate for observed and synthetic data |
+| **Buildings & meters** | A meter's readings against the model's expectation and 90% interval, the difference, and alert windows; an hour-by-hour readout and a data table |
+| **Alerts** | A priority-ordered queue with filters, each alert's evidence and explanation, and reviewer feedback (stored, never used to retrain) |
+| **Cost impact** | Potential energy per kind of data, an explicit tariff scenario, and carbon from sourced factors |
+| **Model lab** | The served model, its recorded test results against a baseline, dataset health and recent analyses |
+
+Behind it is a FastAPI service with OpenAPI docs (`/docs`). It covers buildings, meters,
+expectations, alerts and feedback, impact, CSV upload and analysis, and model information.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    data["BDG2 + ERA5<br/>(pinned, not committed)"] --> pipeline["Offline pipeline<br/>prepare, features, train,<br/>detect, explain, price"]
+    pipeline --> registry[("Model registry")]
+    pipeline --> db[("PostgreSQL 18")]
+    db --> api["FastAPI"]
+    registry -. read-only .-> api
+    api --> web["React app<br/>(Nginx)"]
+```
+
+More: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+| Layer | Technology |
+|---|---|
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS, hand-written SVG charts |
+| API | Python 3.13, FastAPI, Pydantic, SQLAlchemy 2, Alembic, PostgreSQL 18 |
+| ML | pandas, NumPy, LightGBM, scikit-learn; TreeSHAP for influences |
+| Operations | Docker Compose, Nginx, GitHub Actions, uv and npm lockfiles |
+
+## Quickstart
+
+**The synthetic demo** (Docker Desktop's Linux engine running), from this directory:
 
 ```bash
 docker compose up --build -d --wait --wait-timeout 180
 ```
 
-Open <http://127.0.0.1:8080>. This builds the API and Nginx frontend, migrates a separate PostgreSQL
-database and prepares a clearly labelled synthetic demo. Named volumes preserve its model and
-reviews. No real datasets, local database credentials or existing model artifacts are used.
-See [docs/CONTAINERS.md](docs/CONTAINERS.md) for startup order, ports, persistence and verification.
+Open <http://127.0.0.1:8080>. It builds the images, migrates a separate PostgreSQL database, and
+trains a model on a small, clearly labelled **synthetic** dataset. No real data or local
+credentials are used. See [docs/CONTAINERS.md](docs/CONTAINERS.md).
 
-For private-host operation without automatic synthetic seeding, see the separate
-[deployment recipe](docs/DEPLOYMENT.md). It is verified locally/in CI, not a remotely deployed service.
+**Development:** the API (`uv sync --locked`, then `uv run uvicorn wattwise.api.main:create_app
+--factory`) and the app (`npm ci`, then `npm run dev`); see [backend/README.md](backend/README.md),
+[frontend/README.md](frontend/README.md) and [docs/DATABASE.md](docs/DATABASE.md).
 
-## The problem
+**Real data:** downloading BDG2 is an explicit, checksum-verified command, followed by
+preparation, training and loading. The steps are in [docs/DATASETS.md](docs/DATASETS.md),
+[docs/EVALUATION.md](docs/EVALUATION.md) and [docs/DATABASE.md](docs/DATABASE.md).
 
-Commercial buildings waste a meaningful share of their energy through HVAC running after hours,
-equipment left on, drifting control schedules, and faulty meters. Operators rarely lack data.
-What they lack is a defensible answer to *"is this consumption normal, and is it worth my time?"*
+**A private host:** [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) is a loopback-only recipe, verified
+locally and in CI. It is not a deployed service.
 
-WattWise AI is being built to help a building operator answer five questions:
+## How the ML works
 
-1. What should this building's consumption normally be under comparable conditions?
-2. When and where is consumption behaving abnormally?
-3. How much excess energy might have been consumed?
-4. What evidence supports the alert, and how uncertain is the estimate?
-5. Which anomaly should be investigated first, based on potential business impact?
+1. **Data.** BDG2 electricity readings, converted to one canonical shape in UTC after a per-site
+   clock audit ([DATA_CONTRACT.md](docs/DATA_CONTRACT.md), [DATASETS.md](docs/DATASETS.md)).
+   Quality problems are reported, never silently fixed ([DATA_QUALITY.md](docs/DATA_QUALITY.md)).
+2. **Features.** Local calendar and holidays, weather, ERA5 radiation, sun position and the meter's
+   own history, every input known at least a week ahead ([FEATURES.md](docs/FEATURES.md)).
+3. **Splits.** Chronological: train to June 2017, validate July–September, test October–December,
+   scored once. Building and site hold-outs test generalisation ([EVALUATION.md](docs/EVALUATION.md#splits-t010)).
+4. **Model.** LightGBM with L1 loss, adopted only because it beat the seasonal-naive baseline on
+   test under a rule fixed beforehand ([MODEL_CARD.md](docs/MODEL_CARD.md)).
+5. **Intervals.** Rolling relative conformal intervals, reported with their measured coverage.
+6. **Detection.** A rolling same-hour z-score, chosen over two model-based detectors by an
+   injected-anomaly benchmark, then checked against human labels ([DETECTION.md](docs/DETECTION.md)).
+7. **Evidence, impact, priority.** Signatures, explanations with a wording guard, potential
+   excess (meter problems excluded), and a documented priority score.
 
-## Approach
+## Results
 
-The core idea is an **explainable counterfactual energy baseline**: a model of what a meter
-*would* have consumed under the observed weather, calendar and building conditions if behaviour
-had stayed normal. Comparing observed with expected consumption, together with an uncertainty
-interval, lets the system:
+All on real BDG2 data at full scale; each links to its record.
 
-- flag anomalies (spikes, sustained excess, overnight base load, drift, flatlined meters, data faults);
-- estimate **potential** excess kWh, counted only above a conservative upper bound;
-- translate that into an **estimated** cost when a tariff is explicitly configured;
-- rank alerts by likely impact, persistence and confidence;
-- capture operator feedback for later evaluation.
+| Question | Result | Record |
+|---|---|---|
+| How accurate is the expected consumption? | Test MAE 13.700 kWh against 16.705 for seasonal-naive: **18.0% lower** | [T043](docs/EVALUATION.md#best-model-at-full-scale-t043-d036) |
+| On buildings or sites it never saw? | 15.7% lower (unseen buildings), **8.5% lower** (unseen sites) | [T043](docs/EVALUATION.md#best-model-at-full-scale-t043-d036) |
+| Does the 90% interval hold? | **87.2%** of test readings fell inside it | [T044a](docs/EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041) |
+| How well does the default detector find injected anomalies? | 70.0% recall at 0.34 alerts per meter-week (synthetic anomalies on real data) | [T044b](docs/EVALUATION.md#detector-benchmark-at-full-scale-t044b-d042) |
+| And real ones, labelled by a person? | 18.9% of labelled segments found; 22.7% of its events touch a label (chance 1.5% per hour) | [T044c](docs/EVALUATION.md#detector-check-against-lead-labels-at-full-scale-t044c-d043) |
+| How much potential excess? | 558,722 kWh and 220,140 kg CO2e over 5,084 counted alerts: **potential, not verified** | [T044a](docs/EVALUATION.md#downstream-pipeline-at-full-scale-t044a-d039-d040-d041) |
 
-An anomaly is not confirmed waste, and feature attributions are not causes. The product is
-designed to say so wherever it shows a result.
+## Limitations
 
-## Planned architecture
+- **One dataset**, mostly university campuses, two years, North America and Europe. Results
+  elsewhere are unknown. The independent test (T041, HKUST) and the sub-metered case study
+  (T040, LBNL Building 59) have not been run.
+- **The detector misses much of what people label.** It is designed to stay within a budget of
+  0.5 alerts per meter-week, and its persistence rules mostly ignore short events: one or two
+  hours, which are 70% of the labelled segments.
+- **Labels from one annotator** with unmeasured agreement; feedback is collected but nothing is
+  learned from it yet.
+- **No authentication or authorisation.** Keep the application on loopback or behind a private
+  tunnel ([SECURITY.md](docs/SECURITY.md)).
+- Open questions are tracked in [PROJECT_STATUS.md](docs/PROJECT_STATUS.md): an event cluster on
+  a US clock-change date, a few meters with very wide intervals, and 24 meters with no stored
+  expectation.
 
-| Layer | Technology |
-|---|---|
-| Frontend | React, TypeScript, Vite, Tailwind CSS, interactive charts |
-| API | Python, FastAPI, Pydantic, SQLAlchemy, Alembic, PostgreSQL |
-| ML | pandas, NumPy, scikit-learn, LightGBM (only if it beats simple baselines), SHAP |
-| Operations | Docker Compose, GitHub Actions, environment-based configuration |
-
-```
-backend/     Python project "wattwise" (src layout): api, data (contracts, BDG2, quality, weather), ml (splits, evaluation, baselines, features, models)
-frontend/    React + TypeScript + Vite application
-scripts/     dataset acquisition, preprocessing, training and evaluation entry points (planned)
-data/        sample/ = tiny synthetic fixtures (committed); raw/ and processed/ are git-ignored
-docs/        roadmap, decisions, status, work log, specifications
-```
-
-## Data
+## Data and licences
 
 The primary dataset is the [Building Data Genome Project 2](https://github.com/buds-lab/building-data-genome-project-2)
 (Miller et al., 2020, *Scientific Data* 7, 368, <https://doi.org/10.1038/s41597-020-00712-x>).
-Raw data is never committed. Downloading it is an explicit, checksum-verified command
-(`uv run python -m wattwise.data.bdg2 fetch`, about 369 MB). A second command,
-`uv run python -m wattwise.data.bdg2_prepare`, converts it to canonical tables in git-ignored
-`data/processed/`. It uses each site's audited timestamp clock and logs every excluded meter
-with a reason. Provenance, licence evidence and the data conventions are in
-[docs/DATASETS.md](docs/DATASETS.md). All data,
-whether from a dataset or an upload, is converted to one canonical shape, described in
-[docs/DATA_CONTRACT.md](docs/DATA_CONTRACT.md), including the CSV upload format. Data quality (gaps, flatlines,
-unit slips and more) is assessed and reported, never silently fixed:
-[docs/DATA_QUALITY.md](docs/DATA_QUALITY.md). Tests and the
-demo mode use a small, deterministic and clearly **synthetic** dataset with labelled injected
-anomalies: [data/sample/synthetic/](data/sample/synthetic/README.md).
-
-BDG2's licence is stated differently by its sources (MIT, CC BY 4.0, CC BY-SA). WattWise follows
-the most restrictive reading: it attributes the source and never redistributes raw or derived
-BDG2 data (see [docs/DATASETS.md](docs/DATASETS.md#licence)). Other candidate datasets are listed
-in [docs/specs/DATASET_CATALOG.md](docs/specs/DATASET_CATALOG.md).
-
-## Quickstart
-
-The application foundation runs locally today:
-
-1. **Backend:** start the API, which serves a liveness endpoint and OpenAPI docs. See
-   [backend/README.md](backend/README.md).
-2. **Frontend:** run `npm ci` and `npm run dev` in `frontend/`, then open
-   <http://127.0.0.1:5173>. It shows the live API connection status. See
-   [frontend/README.md](frontend/README.md).
-
-No energy data, models or analytics exist yet. The one-command Docker Compose quickstart
-arrives with task T036.
+Its licence is stated differently by its sources, so WattWise follows the most restrictive
+reading: it attributes the source and **never redistributes raw or derived BDG2 data**. Weather
+enrichment is ERA5 via Open-Meteo (CC BY 4.0, used non-commercially); human anomaly labels are
+LEAD 1.0, used locally only. Nothing third-party is committed except small, cited reference
+tables of carbon factors and prices. Details: [LICENSES.md](LICENSES.md) and
+[docs/DATASETS.md](docs/DATASETS.md).
 
 ## Project records
 
 - [docs/ROADMAP.md](docs/ROADMAP.md): milestones, tasks and acceptance criteria
 - [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md): current status and next task
-- [docs/DECISIONS.md](docs/DECISIONS.md): architecture and ML decisions with alternatives
-- [docs/WORK_LOG.md](docs/WORK_LOG.md): chronological checkpoint log
-- [CHANGELOG.md](CHANGELOG.md): notable changes
+- [docs/DECISIONS.md](docs/DECISIONS.md): every significant choice, with the alternatives
+- [docs/EVALUATION.md](docs/EVALUATION.md), [docs/DETECTION.md](docs/DETECTION.md),
+  [docs/MODEL_CARD.md](docs/MODEL_CARD.md): methods and measured results
+- [docs/WORK_LOG.md](docs/WORK_LOG.md) and [CHANGELOG.md](CHANGELOG.md): what changed and when
 - [docs/specs/](docs/specs/): the original product and dataset specifications
 
 ## Licence
 
-Code is released under the [MIT License](LICENSE). Datasets keep their own licences. They are
-not redistributed here.
+Code is released under the [MIT License](LICENSE). Datasets keep their own licences and are not
+redistributed; third-party software licences are listed in [LICENSES.md](LICENSES.md).

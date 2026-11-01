@@ -66,7 +66,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Done |
 | T037 | Security hardening | M12 | T026 | Done |
 | T038 | Deployment recipe and guide | M12 | T036 | Done |
-| T039 | Final documentation | M12 | T034, T038 | Not started |
+| T039 | Final documentation | M12 | T034, T038 | Done |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
@@ -852,6 +852,12 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - The README: Mermaid architecture diagram, features, quickstart, ML methodology and limitations.
   - `docs/ARCHITECTURE.md` and `docs/MODEL_CARD.md`.
   - A finalised `docs/DATASETS.md` and `LICENSES.md`.
+- **Done (2026-11-01):** the README rewritten from "early development" to what exists, with a
+  Mermaid diagram, the application, a quickstart, the ML method, results linked to their records,
+  and limitations; `docs/ARCHITECTURE.md`; `docs/MODEL_CARD.md` for the served model;
+  `LICENSES.md` (data terms, and every shipped dependency's licence read from its own metadata,
+  including psycopg's LGPL-3.0); `docs/DATASETS.md` brought up to date (acquired sources, a
+  corrected row count, the owner's decisions recorded). Every relative link and anchor checked.
 
 ## Added after T007b (supplementary data)
 

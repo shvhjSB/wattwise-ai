@@ -445,6 +445,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T036 | Dockerfiles and Docker Compose | 2026-11-01 |
 | T037 | Security hardening | 2026-11-01 |
 | T038 | Deployment recipe and guide | 2026-11-01 |
+| T039 | Final documentation | 2026-11-01 |
 
 ## Current task
 
@@ -477,10 +478,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T039 — Final documentation** (M12): the README (architecture diagram, features, quickstart,
-ML methodology and limitations), `docs/ARCHITECTURE.md`, `docs/MODEL_CARD.md`, a finalised
-`docs/DATASETS.md` and `LICENSES.md`. Then T040 (LBNL Building 59) and T041 (HKUST), which need
-new datasets. See [ROADMAP.md](ROADMAP.md#t039--final-documentation).
+**T040 — Detector checks on a sub-metered building** (M6): download LBNL Building 59 (CC0,
+263 MB, pinned and git-ignored), mask its imputed spans, run the detector on the whole-building
+series and compare the alerts with end uses, HVAC, occupancy and dated events, as one building's
+case study. Then **T041**: the HKUST independent-building test. See
+[ROADMAP.md](ROADMAP.md#t040--detector-checks-on-a-sub-metered-building).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -502,7 +504,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 6 / 6 |
 | M11 Integration | T034–T035 | 2 / 2 |
-| M12 Operations and docs | T036–T039 | 3 / 4 |
+| M12 Operations and docs | T036–T039 | 4 / 4 |
 
 ## Blockers
 

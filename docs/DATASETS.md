@@ -9,7 +9,13 @@ git-ignored. Only the small synthetic sample and provenance manifests are commit
 |---|---|---|---|
 | Synthetic sample | Tests, demo mode, synthetic benchmarks | Yes: [`data/sample/synthetic/`](../data/sample/synthetic/README.md), about 564 KB | Generated: `uv run python -m wattwise.data.synthetic` |
 | Building Data Genome Project 2 (BDG2) | Primary real data for forecasting and anomaly detection | **No.** Only the manifest [`data/manifests/bdg2.json`](../data/manifests/bdg2.json) | Explicit download, about 369 MB (below) |
-| Supplementary data (labels, carbon, prices, weather, sub-metered buildings) | Evaluated, not yet acquired | No | See [Supplementary data](#supplementary-data-evaluation-t007b) |
+| LEAD 1.0 human anomaly labels | Checking the detectors against human labels (T018b, T044c) | **No.** Local evaluation only, never redistributed (D022); manifest [`data/manifests/lead.json`](../data/manifests/lead.json) | `uv run python -m wattwise.data.lead fetch`, then `prepare` ([below](#real-anomaly-labels-lead-10)) |
+| ERA5 radiation and cloud cover, via Open-Meteo | Weather enrichment features (T007d) | **No.** Fetched by an explicit command into `data/raw/era5` | `uv run python -m wattwise.data.era5 fetch`, `verify`, `prepare` ([below](#weather-enrichment)) |
+| Carbon factors and electricity prices | Sourced references for impact (T021a) | **Yes:** two small cited tables in [`data/reference/`](../data/reference/), each row with its source, licence and file hash | Committed ([below](#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)) |
+| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041) | **No.** Not yet acquired | Planned ([below](#sub-metered-and-independent-buildings)) |
+
+Licences for all of these, and for the software WattWise ships, are summarised in
+[LICENSES.md](../LICENSES.md).
 
 ## Building Data Genome Project 2 (BDG2)
 
@@ -504,8 +510,9 @@ default.
 loads two committed tables, each row carrying its own source, URL, retrieval date, licence and
 the SHA-256 of the file it was read from:
 
-- [`data/reference/carbon_factors.csv`](../data/reference/carbon_factors.csv) — 9 rows: 7 US
-  eGRID subregions, GB and IE, each for 2016 and 2017 where the source publishes that year.
+- [`data/reference/carbon_factors.csv`](../data/reference/carbon_factors.csv) — 11 rows: 7 US
+  eGRID subregions for 2016, and GB and IE for both 2016 and 2017. (Corrected in T039; an
+  earlier version of this line said 9 rows.)
 - [`data/reference/electricity_prices.csv`](../data/reference/electricity_prices.csv) — 10
   geographies (8 US states, GB, IE), with every published band and tax basis kept as a separate
   row rather than one value guessed on the caller's behalf.
@@ -672,17 +679,19 @@ the committed CSVs from the same files.
     licence, "research purposes only"). It needs clarification before any use.
 - **Data from another building cannot confirm a cause in a BDG2 building.** It can only test
   whether a detector reacts to a known kind of event. Causes in BDG2 remain hypotheses.
+- **Status (2026-11-01):** none of these is downloaded or used yet. Building 59 is planned for T040
+  and HKUST for T041; CU-BEMS and EnerNOC are not planned.
 
-### Decisions for the owner
+### Decisions for the owner (all decided)
 
-1. **LEAD licence:** use locally for evaluation only, never redistributed, with citation
-   (recommended), or don't use it.
-2. **Is WattWise non-commercial?** This decides whether the Open-Meteo free API and the EnerNOC
-   data can be used. If not, use the Copernicus CDS (free account) and leave out EnerNOC.
-3. **Carbon method** (decided in T021a):
-   - Average or non-baseload US factors. Average factors are recommended, since they match the
-     UK, Irish and Ontario sources.
-   - Whether to apply the UK publisher's reporting-year convention (recommended).
+1. **LEAD licence:** decided 2026-10-24 (D022). Used locally for evaluation only, never
+   committed or redistributed, with citation.
+2. **Is WattWise non-commercial?** Decided 2026-10-24 (D022): **yes**. So the Open-Meteo free API is
+   used for ERA5 (D023). If the project becomes commercial, switch to the Copernicus CDS (a free
+   account) and do not use EnerNOC.
+3. **Carbon method:** decided in T021a (D037). Average US eGRID factors, which match the UK and
+   Irish sources, and the UK publisher's reporting-year convention. Ontario remains without a
+   sourced factor or price, so its impact is reported in kWh only.
 
 ## Synthetic sample
 

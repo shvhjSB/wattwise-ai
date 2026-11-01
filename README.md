@@ -13,6 +13,19 @@
 > command that produced it.
 > See [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) for the live status.
 
+## Run the synthetic demo
+
+With Docker Desktop's Linux engine running, from this directory:
+
+```bash
+docker compose up --build -d --wait --wait-timeout 180
+```
+
+Open <http://127.0.0.1:8080>. This builds the API and Nginx frontend, migrates a separate PostgreSQL
+database and prepares a clearly labelled synthetic demo. Named volumes preserve its model and
+reviews. No real datasets, local database credentials or existing model artifacts are used.
+See [docs/CONTAINERS.md](docs/CONTAINERS.md) for startup order, ports, persistence and verification.
+
 ## The problem
 
 Commercial buildings waste a meaningful share of their energy through HVAC running after hours,

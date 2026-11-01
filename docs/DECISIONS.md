@@ -2063,6 +2063,33 @@ links to the entry that replaces it.
 
 ---
 
+## D058 — A separate, checkpointed synthetic Compose demo
+- **Date:** 2026-11-01 · **Task:** T036 · **Status:** Accepted
+- **Images:** digest-pinned Python/uv and Node/Nginx multi-stage builds. Python installs locked,
+  non-editable runtime dependencies without the dev group. Only static assets reach the frontend
+  runtime. Both application containers run non-root. A source allowlist plus explicit dependency,
+  environment-file and raw-data exclusions limits the build context.
+- **Startup:** Compose waits for PostgreSQL health, one-shot migrations/demo initialization, then
+  API readiness before Nginx. PostgreSQL 18 has a named volume at `/var/lib/postgresql`; demo models,
+  canonical tables and evaluation reports use a separate volume. Only Nginx's loopback port 8080 is
+  published. The demo password is public demonstration configuration, not production credentials.
+- **Persistence:** `wattwise.demo` owns the real synthetic pipeline and is shared by browser fixtures.
+  A source-hash/model checkpoint, migration transaction and advisory lock make reinitialization
+  restart-safe. Existing matching data is kept, including feedback; models are not retrained on
+  restart. Other datasets and mismatched artifacts are refused. An empty database can be restored
+  using retained matching model artifacts; reviews require a database backup if its volume is lost.
+- **Verification:** smoke checks cover built assets, SPA deep links, JSON API errors, readiness,
+  synthetic totals, model/evaluation identity and a review write. Existing Chromium workflows can
+  target only an explicit loopback Compose origin. CI now builds both images, runs smoke/browser
+  checks through Nginx, recreates containers without dropping volumes, verifies persistence and
+  cleans only its disposable project. Native service tests remain independent.
+- **Alternatives:** mounting a developer's database, raw data or registry would make the quickstart
+  dependent on private state. Seeding on every API start would overwrite work or train repeatedly.
+  A frontend-only image build would miss proxy, readiness and volume failures. Docker demo startup
+  is verified locally and in CI before completion; production hardening/deployment remain T037/T038.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

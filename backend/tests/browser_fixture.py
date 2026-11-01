@@ -14,21 +14,10 @@ from dotenv import load_dotenv
 from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 
-from tests.conftest import SAMPLE_INFO, SYNTHETIC_SAMPLE
-from tests.integration.test_pipeline import WINDOW
+from tests.conftest import SYNTHETIC_SAMPLE
 from wattwise.api.main import create_app
 from wattwise.core.config import Settings
-from wattwise.data.contracts import BUILDINGS, READINGS, WEATHER
-from wattwise.db.alerts import load_alerts
-from wattwise.db.expectations import compute_expectations, store_expectations
-from wattwise.db.load import load_dataset, read_table
-from wattwise.db.migrate import upgrade
-from wattwise.ml.baselines import SeasonalNaive
-from wattwise.ml.detection import run_detection
-from wattwise.ml.evaluation import Forecaster, evaluate, write_report
-from wattwise.ml.explanations import explain
-from wattwise.ml.registry import promote, read_inputs, save, train
-from wattwise.ml.splits import Role, SplitConfig, make_split
+from wattwise.demo import initialize_demo
 
 SCHEMA_NAME = re.compile(r"^e2e_[0-9a-f]{12}$")
 
@@ -71,50 +60,12 @@ def prepare(state: Path) -> None:
             connection.execute(text(f'CREATE SCHEMA "{schema}"'))
     finally:
         admin.dispose()
-    prepared = state.parent / "prepared"
-    prepared.mkdir()
-    for contract in (BUILDINGS, READINGS, WEATHER):
-        read_table(SYNTHETIC_SAMPLE, contract).to_parquet(
-            prepared / f"{contract.name}.parquet", index=False
-        )
-    readings, buildings, features = read_inputs(prepared, None)
-    root = state.parent / "models"
-    config = SplitConfig(time=WINDOW)
-    trained = train(readings, buildings, features, config)
-    version = save(trained, root)
-    promote(version, root)
-    run = run_detection(readings, buildings, features, root)
-    bundles = explain(run, readings, features, top=0)
-    if not bundles:
-        raise ValueError("The synthetic browser fixture must produce alerts.")
-    expected, info = compute_expectations(prepared, None, None, root)
-    split = make_split(readings, config, buildings)
-    part = split.folds[0]
-    naive = SeasonalNaive()
-    for forecaster, name in ((trained.model, "chosen"), (naive, naive.name)):
-        predictions = {
-            (part.fold.name, role): forecaster.predict(
-                part.rows(role).drop(columns="value"), readings
-            )
-            for role in (Role.VALIDATION, Role.TEST)
-        }
-        write_report(
-            evaluate(
-                split, predictions, Forecaster(name=forecaster.name, params=forecaster.params)
-            ),
-            state.parent / "evaluation",
-            name,
-        )
     engine = engine_for(state)
     try:
-        with engine.begin() as connection:
-            upgrade(connection)
-            load_dataset(connection, SAMPLE_INFO, buildings, readings)
-            load_alerts(connection, SAMPLE_INFO.dataset_id, bundles)
-            store_expectations(connection, SAMPLE_INFO.dataset_id, expected, info)
+        result = initialize_demo(engine, SYNTHETIC_SAMPLE, state.parent)
     finally:
         engine.dispose()
-    print(f"Synthetic browser fixture prepared: {len(readings)} rows, {len(bundles)} alerts.")
+    print(f"Synthetic browser fixture prepared: {result.readings} rows, {result.alerts} alerts.")
 
 
 def cleanup(state: Path) -> None:

@@ -39,6 +39,12 @@ it cannot hardlink, because its cache and the repo are on different drives, set
 
 ## Run the API
 
+For the complete synthetic demo in containers, use `docker compose up --build` from the repository
+root. See [docs/CONTAINERS.md](../docs/CONTAINERS.md). The API image installs locked runtime
+dependencies without pytest/development tools, runs as a non-root user and gets a read-only model
+volume after the demo initializer finishes. `wattwise.demo` owns migration and restart-safe demo
+initialization; the browser-test fixture uses that same initializer.
+
 ```bash
 uv run uvicorn wattwise.api.main:create_app --factory --reload --port 8000
 ```

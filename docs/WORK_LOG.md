@@ -2614,3 +2614,44 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   lint/format/type checks, production build and the PostgreSQL pipeline guard.
 - T035 and M11 are complete. T033's earlier visual-review gap is closed. Next: T036 Dockerfiles,
   Compose and a reproducible synthetic demo startup. Firefox/WebKit remain outside this checkpoint.
+
+---
+
+## 2026-11-01 — T036 Docker images, Compose and persistent synthetic demo
+
+**Implemented**
+- Digest-pinned multi-stage backend and Nginx images, locked dependencies, non-root application
+  runtimes and a source-only build context. PostgreSQL 18 uses its correct named-volume mount.
+  API/model volumes remain internal; only frontend loopback port 8080 is published.
+- Compose startup follows database health → migration/demo initializer success → API readiness →
+  Nginx. The demo generates actual model artifacts, alerts, explanations, interval expectations and
+  evaluation reports from the committed synthetic sample. No native database or real data is used.
+- Shared `wattwise.demo` initialization replaces duplicate browser-fixture setup. A checkpoint and
+  advisory lock preserve existing data/reviews and reuse the model on restarts. Mismatched artifacts
+  or other datasets are refused. Fresh-database recovery reuses matching retained model artifacts.
+- Smoke checks exercise built assets, deep links, JSON API 404s, health/readiness, synthetic totals,
+  metrics and review persistence. Chromium tests now support an explicit loopback container origin.
+  CI builds the Compose stack, tests through Nginx, recreates it and verifies persistence.
+
+**Problems found and fixed**
+- Initial Docker ignore negations admitted dependency subdirectories and enlarged the frontend
+  build context. Stopped that build, added directory-level re-exclusions plus explicit environment
+  and dependency exclusions, then rebuilt successfully. Final images were checked for non-root
+  execution, absence of pytest, local environment files and raw data.
+- Type checking rejected comparing SQLAlchemy row objects with tuples; normalize the dataset keys
+  explicitly. Strict frontend lint required explicit empty-string normalization for the optional
+  Compose browser origin. These checks now pass.
+
+**Local validation so far**
+- Three integration tests passed in 13.69 s: restart retains model/readings/reviews; mismatched
+  checkpoint does not delete data; a fresh schema reuses the retained model.
+- `docker compose config --quiet`, both image builds and the full health-gated startup passed.
+  Initializer exited 0 with 5,376 readings and two alerts; API, PostgreSQL and Nginx are healthy.
+- HTTP smoke passed. All **nine Chromium scenarios** passed through the actual containers in
+  21.6 s. Container recreation without deleting volumes passed; initializer reported `seeded: false`
+  with the same model, and the restored smoke check found its saved review and unchanged totals.
+- Backend Ruff/format/strict mypy pass; the full backend suite passed **887 tests** in 350.36 s
+  (884 before, three added). Frontend ESLint/Prettier/TypeScript pass; **259 tests** pass in
+  37.38 s. Workflow actionlint passed. GitHub CI remains to verify before closing the task.
+- Local `wattwise-demo` volumes and the running loopback demo are retained for the owner. No
+  unrelated containers, host database data or user files were removed.

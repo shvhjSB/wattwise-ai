@@ -7,6 +7,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Pinned multi-stage API/Nginx images and a loopback-only PostgreSQL Compose demo with health-gated
+  startup, migration/initialization service, persistent database/model volumes and source-only build
+  context. The synthetic initializer reuses models and preserves reviews on restart. (T036)
+- Container smoke checks, restart/recovery regression tests and Chromium workflows through the
+  actual Nginx/API path; CI builds both images and verifies persistence after recreation. (T036)
 - Nine Playwright scenarios against the production build, real API, isolated PostgreSQL schema and
   temporary model: desktop light/dark and mobile workflows, screenshots, fixture safety guards and
   a dedicated CI job. (T035)

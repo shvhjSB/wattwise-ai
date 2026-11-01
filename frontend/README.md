@@ -83,6 +83,11 @@ npm run build          # type check + production build to dist/
 
 ## Browser verification
 
+For browser verification against the Docker demo, start Compose from the repository root, then run
+`npm run test:e2e:compose` here. The same nine scenarios now exercise Nginx and the container API.
+The CI container job also checks deep links, proxying and feedback/model persistence after a full
+container recreation. See [docs/CONTAINERS.md](../docs/CONTAINERS.md) for the smoke commands.
+
 T035 uses pinned Playwright 1.64.1/Chromium to test the production build against a real API and
 PostgreSQL fixture. Install the backend's locked development dependencies first. Set
 `WATTWISE_TEST_DATABASE_URL` (or keep it in untracked `backend/.env`) to a psycopg PostgreSQL

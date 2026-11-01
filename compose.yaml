@@ -1,0 +1,67 @@
+name: wattwise-demo
+
+x-backend: &backend
+  image: wattwise-api:demo
+  environment:
+    WATTWISE_ENVIRONMENT: development
+    WATTWISE_DATABASE_URL: postgresql+psycopg://wattwise:synthetic-demo-only@db:5432/wattwise_demo
+    WATTWISE_REGISTRY_ROOT: /state/models
+    WATTWISE_EVALUATION_ROOT: /state/evaluation
+    WATTWISE_MODEL_DATA_KIND: synthetic
+
+services:
+  db:
+    image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+    environment:
+      POSTGRES_USER: wattwise
+      POSTGRES_PASSWORD: synthetic-demo-only
+      POSTGRES_DB: wattwise_demo
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U wattwise -d wattwise_demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+  init:
+    <<: *backend
+    pull_policy: never
+    command: [python, -m, wattwise.demo, --artifacts, /state]
+    healthcheck:
+      disable: true
+    volumes:
+      - demo-artifacts:/state
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    <<: *backend
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    init: true
+    volumes:
+      - demo-artifacts:/state:ro
+    depends_on:
+      init:
+        condition: service_completed_successfully
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: wattwise-frontend:demo
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:${WATTWISE_DEMO_PORT:-8080}:8080"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  demo-artifacts:

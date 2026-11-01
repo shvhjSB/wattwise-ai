@@ -15,7 +15,12 @@ const artifactRoot = join(workspace, 'artifacts', 'e2e');
 await mkdir(artifactRoot, { recursive: true });
 const runDirectory = await mkdtemp(join(artifactRoot, 'run-'));
 const state = join(runDirectory, 'state.json');
-const env = { ...process.env, WATTWISE_E2E_STATE: state, VITE_API_BASE_URL: '' };
+const env = {
+  ...process.env,
+  WATTWISE_E2E_STATE: state,
+  WATTWISE_E2E_BASE_URL: '',
+  VITE_API_BASE_URL: '',
+};
 
 function run(command, args, cwd) {
   return new Promise((resolveRun, reject) => {

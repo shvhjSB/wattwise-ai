@@ -445,19 +445,18 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. T035 is pushed as `5ed01c8`; CI run `41321709833` passed all three jobs: **884 backend
-tests, 259 frontend tests and nine browser scenarios**. Desktop light/dark and 390 CSS px mobile
-screenshots reviewed; the discovered synthetic metric-provenance issue is fixed and covered by
-regressions. Build, lint, formatting, typing, the PostgreSQL pipeline guard and browser cleanup
-are verified. Waiting for the next task.
+**T036 — Dockerfiles and Docker Compose:** API and Nginx images build locally; the separate
+synthetic PostgreSQL demo starts with health-gated migrations/initialization. HTTP smoke checks
+and nine browser scenarios pass through the actual Nginx/container API. Restart/recovery tests
+pass; final persistence, regression and CI verification are in progress.
 
 T033 and T034 are pushed with successful CI runs `41318517157` and `41319423663`. T035's browser
 tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T036 — Dockerfiles and Docker Compose** (M12): API and frontend images, PostgreSQL,
-health checks, migrations and a reproducible synthetic demo startup.
+After T036: **T037 — Security hardening** (M12): request/CORS controls, safe errors and logging,
+dependency audits and secret scanning in CI.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and

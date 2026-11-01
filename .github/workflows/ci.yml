@@ -129,43 +129,16 @@ jobs:
         run: npm run build
 
   browser:
-    name: Browser workflows (Chromium)
+    name: Containers and browser workflows
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
-    services:
-      postgres:
-        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
-        env:
-          POSTGRES_USER: wattwise
-          POSTGRES_PASSWORD: wattwise-ci
-          POSTGRES_DB: wattwise_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U wattwise -d wattwise_test"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 12
+    timeout-minutes: 20
     env:
-      WATTWISE_TEST_DATABASE_URL: postgresql+psycopg://wattwise:wattwise-ci@localhost:5432/wattwise_test
+      COMPOSE_PROJECT_NAME: wattwise-ci
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
-        with:
-          version: '0.12.24'
-          checksum: 'b4dfaef47d491a7296981f8374a4595f55dbf84e8937c8ecd2983574d8bb3da6'
-          working-directory: backend
-          enable-cache: true
-          cache-dependency-glob: uv.lock
-
-      - name: Install Python and locked dependencies
-        working-directory: backend
-        run: uv sync --locked
 
       - name: Set up Node.js
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -182,6 +155,30 @@ jobs:
         working-directory: frontend
         run: npx --no-install playwright install --with-deps chromium
 
-      - name: Verify browser workflows against the built app and PostgreSQL
+      - name: Build and start the synthetic Compose demo
+        run: docker compose up --build -d --wait --wait-timeout 180
+
+      - name: Verify the Nginx frontend and API demo
         working-directory: frontend
-        run: npm run test:e2e
+        run: node scripts/compose-smoke.mjs initial
+
+      - name: Verify browser workflows through Nginx and the container API
+        working-directory: frontend
+        run: npm run test:e2e:compose
+
+      - name: Recreate containers while preserving demo data
+        run: |
+          docker compose down
+          docker compose up -d --wait --wait-timeout 180
+
+      - name: Verify model and review persistence after recreation
+        working-directory: frontend
+        run: node scripts/compose-smoke.mjs restored
+
+      - name: Show container logs on failure
+        if: failure()
+        run: docker compose logs --no-color
+
+      - name: Remove the disposable CI demo
+        if: always()
+        run: docker compose down --volumes --remove-orphans

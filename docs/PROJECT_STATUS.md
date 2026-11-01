@@ -449,7 +449,10 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. T038 is complete: a private Docker-host recipe (D060), verified locally. Locally, static
+None. T038 and T039 are complete. [CI run 41334971115](https://github.com/shvhjSB/wattwise-ai/actions/runs/41334971115)
+passed all four jobs at `8f20f39`, including the deployment verifier on the CI runner
+(928 backend tests, 259 frontend tests, 9 browser scenarios). T038 is a private Docker-host
+recipe (D060), also verified locally. Locally, static
 checks, **928 backend tests**, **259 frontend tests**, actionlint and the deployment verifier pass;
 the verifier rehearsed missing-model refusal, the pinned-model gate, a non-superuser role,
 read-only artifacts, recreation and a real backup restored into fresh volumes (217 s), then
@@ -508,7 +511,15 @@ why the model detector's recall advantage on the sample reversed at full scale.
 
 ## Blockers
 
-None.
+**T040 and T041 cannot download their data.** Both datasets are on Dryad (LBNL Building 59,
+doi:10.7941/D1N33Q, CC0, 263 MB; HKUST, doi:10.5061/dryad.k3j9kd5h6, CC0). The dataset record is
+public, but every download route refuses an unauthenticated client: the API's dataset and file
+downloads answer **401** and the web download links **403** (checked 2026-11-01). Dryad's access
+control is not worked around. The owner can unblock it either way:
+- create a Dryad API token and provide it as an environment variable for a pinned, checksummed
+  download (never committed), or
+- download `Building_59.zip` (and the HKUST files) in a browser into `data/raw/` and let the fetch
+  command verify them against recorded checksums.
 
 The `workflow`-scope push blocker was resolved on 2026-10-23. At the owner's request, `shvhjSB`'s
 `gh` token was refreshed with the `workflow` scope (device-flow approval by the owner). The

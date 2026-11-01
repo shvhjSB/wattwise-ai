@@ -2818,3 +2818,30 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   broken file link and anchor.
 - No code changed in this task; the backend and frontend suites are unaffected (928 and 259 at
   T038).
+
+---
+
+## 2026-11-01 — T038 CI: the deployment verifier failed on the runner, then passed
+
+- **Failed twice in CI, passed every time locally (5 runs).** The first CI failure gave only
+  `fetch failed: other side closed`, and the verifier then tore its project down, so I first made
+  it name the failing request and print the API and Nginx logs before teardown (`2958c39`).
+- **The evidence:** the failing request was `GET /` of the second release check; Nginx logged no
+  request; the socket had carried exactly 9 earlier requests (its bytes written grew by exactly 9
+  when the port number grew by one digit). So a pooled keep-alive connection was reused after the
+  slow, event-loop-blocking `docker` commands between checks, and the server had already closed it.
+- **A wrong guess first:** I suspected another listener on port 8082 and switched to a free port
+  with an occupied-port check (`d86e86b`). That was harmless but did not fix it; the next run failed
+  the same way. I could not reproduce the stale connection on Docker Desktop for Windows.
+- **The fix (`0bcf403`):** every verifier request opens its own connection (no keep-alive pool).
+  [CI run 41334971115](https://github.com/shvhjSB/wattwise-ai/actions/runs/41334971115) then passed
+  all four jobs, with the verifier's three stages logged. The mechanism is supported by the
+  evidence and by the fix working, but was not reproduced locally.
+- **The deployed recipe is unaffected:** this was the test client's connection reuse, not the API
+  or Nginx.
+
+## 2026-11-01 — T040/T041 blocked: Dryad downloads need authentication
+
+- Both datasets are CC0 on Dryad. The records are public, but the API's dataset and file downloads
+  answer 401 and the website's download links 403 to an unauthenticated client. Not worked around;
+  recorded as a blocker in PROJECT_STATUS.md with the two ways the owner can unblock it.

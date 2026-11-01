@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import { createServer } from 'node:net';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -31,7 +32,7 @@ async function freePort() {
 const port = process.env.WATTWISE_DEPLOY_CHECK_PORT ?? (await freePort());
 assert(/^\d+$/.test(port) && Number(port) > 1024 && Number(port) < 65536);
 const origin = `http://127.0.0.1:${port}`;
-const occupied = await fetch(origin, { signal: AbortSignal.timeout(3_000) }).then(
+const occupied = await request('/').then(
   (response) => response.status,
   () => null,
 );
@@ -73,15 +74,51 @@ function createVolume(suffix) {
   return name;
 }
 
-/** fetch, naming the request if the connection itself fails (CI showed only "fetch failed"). */
-async function request(path, options) {
-  try {
-    return await fetch(new URL(path, origin), { ...options, signal: AbortSignal.timeout(15_000) });
-  } catch (error) {
-    throw new Error(`${options?.method ?? 'GET'} ${path}: ${error.cause?.code ?? error.message}`, {
-      cause: error,
+/**
+ * One HTTP request on its own connection (no keep-alive pool), returning a fetch-like response.
+ * The verifier blocks the event loop with synchronous docker commands between requests; in CI a
+ * pooled connection was then reused after the server had closed it ("other side closed" on the
+ * 10th request of one socket). A fresh connection per request removes that failure class.
+ */
+function request(path, options = {}) {
+  const url = new URL(path, origin);
+  const body = options.body;
+  return new Promise((resolveResponse, reject) => {
+    const outgoing = httpRequest(
+      url,
+      {
+        method: options.method ?? 'GET',
+        headers: {
+          ...options.headers,
+          ...(body === undefined ? {} : { 'Content-Length': Buffer.byteLength(body) }),
+        },
+        agent: false,
+        timeout: 15_000,
+      },
+      (incoming) => {
+        const chunks = [];
+        incoming.on('data', (chunk) => chunks.push(chunk));
+        incoming.on('end', () => {
+          const text = Buffer.concat(chunks).toString('utf8');
+          const status = incoming.statusCode ?? 0;
+          resolveResponse({
+            status,
+            ok: status >= 200 && status < 300,
+            headers: { get: (name) => incoming.headers[name.toLowerCase()] ?? null },
+            text: () => Promise.resolve(text),
+            json: () => Promise.resolve(JSON.parse(text)),
+          });
+        });
+        incoming.on('error', reject);
+      },
+    );
+    outgoing.on('timeout', () => outgoing.destroy(new Error('timed out after 15 s')));
+    outgoing.on('error', (error) => {
+      reject(new Error(`${options.method ?? 'GET'} ${path}: ${error.code ?? error.message}`));
     });
-  }
+    if (body !== undefined) outgoing.write(body);
+    outgoing.end();
+  });
 }
 
 async function json(path, options) {

@@ -2570,4 +2570,10 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   timestamp and comparing parsed datetimes. The full backend suite passed **877 tests** in
   292.21 s (876 before, 1 added); the JUnit CI guard passed against that run's report.
 - Frontend source is unchanged from T033, whose complete checks passed locally and on GitHub.
-- GitHub CI verification of the new pipeline and its guard is the remaining acceptance check.
+- Committed as `7088f7611870b7149ef1fd5d0e74a8a69e5ad26b`, pushed to `origin/main` and verified
+  with `git ls-remote`. GitHub attributes author and committer to `shvhjSB`.
+- [CI run 41319423663](https://github.com/shvhjSB/wattwise-ai/actions/runs/41319423663) passed both
+  backend and frontend jobs. The explicit "Require the PostgreSQL pipeline test to run" step
+  succeeded, confirming the end-to-end test passed on CI's fresh PostgreSQL service without a skip.
+- T034 is complete. Next: T035's browser-flow coverage decision and verification, including the
+  visual-review limit carried forward from T033.

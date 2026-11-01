@@ -61,7 +61,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T031 | Anomaly investigation queue and alert detail | M10 | T025, T030 | Done |
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Done |
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Done |
-| T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | In progress |
+| T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Done |
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Not started |
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Not started |
 | T037 | Security hardening | M12 | T026 | Not started |
@@ -790,7 +790,9 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   trained and reloaded from a temporary registry, and the default detector's real explanations
   and interval expectations are persisted in a fresh, migrated PostgreSQL schema. API checks cover
   data provenance, missing values, metrics, priority order, evidence and feedback surviving reload.
-  CI requires a JUnit record for this test with no skip/failure/error. Final CI verification pending.
+  CI requires a JUnit record for this test with no skip/failure/error.
+- **Checkpoint:** committed and pushed as `7088f76`; GitHub CI run `41319423663` passed, including
+  the PostgreSQL pipeline guard. Locally all 877 backend tests and checks passed.
 
 ### T035 — Browser end-to-end tests for key flows
 - **Scope:** browser automation for overview → alert → feedback, plus model-lab rendering.

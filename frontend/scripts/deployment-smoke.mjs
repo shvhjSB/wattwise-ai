@@ -53,18 +53,26 @@ function createVolume(suffix) {
   return name;
 }
 
+/** fetch, naming the request if the connection itself fails (CI showed only "fetch failed"). */
+async function request(path, options) {
+  try {
+    return await fetch(new URL(path, origin), { ...options, signal: AbortSignal.timeout(15_000) });
+  } catch (error) {
+    throw new Error(`${options?.method ?? 'GET'} ${path}: ${error.cause?.code ?? error.message}`, {
+      cause: error,
+    });
+  }
+}
+
 async function json(path, options) {
-  const response = await fetch(new URL(path, origin), {
-    ...options,
-    signal: AbortSignal.timeout(15_000),
-  });
+  const response = await request(path, options);
   assert(response.ok, `${path}: HTTP ${response.status}`);
   assert(response.headers.get('content-type')?.includes('application/json'));
   return response.json();
 }
 
 async function assertRelease(modelVersion, alertId, note) {
-  const response = await fetch(origin, { signal: AbortSignal.timeout(15_000) });
+  const response = await request('/');
   assert.equal(response.status, 200);
   assert((await response.text()).includes('id="root"'));
   assert.equal((await json('/api/v1/ready')).status, 'ready');
@@ -288,6 +296,16 @@ try {
   console.log(
     'Backup restore into fresh external database/artifact volumes preserves the model and review.',
   );
+} catch (error) {
+  // Keep the evidence: the project is torn down below. API and Nginx logs hold no URLs, bodies
+  // or secrets (D059); the database's logs are deliberately not printed.
+  const logs = compose(['logs', '--no-color', '--tail', '150', 'api', 'frontend'], true);
+  console.error(`--- api and frontend logs before teardown ---
+${logs.output}${logs.error}`);
+  const states = compose(['ps', '-a', '--format', 'json'], true);
+  console.error(`--- container states ---
+${states.output}`);
+  throw error;
 } finally {
   if (environment.WATTWISE_DB_PASSWORD_FILE !== undefined)
     compose(['down', '--remove-orphans'], true);

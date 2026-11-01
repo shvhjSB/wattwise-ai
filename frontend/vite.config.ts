@@ -18,6 +18,7 @@ export default defineConfig(({ mode }) => {
       // Same-origin API calls in development; production uses a reverse proxy (see DECISIONS D009).
       proxy: { '/api': { target: devApiTarget } },
     },
+    preview: { proxy: { '/api': { target: devApiTarget } } },
     test: {
       environment: 'jsdom',
       setupFiles: ['./src/test/setup.ts'],

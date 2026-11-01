@@ -72,6 +72,15 @@ CI runs it with the rest of pytest against its PostgreSQL service, then checks t
 to ensure the pipeline test was collected exactly once and passed without skipping. Locally,
 `WATTWISE_TEST_DATABASE_URL` is required to run it rather than skip it.
 
+## Browser fixture
+
+The browser runner (`npm run test:e2e` from `frontend/`) uses `tests/browser_fixture.py` to
+prepare a separate synthetic schema and model registry, serve the API on loopback, and clean up.
+It requires a `postgresql+psycopg` test URL whose database name ends in `_test`. The application
+database URL and existing schemas are not used. Set `WATTWISE_MODEL_DATA_KIND=synthetic` when
+serving generated training data; the default `observed` value describes the production BDG2
+registry. The Model lab's metric badge and explanatory note follow this explicit setting.
+
 ## Changing dependencies
 
 ```bash

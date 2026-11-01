@@ -16,6 +16,8 @@ describe('model lab API contracts', () => {
   it('accepts recorded data and explicit unavailable responses', () => {
     expect(isMetadata(METADATA)).toBe(true);
     expect(isModelMetrics(MODEL_METRICS)).toBe(true);
+    expect(isModelMetrics({ ...MODEL_METRICS, data_label: 'synthetic' })).toBe(true);
+    expect(isModelMetrics({ ...MODEL_METRICS, data_label: 'invented' })).toBe(false);
     expect(isEvaluation(EVALUATION)).toBe(true);
     expect(isDatasetHealth(DATASET)).toBe(true);
     expect(isAnalysisPage({ items: [ANALYSIS], total: 1, limit: 10, offset: 0 })).toBe(true);

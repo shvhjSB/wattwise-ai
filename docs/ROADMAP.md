@@ -62,7 +62,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T032 | Cost-impact analysis and tariff configuration | M10 | T021, T024, T028 | Done |
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Done |
 | T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Done |
-| T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Not started |
+| T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | In progress |
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Not started |
 | T037 | Security hardening | M12 | T026 | Not started |
 | T038 | Deployment recipe and guide | M12 | T036 | Not started |
@@ -797,6 +797,11 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 ### T035 — Browser end-to-end tests for key flows
 - **Scope:** browser automation for overview → alert → feedback, plus model-lab rendering.
   Added only if UI complexity justifies it. The decision is recorded in DECISIONS.md.
+- **Decision (D057):** routing, review writes, charts and responsive layouts justify real browser
+  coverage. Nine Playwright scenarios use a production build and isolated real API/PostgreSQL,
+  across desktop light/dark and 390 CSS px mobile Chromium. No retries.
+- **Local verification:** browser tests pass and screenshots reviewed. Fixed a hardcoded observed
+  metric label discovered on the synthetic fixture. Final regression/CI checkpoint pending.
 
 ## M12 — Docker, CI, deployment, security and documentation
 

@@ -7,6 +7,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Nine Playwright scenarios against the production build, real API, isolated PostgreSQL schema and
+  temporary model: desktop light/dark and mobile workflows, screenshots, fixture safety guards and
+  a dedicated CI job. (T035)
+- Explicit model-metric provenance (`WATTWISE_MODEL_DATA_KIND`): synthetic model scores no longer
+  receive an observed BDG2 badge; API and browser regression assertions cover the distinction. (T035)
 - PostgreSQL pipeline integration test from the committed synthetic fixture through preparation,
   training/reload, default detection, explanations, stored readings/expectations/alerts and API
   checks, including feedback surviving reload. CI requires the test to pass without skipping. (T034)

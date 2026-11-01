@@ -122,7 +122,15 @@ def model_metrics(
         for role in ("validation", "test")
     ]
     return ModelMetricsOut(
-        version=metadata.version, roles=roles, definitions=METRIC_DEFINITIONS, note=METRICS_NOTE
+        version=metadata.version,
+        data_label=settings.model_data_kind,
+        roles=roles,
+        definitions=METRIC_DEFINITIONS,
+        note=METRICS_NOTE
+        if settings.model_data_kind == "observed"
+        else "Recorded on synthetic readings in a chronological split. These metrics describe "
+        "generated data and do not establish real-world performance or accuracy on uploaded "
+        "buildings.",
     )
 
 

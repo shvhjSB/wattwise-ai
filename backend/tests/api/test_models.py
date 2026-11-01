@@ -70,6 +70,14 @@ def test_the_metrics_are_exactly_the_recorded_ones(model_root: Path) -> None:
     assert set(body["definitions"]) >= {"mae", "rmse", "bias", "wape"}
 
 
+def test_synthetic_model_metrics_have_explicit_provenance(model_root: Path) -> None:
+    with app_client(model_root, model_data_kind="synthetic") as client:
+        body = client.get(f"{API}/models/metrics").json()
+    assert body["data_label"] == "synthetic"
+    assert "generated data" in body["note"]
+    assert "do not establish real-world performance" in body["note"]
+
+
 def test_a_role_that_was_not_recorded_is_null(model_root: Path, tmp_path: Path) -> None:
     root = broken_copy(model_root, tmp_path / "models")
     path = root / current(root) / "metadata.json"

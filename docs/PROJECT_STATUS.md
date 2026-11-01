@@ -444,18 +444,18 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. T034 is committed and pushed as `7088f76`. All **877 backend tests**, lint, formatting,
-strict type checks and the JUnit guard pass locally. GitHub CI run `41319423663` passed both jobs,
-including the required PostgreSQL pipeline-test guard. Waiting for the next task.
+**T035 — Browser end-to-end tests for key flows:** nine Playwright scenarios pass against the
+production build, real API, isolated PostgreSQL schema and temporary model, across desktop
+light/dark and 390 CSS px mobile. Screenshots reviewed; a synthetic metric-provenance issue found
+by the review is fixed. Final regression checks and the CI checkpoint are being verified.
 
-T033 is committed and pushed as `f22989c`, with successful GitHub CI run `41318517157`. All five
-frontend workflows are implemented and automated checks pass. Visual browser verification is
-still unconfirmed; T035 covers the browser-flow review.
+T033 and T034 are pushed with successful CI runs `41318517157` and `41319423663`. T035's browser
+tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T035 — Browser end-to-end tests for key flows** (M11): decide the appropriate browser coverage
-for overview → alert → feedback and Model lab rendering, then implement and verify it if justified.
+After T035: **T036 — Dockerfiles and Docker Compose** (M12): API and frontend images, PostgreSQL,
+health checks, migrations and a reproducible synthetic demo startup.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and

@@ -81,6 +81,31 @@ npm test               # Vitest + React Testing Library (jsdom)
 npm run build          # type check + production build to dist/
 ```
 
+## Browser verification
+
+T035 uses pinned Playwright 1.64.1/Chromium to test the production build against a real API and
+PostgreSQL fixture. Install the backend's locked development dependencies first. Set
+`WATTWISE_TEST_DATABASE_URL` (or keep it in untracked `backend/.env`) to a psycopg PostgreSQL
+database named `*_test`. From `frontend/`:
+
+```bash
+npx --no-install playwright install chromium
+npm run test:e2e
+```
+
+The runner builds the app, validates the committed synthetic sample, trains a temporary model,
+stores actual detections/expectations, then runs nine scenarios across desktop light, desktop dark
+and 390 CSS px mobile Chromium. Coverage includes overview → alert → feedback persistence,
+Model lab filtering/provenance, API-error recovery and empty results. Uncaught page exceptions
+and page-width overflow fail the tests. Retries are disabled and focused tests are forbidden.
+
+Ports 8765 (API) and 4175 (preview) must be free: existing servers are never reused. Temporary
+schema/model cleanup runs after success or failure. The application database and registry remain
+untouched. Screenshots/JUnit output live in ignored `test-results/`, HTML in `playwright-report/`,
+and failure traces are retained. CI runs this suite with its own PostgreSQL service and installs
+Chromium's Linux dependencies. This verifies the named Chromium workflows, not Firefox/WebKit
+support or real-world model accuracy.
+
 ## Configuration
 
 Copy [`.env.example`](.env.example) to `.env.local` for local overrides. Variables prefixed with

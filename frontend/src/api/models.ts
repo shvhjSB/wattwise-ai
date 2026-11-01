@@ -47,7 +47,7 @@ export interface Metrics {
 export interface ModelMetrics {
   available: true;
   version: string;
-  data_label: 'observed';
+  data_label: StoredKind;
   note: string;
   definitions: Record<string, string>;
   roles: {
@@ -164,7 +164,7 @@ export function isModelMetrics(value: unknown): value is ModelMetrics | Unavaila
     (record(value) &&
       value.available === true &&
       text(value.version) &&
-      value.data_label === 'observed' &&
+      (value.data_label === 'observed' || value.data_label === 'synthetic') &&
       text(value.note) &&
       map(text)(value.definitions) &&
       Array.isArray(value.roles) &&

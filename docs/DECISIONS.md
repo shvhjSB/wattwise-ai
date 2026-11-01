@@ -2037,9 +2037,35 @@ links to the entry that replaces it.
 
 ---
 
+## D057 — Browser workflows use a real, isolated API fixture
+- **Date:** 2026-11-01 · **Task:** T035 · **Status:** Accepted
+- **Decision:** pinned Playwright 1.64.1/Chromium tests the production build against FastAPI and
+  PostgreSQL. The fixture validates the committed synthetic sample, trains a temporary model and
+  stores actual alerts, explanations and interval expectations. Nine scenarios cover desktop
+  light/dark and 390 CSS px mobile: navigation, review persistence, Model lab data/filtering,
+  provenance, API retry and empty results. Page exceptions and width overflow fail the tests;
+  retries are zero, focused tests forbidden, screenshots inspected.
+- **Isolation:** only `WATTWISE_TEST_DATABASE_URL`, a psycopg database named `*_test`, and a
+  random `e2e_<12 hex>` schema are allowed. Cleanup validates the schema identifier before dropping
+  it. Models and prepared data live under an owned run directory removed after completion or
+  failure. Existing servers and the application database/registry are never reused. Safety tests
+  cover invalid database/schema targets; generated screenshots and traces are git-ignored.
+- **Provenance fix:** the old observed-only metrics badge was wrong for synthetic registries.
+  `WATTWISE_MODEL_DATA_KIND` explicitly selects observed (the default BDG2 registry) or synthetic;
+  the synthetic note disclaims real-world accuracy. API and browser tests assert this distinction.
+  Deployment configuration must match the registry; provenance is not inferred from scores.
+- **Alternatives:** component tests do not verify browser layout or real feedback writes. The
+  native desktop browser runtime had an unresolved URL-verification limit, so a dedicated runner
+  with controlled loopback origins supplies reproducible verification without user browser state.
+  Firefox/WebKit coverage is deferred; only the named Chromium scenarios are established here.
+- **CI:** a dedicated job reuses the pinned PostgreSQL service and setup actions, installs locked
+  dependencies and Chromium, then runs `npm run test:e2e`.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
-| Browser E2E tooling | T035 | Only if justified |
+| Browser E2E tooling | Resolved in D057 | Playwright, real API fixture, desktop and mobile Chromium |

@@ -61,6 +61,8 @@ dist/
 coverage/
 *.tsbuildinfo
 .vite/
+test-results/
+playwright-report/
 
 # ---------------------------------------------------------------------------
 # OS and editors

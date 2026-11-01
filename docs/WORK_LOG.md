@@ -2577,3 +2577,33 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   succeeded, confirming the end-to-end test passed on CI's fresh PostgreSQL service without a skip.
 - T034 is complete. Next: T035's browser-flow coverage decision and verification, including the
   visual-review limit carried forward from T033.
+
+---
+
+## 2026-11-01 — T035 Browser workflows and visual verification
+
+**Implemented**
+- Pinned Playwright 1.64.1 with Chromium; three scenarios in three contexts (desktop light, desktop
+  dark, mobile at 390 CSS px). Tests cover overview → alert → feedback/reload, Model lab metrics,
+  filtering/query persistence/provenance, API failure/retry and no matching buildings. Page
+  exceptions and page-width overflow fail the tests. No retries or focused tests are allowed.
+- `npm run test:e2e` builds the production frontend, prepares a real synthetic pipeline in a new
+  PostgreSQL schema/temporary registry, starts loopback API/preview servers and cleans up. Safety
+  guards reject non-test database names and invalid schema identifiers (six regression cases).
+- Added a dedicated browser CI job using the same pinned setup actions and PostgreSQL image.
+  Screenshots, reports and failure traces are git-ignored, never production data.
+- Visual inspection revealed the metrics API always labelled scores Observed. Added explicit
+  `WATTWISE_MODEL_DATA_KIND` configuration and synthetic-specific wording, plus API and browser
+  assertions. Production BDG2 keeps its observed default; the test fixture declares synthetic.
+
+**Local validation**
+- First browser run: **9 passed** in 30.4 s. After the provenance fix: **9 passed** in 31.3 s,
+  with zero retries, skipped cases or uncaught page exceptions. Both runs confirmed schema cleanup.
+- Inspected screenshots of Model lab (mobile and desktop dark), overview (desktop light), and alert
+  review (mobile). Content fits; wide tables have local horizontal scrolling. The 390 px assertion
+  uses CSS viewport width, independent of device-pixel-ratio screenshot resolution.
+- Backend regression run before the provenance change: **883 passed** in 305.18 s; updated
+  provenance/fixture-safety focused run: **7 passed** in 2.27 s. Ruff check/format and strict mypy
+  pass after the fix. After the client guard change, frontend ESLint, Prettier and `tsc -b` pass;
+  all **259 Vitest tests** pass in 50.14 s. The browser runner's production build passes too.
+- CI verification of the final code is pending; T035 remains In progress until it passes.

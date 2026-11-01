@@ -29,6 +29,7 @@ class Settings(BaseSettings):
     #: The model registry `/inference/analyze` loads the promoted (`CURRENT`) model from.
     registry_root: Path = Path("../artifacts/models")
     evaluation_root: Path = Path("../data/processed/evaluation/fullscale/test")
+    model_data_kind: Literal["observed", "synthetic"] = "observed"
 
     @field_validator("database_url")
     @classmethod

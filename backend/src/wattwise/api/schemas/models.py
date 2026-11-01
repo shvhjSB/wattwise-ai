@@ -55,8 +55,8 @@ class RoleMetrics(BaseModel):
 class ModelMetricsOut(BaseModel):
     available: Literal[True] = True
     version: str
-    data_label: Literal["observed"] = Field(
-        default="observed", description="Scored on measured BDG2 readings, not synthetic data."
+    data_label: Literal["observed", "synthetic"] = Field(
+        default="observed", description="The explicitly configured provenance of the model's data."
     )
     roles: list[RoleMetrics]
     definitions: dict[str, str]

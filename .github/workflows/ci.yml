@@ -127,3 +127,61 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  browser:
+    name: Browser workflows (Chromium)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+        env:
+          POSTGRES_USER: wattwise
+          POSTGRES_PASSWORD: wattwise-ci
+          POSTGRES_DB: wattwise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wattwise -d wattwise_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      WATTWISE_TEST_DATABASE_URL: postgresql+psycopg://wattwise:wattwise-ci@localhost:5432/wattwise_test
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.24'
+          checksum: 'b4dfaef47d491a7296981f8374a4595f55dbf84e8937c8ecd2983574d8bb3da6'
+          working-directory: backend
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python and locked dependencies
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium and its system dependencies
+        working-directory: frontend
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Verify browser workflows against the built app and PostgreSQL
+        working-directory: frontend
+        run: npm run test:e2e

@@ -2120,3 +2120,4 @@ links to the entry that replaces it.
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Browser E2E tooling | Resolved in D057 | Playwright, real API fixture, desktop and mobile Chromium |
+| Public deployment security | T038 | Authentication/access controls and the documented moderate tooling advisory (D059) |

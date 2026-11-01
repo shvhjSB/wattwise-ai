@@ -64,7 +64,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Done |
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Done |
 | T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Done |
-| T037 | Security hardening | M12 | T026 | In progress |
+| T037 | Security hardening | M12 | T026 | Done |
 | T038 | Deployment recipe and guide | M12 | T036 | Not started |
 | T039 | Final documentation | M12 | T034, T038 | Not started |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
@@ -826,10 +826,12 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   - Request size and time limits, and safe exception handlers.
   - Structured logging.
   - `pip-audit` and `npm audit` in CI, plus secret scanning.
-  - **Progress (2026-11-01):** CORS settings, streaming body limits, response deadlines with
-    retained work capacity, safe errors and privacy-preserving JSON access records implemented.
-    CI audits and digest-pinned full-history secret scanning added. Full verification is in
-    progress; see [SECURITY.md](SECURITY.md) for the unresolved moderate development-tool advisory.
+  - **Completed (2026-11-01):** CORS settings, streaming body limits, response deadlines with
+    retained work capacity, safe errors and privacy-preserving JSON access records. CI audits and
+    digest-pinned full-history secret scanning pass. CI run `41327343407` passed 920 backend tests,
+    259 frontend tests and nine container browser scenarios, including restart persistence.
+    Local focused and standalone browser checks also pass. See [SECURITY.md](SECURITY.md) for
+    the unresolved moderate development-tool advisory and public-deployment prerequisites.
 
 ### T038 — Deployment recipe and guide
 - **Scope:**

@@ -2709,3 +2709,24 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   cases and callback refinement are covered by the subsequent **33-test** focused pass; CI will
   run the final 920-test collection. All source/static checks pass. Task completion remains
   pending the frontend rerun, isolated browser verification and GitHub CI checkpoint.
+
+**Completed verification**
+- The unchanged frontend suite passed all **259 tests** in 69.71 seconds after the resource-heavy
+  checks finished; no test timeout, assertion or production frontend behavior was changed.
+- A fresh, separate `wattwise-securitycheck` Compose project passed initial smoke and **nine
+  Chromium scenarios** in 19.8 seconds. Full container recreation without dropping volumes then
+  passed restored model/review persistence. The owner's retained demo was not reset.
+- The standalone browser runner passed all **nine scenarios** against the final source in
+  31.4 seconds and confirmed removal of its own temporary database schema. Final Ruff/format,
+  strict mypy and workflow actionlint checks pass; the staged patch secret scan found no leaks.
+- Pushed `e8756fea20fee25eae0845a9002771ad798cd13b` to `origin/main`; the remote hash matched,
+  and GitHub attributes both author and committer to `shvhjSB`.
+- [CI run 41327343407](https://github.com/shvhjSB/wattwise-ai/actions/runs/41327343407) passed all
+  **four jobs**: 920 backend tests in 87.59 seconds, 259 frontend tests, nine container browser
+  scenarios, image builds, initial/restored smoke, Python/npm audit gates and full-history secret
+  scanning. Python/runtime npm audits report zero; the documented 13 moderate tooling findings
+  remain visible under the full-tree high/critical gate.
+- T037 is complete; M12 is 2/4 complete. Next: T038 deployment recipe and guide. No authentication,
+  public deployment, hard computation cancellation or zero-vulnerability claim is implied.
+- Removed only the separately labelled disposable security-check project and its two volumes;
+  the owner's loopback demo remains healthy with its existing PostgreSQL/model volumes.

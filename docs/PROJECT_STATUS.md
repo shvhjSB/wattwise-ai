@@ -443,14 +443,20 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T034 | API integration and pipeline end-to-end tests | 2026-11-01 |
 | T035 | Browser end-to-end tests for key flows | 2026-11-01 |
 | T036 | Dockerfiles and Docker Compose | 2026-11-01 |
+| T037 | Security hardening | 2026-11-01 |
 
 ## Current task
 
-T037 security hardening is in progress. Request/CORS controls, safe errors, JSON access logging,
-dependency audits and full-history secret scanning are implemented; full local/CI verification
-is pending. The backend audit and 33 security regressions pass. Frontend runtime dependencies
-are clean; 13 moderate development-tool findings share one minimatch advisory, documented in
-[SECURITY.md](SECURITY.md). These are not claimed fixed.
+None. T037 implementation is pushed as `e8756fe`; [CI run 41327343407](https://github.com/shvhjSB/wattwise-ai/actions/runs/41327343407)
+passed all four jobs: **920 backend tests**, **259 frontend tests**, nine container browser
+scenarios, both image builds, restart persistence, dependency audits and full-history secret
+scanning. Locally, static checks, 916 backend tests plus the final 33-case security suite,
+259 frontend tests, nine container scenarios and nine standalone browser scenarios pass.
+
+Request/CORS controls, safe errors and JSON access logging are in place. Backend and frontend
+runtime audits are clean. The full npm tree still reports **13 moderate development-tool findings**
+from one minimatch advisory; these are not claimed fixed. See [SECURITY.md](SECURITY.md) for the
+audit thresholds, timeout limitations and remaining authentication/public-deployment prerequisites.
 
 T036 is pushed as `010805b`; CI run `41324653540` passed all three jobs. The local synthetic
 demo remains at `http://127.0.0.1:8080`; database/model volumes are preserved.
@@ -460,8 +466,10 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T037 — Security hardening** (M12): request/CORS controls, safe errors and logging,
-dependency audits and secret scanning in CI.
+**T038 — Deployment recipe and guide** (M12): persistent-storage deployment configuration,
+health checks, rollback/model-version notes and `docs/DEPLOYMENT.md`. Do not describe the app
+as deployed unless an actual deployment is verified. Reassess the documented tooling advisory
+and authentication/access controls before exposing a service beyond loopback.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -483,7 +491,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 6 / 6 |
 | M11 Integration | T034–T035 | 2 / 2 |
-| M12 Operations and docs | T036–T039 | 1 / 4 |
+| M12 Operations and docs | T036–T039 | 2 / 4 |
 
 ## Blockers
 

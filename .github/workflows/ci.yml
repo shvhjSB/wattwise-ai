@@ -68,6 +68,11 @@ jobs:
         # --locked fails if uv.lock is out of date with pyproject.toml.
         run: uv sync --locked
 
+      - name: Audit locked Python dependencies (runtime and development)
+        run: |
+          uv export --locked --no-emit-project --format requirements-txt --output-file /tmp/wattwise-audit.txt > /dev/null
+          uv run --locked pip-audit --disable-pip --require-hashes -r /tmp/wattwise-audit.txt --progress-spinner off
+
       - name: Lint (ruff)
         run: uv run --locked ruff check --output-format=github .
 
@@ -113,6 +118,12 @@ jobs:
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
 
+      - name: Audit frontend runtime dependencies (all severities)
+        run: npm audit --omit=dev --audit-level=low
+
+      - name: Audit all frontend dependencies (high and critical gate)
+        run: npm audit --audit-level=high
+
       - name: Format check (Prettier)
         run: npm run format:check
 
@@ -127,6 +138,24 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  secrets:
+    name: Secret scan (full history)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check out full repository history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Scan Git history with redacted output
+        run: >-
+          docker run --rm --network none
+          --mount "type=bind,source=$GITHUB_WORKSPACE,target=/repo,readonly"
+          ghcr.io/gitleaks/gitleaks:v8.30.1@sha256:c00b6bd0aeb3071cbcb79009cb16a60dd9e0a7c60e2be9ab65d25e6bc8abbb7f
+          git /repo --redact=100 --no-banner --log-opts=--all
 
   browser:
     name: Containers and browser workflows

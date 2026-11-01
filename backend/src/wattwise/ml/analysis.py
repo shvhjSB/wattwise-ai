@@ -79,8 +79,8 @@ def analyze(
         loaded = load(features, root=root)
         expected = loaded.model.predict(readings.drop(columns="value"), readings)
         version = loaded.metadata.version
-    except RegistryError as exc:  # no model promoted, or one that cannot be used
-        note = f"No predictions: {type(exc).__name__}: {exc}"
+    except RegistryError:  # no model promoted, or one that cannot be used
+        note = "No predictions: the configured model is unavailable or incompatible."
     return Analysis(expected, version, note, events, Detector.ROLLING_Z)
 
 

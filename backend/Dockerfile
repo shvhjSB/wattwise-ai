@@ -20,4 +20,4 @@ ENV PATH="/app/backend/.venv/bin:$PATH"
 USER 10001:10001
 EXPOSE 8000
 HEALTHCHECK --interval=5s --timeout=5s --start-period=15s --retries=12 CMD ["python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/ready', timeout=3).close()"]
-CMD ["python", "-m", "uvicorn", "wattwise.api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "wattwise.api.main:create_app", "--factory", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]

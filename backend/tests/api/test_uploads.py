@@ -217,7 +217,10 @@ def test_without_a_model_there_are_alerts_but_no_predictions(tmp_path: Path) -> 
         body = analyze(no_model).json()
 
     assert body["model_version"] is None
-    assert body["prediction_note"].startswith("No predictions: NoModelError")
+    assert body["prediction_note"] == (
+        "No predictions: the configured model is unavailable or incompatible."
+    )
+    assert str(tmp_path) not in body["prediction_note"]
     assert all(p["expected"] is None for m in body["meters"] for p in m["points"])
     assert body["alerts"]
 

@@ -2664,3 +2664,48 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - T036 is complete. Next: T037 security hardening.
 - Local `wattwise-demo` volumes and the running loopback demo are retained for the owner. No
   unrelated containers, host database data or user files were removed.
+
+---
+
+## 2026-11-01 — T037 Security hardening
+
+**Previous checkpoint:** T036 completion records `983ce2f`; CI run `41325092616` passed.
+
+**Implemented**
+- Environment-validated exact CORS origins; no wildcard/credentialed CORS. Stream-counted whole
+  request limits, safe Content-Length validation, HTTP deadlines and per-worker admission limits.
+  Timed-out computation retains its capacity slot and cannot send a late second response.
+- Safe server/validation errors and model-unavailable notes; generated request IDs and JSON
+  access records use route templates, omitting submitted data, raw URLs and credentials.
+- Uvicorn raw access logging disabled in the image; Nginx uses minimal JSON access records,
+  defensive headers and aligned body/time controls. Local Compose volumes remain intact.
+- Locked pip-audit and CI checks for Python runtime/dev dependencies, npm runtime/all tooling
+  dependencies, and a digest-pinned, fully redacted full-history Gitleaks scan.
+- SECURITY.md and D059 document actual limits: no authentication, hard CPU cancellation or
+  zero-vulnerability claim. Thirteen moderate npm package findings share one development-only
+  minimatch advisory; no compatible consumer update is proven, so no forced downgrade/override.
+
+**Verification in progress**
+- Ruff, formatting and strict mypy pass. All 33 focused security regressions pass, including
+  undeclared/underdeclared streaming bodies, multipart overflow, CORS, safe logs/errors, malformed
+  lengths and capacity retention for timed-out threaded work.
+- Exact hashed-requirements pip-audit command reports no known vulnerabilities. Runtime npm
+  audit reports zero; full audit's high/critical gate passes while reporting 13 moderate findings.
+- Read-only, network-disabled Gitleaks scanned all 61 existing commits and found no leaks.
+- Workflow actionlint, Compose configuration, image builds and health-gated startup pass.
+- During simultaneous image building and backend tests, one of 259 frontend tests exceeded its
+  existing five-second deadline. No unrelated test timeout was relaxed; a single-worker rerun
+  follows. Static frontend checks and the production build passed on that first run.
+- Full backend, frontend rerun, container browser checks, final source scan and GitHub CI remain
+  pending; T037 is not yet marked complete.
+- The frontend timeout repeated while backend/browser checks were still running; defer the next
+  full frontend run until resource-heavy checks finish. Existing retained browser reviews also
+  made the old fixed-note locator ambiguous on the persistent demo. Rather than delete feedback
+  or alter unrelated assertions, browser verification uses a separate disposable synthetic Compose
+  project on loopback 8081. The owner's demo stays on 8080 with its model/review volumes intact.
+- Actual proxy headers (request ID, nosniff, no-referrer, frame denial and no-store) were asserted;
+  a raw-query privacy canary was absent from both API and proxy access logs.
+- Full backend run passed **916 tests** in 381.62 seconds. The final four additional origin
+  cases and callback refinement are covered by the subsequent **33-test** focused pass; CI will
+  run the final 920-test collection. All source/static checks pass. Task completion remains
+  pending the frontend rerun, isolated browser verification and GitHub CI checkpoint.

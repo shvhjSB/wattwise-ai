@@ -2090,6 +2090,30 @@ links to the entry that replaces it.
 
 ---
 
+## D059 — Bounded requests and explicit security audit policy
+- **Date:** 2026-11-01 · **Task:** T037 · **Status:** Accepted
+- **Intake:** exact environment-configured CORS origins, default empty; no wildcard/credentialed
+  CORS. Pure ASGI middleware counts streamed body bytes before parser consumption, rejects malformed
+  lengths and bounds concurrent requests per worker. The existing per-CSV limit remains separate.
+- **Deadline semantics:** 504 is an HTTP deadline, not a promise to kill Python/native threads or
+  roll back writes. Timed-out requests keep their capacity slot until completion and late responses
+  are suppressed. Slow body reads use the remaining deadline. This avoids an unbounded abandoned
+  inference queue; process budgets/authorization remain prerequisites for public deployment.
+- **Privacy:** JSON access records contain generated IDs and route templates, never raw URLs,
+  queries, bodies or headers. Uvicorn raw access logging is disabled in containers; Nginx emits a
+  minimal JSON record. Safe public errors omit validation inputs, exceptions and registry paths.
+- **Supply chain:** all hashed locked Python runtime/dev packages are audited at every severity;
+  npm runtime packages at every severity and the full tooling tree at high/critical. The current
+  13 moderate findings share minimatch advisory GHSA-g3hv-75wg-m249, only in development tooling.
+  No API-breaking minimatch major override or forced TypeScript-tooling downgrade is applied.
+  This known risk is documented, not fixed or hidden; revisit compatible releases before public
+  deployment. Full-history Gitleaks uses a pinned image digest, redacted output, read-only mount
+  and no network; it needs no scanner token or broad secret allowlist.
+- **Boundary:** this is defense in depth for the local demo, not authentication, authorization,
+  CSRF prevention, a hard CPU limit or a claim that the project has no vulnerabilities.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

@@ -46,7 +46,7 @@ volume after the demo initializer finishes. `wattwise.demo` owns migration and r
 initialization; the browser-test fixture uses that same initializer.
 
 ```bash
-uv run uvicorn wattwise.api.main:create_app --factory --reload --port 8000
+uv run uvicorn wattwise.api.main:create_app --factory --reload --port 8000 --no-access-log
 ```
 
 - Liveness: <http://127.0.0.1:8000/api/v1/health>
@@ -108,6 +108,10 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 | `WATTWISE_DATABASE_URL` | `postgresql+psycopg://user:password@host:port/database` | unset (no database) |
 | `WATTWISE_TEST_DATABASE_URL` | the same form; **tests only** | unset (database tests skip) |
 | `WATTWISE_MAX_UPLOAD_BYTES` | the largest CSV file accepted, in bytes | `10000000` |
+| `WATTWISE_CORS_ORIGINS` | JSON array of explicit HTTP(S) origins, no wildcard or trailing slash | `[]` |
+| `WATTWISE_MAX_REQUEST_BYTES` | whole HTTP body ceiling, including multipart overhead | `32000000` |
+| `WATTWISE_REQUEST_TIMEOUT_SECONDS` | HTTP response deadline, positive and at most 300 seconds | `60` |
+| `WATTWISE_MAX_CONCURRENT_REQUESTS` | concurrent requests per worker (including timed-out work) | `16` |
 | `WATTWISE_REGISTRY_ROOT` | the model registry `/inference/analyze` uses | `../artifacts/models` |
 | `WATTWISE_EVALUATION_ROOT` | recorded `chosen.json` and `seasonal-naive-1w.json` reports for the Model lab | `../data/processed/evaluation/fullscale/test` |
 

@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Environment-based CORS allowlist, streaming request-size limits, response deadlines and bounded
+  in-flight work; safe validation/server errors, request IDs and privacy-preserving JSON access
+  logs. CI audits Python/npm dependencies and scans full Git history for secrets. Security limits
+  and the remaining moderate development-tool advisory are documented. (T037)
 - Pinned multi-stage API/Nginx images and a loopback-only PostgreSQL Compose demo with health-gated
   startup, migration/initialization service, persistent database/model volumes and source-only build
   context. The synthetic initializer reuses models and preserves reviews on restart. (T036)

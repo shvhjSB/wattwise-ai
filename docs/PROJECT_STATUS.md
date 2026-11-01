@@ -446,11 +446,14 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. T036 is pushed as `010805b`; CI run `41324653540` passed backend, frontend and container
-jobs. Both images build locally and in CI; Compose startup, proxying, browser workflows and
-review/model persistence after recreation are verified. All 887 backend and 259 frontend tests
-pass. Nine browser scenarios pass through Compose and through the standalone runner. The local
-synthetic demo is running at `http://127.0.0.1:8080`; see CONTAINERS.md. Waiting for the next task.
+T037 security hardening is in progress. Request/CORS controls, safe errors, JSON access logging,
+dependency audits and full-history secret scanning are implemented; full local/CI verification
+is pending. The backend audit and 33 security regressions pass. Frontend runtime dependencies
+are clean; 13 moderate development-tool findings share one minimatch advisory, documented in
+[SECURITY.md](SECURITY.md). These are not claimed fixed.
+
+T036 is pushed as `010805b`; CI run `41324653540` passed all three jobs. The local synthetic
+demo remains at `http://127.0.0.1:8080`; database/model volumes are preserved.
 
 T033 and T034 are pushed with successful CI runs `41318517157` and `41319423663`. T035's browser
 tests and screenshot review now close T033's earlier visual-verification gap.

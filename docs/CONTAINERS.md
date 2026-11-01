@@ -108,6 +108,10 @@ PostgreSQL pipeline tests run in their own jobs.
 
 ## Implementation references
 
+Security controls, audit policy and remaining public-deployment prerequisites are described in
+[SECURITY.md](SECURITY.md). The demo has no authentication; do not publish it as a private-data
+service merely by changing its port binding.
+
 - [Compose startup conditions](https://docs.docker.com/compose/how-tos/startup-order/)
 - [uv Docker integration](https://docs.astral.sh/uv/guides/integration/docker/)
 - [PostgreSQL container guide and version 18 volume layout](https://docs.docker.com/guides/postgresql/)

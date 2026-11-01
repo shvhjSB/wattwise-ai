@@ -7,6 +7,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Pinned Dryad acquisition (T045): `python -m wattwise.data.dryad` for LBNL Building 59 and
+  HKUST, verified against Dryad's published SHA-256, with a token or a browser download.
 - Final documentation (T039): a rewritten README (architecture diagram, the application,
   quickstart, ML method, results linked to their records, limitations), `docs/ARCHITECTURE.md`,
   `docs/MODEL_CARD.md` and `LICENSES.md`; `docs/DATASETS.md` updated to what is acquired.

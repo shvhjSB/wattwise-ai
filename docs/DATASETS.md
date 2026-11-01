@@ -12,7 +12,7 @@ git-ignored. Only the small synthetic sample and provenance manifests are commit
 | LEAD 1.0 human anomaly labels | Checking the detectors against human labels (T018b, T044c) | **No.** Local evaluation only, never redistributed (D022); manifest [`data/manifests/lead.json`](../data/manifests/lead.json) | `uv run python -m wattwise.data.lead fetch`, then `prepare` ([below](#real-anomaly-labels-lead-10)) |
 | ERA5 radiation and cloud cover, via Open-Meteo | Weather enrichment features (T007d) | **No.** Fetched by an explicit command into `data/raw/era5` | `uv run python -m wattwise.data.era5 fetch`, `verify`, `prepare` ([below](#weather-enrichment)) |
 | Carbon factors and electricity prices | Sourced references for impact (T021a) | **Yes:** two small cited tables in [`data/reference/`](../data/reference/), each row with its source, licence and file hash | Committed ([below](#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)) |
-| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041) | **No.** Not yet acquired | Planned ([below](#sub-metered-and-independent-buildings)) |
+| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041) | **No.** Not yet acquired; files and SHA-256 pinned | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
 
 Licences for all of these, and for the software WattWise ships, are summarised in
 [LICENSES.md](../LICENSES.md).

@@ -446,6 +446,7 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T037 | Security hardening | 2026-11-01 |
 | T038 | Deployment recipe and guide | 2026-11-01 |
 | T039 | Final documentation | 2026-11-01 |
+| T045 | Pinned acquisition of the Dryad datasets | 2026-11-01 |
 
 ## Current task
 
@@ -515,11 +516,12 @@ why the model detector's recall advantage on the sample reversed at full scale.
 doi:10.7941/D1N33Q, CC0, 263 MB; HKUST, doi:10.5061/dryad.k3j9kd5h6, CC0). The dataset record is
 public, but every download route refuses an unauthenticated client: the API's dataset and file
 downloads answer **401** and the web download links **403** (checked 2026-11-01). Dryad's access
-control is not worked around. The owner can unblock it either way:
-- create a Dryad API token and provide it as an environment variable for a pinned, checksummed
-  download (never committed), or
-- download `Building_59.zip` (and the HKUST files) in a browser into `data/raw/` and let the fetch
-  command verify them against recorded checksums.
+control is not worked around. The command for it now exists (T045): `uv run python -m wattwise.data.dryad fetch lbnl59` (and
+`hkust`) verifies every file against Dryad's published SHA-256. The owner can unblock it either way:
+- set `WATTWISE_DRYAD_TOKEN` to a Dryad API token (never committed or printed), then run the
+  command, which downloads and verifies; or
+- download the files in a browser from the dataset pages into `data/raw/lbnl59/` and
+  `data/raw/hkust/`, then run the command, which verifies them.
 
 The `workflow`-scope push blocker was resolved on 2026-10-23. At the owner's request, `shvhjSB`'s
 `gh` token was refreshed with the `workflow` scope (device-flow approval by the owner). The

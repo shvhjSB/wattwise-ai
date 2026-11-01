@@ -67,8 +67,9 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T037 | Security hardening | M12 | T026 | Done |
 | T038 | Deployment recipe and guide | M12 | T036 | Done |
 | T039 | Final documentation | M12 | T034, T038 | Done |
-| T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017 | Not started |
-| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014 | Not started |
+| T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017, T045 | Not started (data needed) |
+| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Not started (data needed) |
+| T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
@@ -860,6 +861,14 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   corrected row count, the owner's decisions recorded). Every relative link and anchor checked.
 
 ## Added after T007b (supplementary data)
+
+### T045 — Pinned acquisition of the Dryad datasets
+- **Why (2026-11-01):** T040 and T041 both start by downloading CC0 datasets from Dryad, which
+  refuses unauthenticated downloads. Split out as a shared prerequisite.
+- **Done:** `python -m wattwise.data.dryad` pins both datasets' files, sizes and SHA-256 (from
+  Dryad's records). With `WATTWISE_DRYAD_TOKEN` it downloads and verifies; without one it verifies
+  files downloaded in a browser, and otherwise says exactly what to download and where. The token
+  is sent only to Dryad's API and never printed or recorded.
 
 ### T040 — Detector checks on a sub-metered building
 - **Objective:** test whether the whole-building detector reacts to known kinds of event, using

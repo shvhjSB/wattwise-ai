@@ -2845,3 +2845,30 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - Both datasets are CC0 on Dryad. The records are public, but the API's dataset and file downloads
   answer 401 and the website's download links 403 to an unauthenticated client. Not worked around;
   recorded as a blocker in PROJECT_STATUS.md with the two ways the owner can unblock it.
+
+---
+
+## 2026-11-01 — T045 Pinned acquisition of the Dryad datasets
+
+**Done**
+- The owner asked for the data to be downloaded. Both datasets exist only on Dryad (the HKUST
+  authors' GitHub repository holds code only, 681 KB), and Dryad refuses unauthenticated downloads
+  (401 from the API, 403 from the website). Impersonating a browser to get past that was not done.
+- `wattwise.data.dryad`: both datasets' files pinned by Dryad file id, size and SHA-256, read from
+  Dryad's API records. With `WATTWISE_DRYAD_TOKEN` it downloads through the existing verified,
+  atomic acquisition code; without a token it verifies browser downloads, or names exactly what to
+  download and where. The token goes only to `https://datadryad.org/api/v2/`, in an Authorization
+  header, and is never printed or written to a manifest (tested).
+
+**A mistake, caught before commit**
+- While writing the pins I had printed only the first 12 characters of the two HKUST checksums,
+  and I filled in the rest of both by hand: invented digests. Before running anything, I rewrote
+  all six pins from Dryad's records by file id and checked each one against the record (6 of 6
+  match; the real `All_Data.zip` digest begins `f2446158573311bd`). An invented pin would have
+  rejected the genuine file. A test now refuses obvious placeholder digests, but the protection
+  that matters is reading pins from the source, never typing them.
+
+**Validation**
+- Ruff, format and strict mypy clean; 12 new tests pass (with the 18 existing acquisition tests).
+- Ran for real: `python -m wattwise.data.dryad fetch lbnl59` without a token lists the four files,
+  their sizes, the dataset page and the target folder, and writes nothing.

@@ -80,6 +80,7 @@ Settings come from environment variables prefixed with `WATTWISE_`. See
 | `WATTWISE_TEST_DATABASE_URL` | the same form; **tests only** | unset (database tests skip) |
 | `WATTWISE_MAX_UPLOAD_BYTES` | the largest CSV file accepted, in bytes | `10000000` |
 | `WATTWISE_REGISTRY_ROOT` | the model registry `/inference/analyze` uses | `../artifacts/models` |
+| `WATTWISE_EVALUATION_ROOT` | recorded `chosen.json` and `seasonal-naive-1w.json` reports for the Model lab | `../data/processed/evaluation/fullscale/test` |
 
 The database URL carries a password: keep it in an untracked file, never in the repository.
 `backend/.env` is git-ignored; run commands with `uv run --env-file .env ...` to load it. See
@@ -105,6 +106,7 @@ The database URL carries a password: keep it in an untracked file, never in the 
 | POST | `/api/v1/inference/analyze` | Multipart `readings`, `buildings` and optional `weather` CSV files: each meter's readings with the model's expectation, and the default detector's alerts. At most 200,000 readings and 50 meters. Not stored; nothing retrained. |
 | GET | `/api/v1/models/metadata` | The promoted model's verified metadata, or `available: false` with a reason. |
 | GET | `/api/v1/models/metrics` | Its validation and test metrics as recorded at training time, with windows and definitions, or `available: false`. |
+| GET | `/api/v1/models/evaluation` | Recorded test baseline and model errors, with per-building errors (`q` matches a building identifier, case-insensitive; `limit` 1–200, `offset`). Reports must match the served model's data fingerprint, split, settings and recorded test metrics; absent or mismatched reports return `available: false`. Each forecaster uses its available predictions, so row coverage may differ. No training or evaluation runs inside the request. |
 | GET | `/api/v1/analysis-runs` | One monitoring record per analysis, newest first (`model_version` filter). |
 | GET | `/api/v1/ready` | Readiness: 200 when the database is reachable and migrated to the head revision; 503 otherwise, naming the reason (`not_configured`, `unreachable`, `schema_outdated`) and never the connection details. |
 

@@ -6,6 +6,7 @@ import { ExplorerPage } from './pages/ExplorerPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { ImpactPage } from './pages/ImpactPage';
 import { OverviewPage } from './pages/OverviewPage';
+import { ModelsPage } from './pages/ModelsPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
 import { AppShell } from './shell/AppShell';
 
@@ -38,6 +39,8 @@ function Routes() {
         <AlertsPage summary={route.summary} />
       ) : route.path === '/impact' ? (
         <ImpactPage summary={route.summary} />
+      ) : route.path === '/models' ? (
+        <ModelsPage summary={route.summary} />
       ) : (
         <PlannedPage route={route} />
       )}

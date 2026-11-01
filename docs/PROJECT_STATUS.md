@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-10-31 · **Current milestone:** M10 — Frontend workflows
+**Last updated:** 2026-11-01 · **Current milestone:** M10 — Frontend workflows
 
 ## Summary
 
@@ -338,8 +338,8 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 - **Design system and shell (T028, D050):** the frontend now has colour tokens with light, dark and
   system themes, a header with skip link and main navigation, and five pages (Overview, Buildings &
-  meters, Alerts, Cost impact, Model lab). Pages that later tasks build say "Not built yet" and name
-  the task; no page shows invented data.
+  meters, Alerts, Cost impact, Model lab). All five workflows are implemented locally; no page
+  shows invented data.
   - **Provenance is always visible:** a demo-data banner appears on every page while synthetic data
     is stored, and badges mark Synthetic, Observed and Uploaded in words, not colour alone.
   - **Accessibility is tested:** every text/background pair meets 4.5:1 contrast in both themes, and
@@ -442,14 +442,18 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. Waiting for the owner to continue.
+**T033 — Model evaluation lab, dataset and model information:** implemented locally. The Model
+lab shows recorded errors, baseline coverage, building metrics, metadata, dataset missingness and
+analysis history. Backend validation passed (876 tests); all 259 frontend tests, lint, formatting,
+type checks and the production build pass. Browser visual verification and a commit/push
+checkpoint remain outstanding. No new model
+training is needed. See WORK_LOG for the final check results and verification limits.
 
 ## Next task
 
-**T033 — Model evaluation lab, dataset and model information** (M10): baseline comparisons,
-evaluation windows, per-building metrics, training metadata, dataset health and recent uploads,
-with explicit warnings where metrics are unavailable. See
-[ROADMAP.md](ROADMAP.md#t033--model-evaluation-lab-dataset-and-model-information).
+After the T033 checkpoint: **T034 — API integration and pipeline end-to-end tests** (M11): a
+fixture-to-persistence-to-API pipeline test against a clean PostgreSQL schema, running in CI. Then
+T035 evaluates browser end-to-end coverage for the key frontend flows.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and

@@ -11,7 +11,7 @@ src/
   design/chart/ hand-written SVG charts and their tested arithmetic (D052)
   features/     feature folders: components, hooks and their tests, side by side
                 (`summary/` shares dashboard data; `alerts/` investigates; `impact/` configures a scenario)
-  pages/        overview, explorer, alert and impact workflows, planned pages and the not-found page
+  pages/        overview, explorer, alert, impact and model workflows, and the not-found page
   shell/        the application frame: header, navigation, theme switch
   test/         test setup and shared test helpers
   App.tsx       routing and composition
@@ -33,6 +33,18 @@ Every page marks where its data comes from with `ProvenanceBadge`, and the shell
 The impact page keeps its optional tariff scenario in the URL (`tariff_geography`, `currency`,
 `rate_per_kwh`) and does not save it. Published rates are explicit choices, while missing tariff or
 carbon factors remain labelled "not configured" rather than receiving a client-side default.
+
+The Model lab (`/models`) shows the served model's training metadata, chronological evaluation
+windows, recorded validation/test errors, and paginated building errors and analysis history.
+The baseline comparison uses the backend's saved evaluation reports; it shows each forecaster's
+scored and missing-prediction counts because the rows can differ. It does not calculate a common-row
+improvement from those separate scores. Building search and page offsets are kept in the URL.
+
+Dataset health shows ingestion counts, missing values and the stored time range, with provenance
+per dataset. Missing share describes stored rows, not absent hours. Duplicate, gap, flatline and
+out-of-range audit results are explicitly unavailable here because the API does not retain them.
+Recent uploads are analysis monitoring records: uploaded readings and filenames are not retained.
+Each resource has its own loading, empty, unavailable and retry state; missing metrics stay absent.
 
 ## Setup
 

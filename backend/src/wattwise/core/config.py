@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     max_upload_bytes: int = Field(default=10_000_000, gt=0, le=100_000_000)
     #: The model registry `/inference/analyze` loads the promoted (`CURRENT`) model from.
     registry_root: Path = Path("../artifacts/models")
+    evaluation_root: Path = Path("../data/processed/evaluation/fullscale/test")
 
     @field_validator("database_url")
     @classmethod

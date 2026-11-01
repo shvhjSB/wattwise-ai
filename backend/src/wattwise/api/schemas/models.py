@@ -5,6 +5,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, Field
 
 from wattwise.api.schemas.catalog import UtcDatetime
+from wattwise.ml.evaluation import BuildingScore, Metrics
 
 #: Why a model's information is unavailable. Never replaced by made-up values.
 UnavailableReason = Literal["no_model_promoted", "model_invalid", "model_incompatible"]
@@ -74,3 +75,16 @@ class AnalysisRunOut(BaseModel):
     missing_values: int
     predictions: int
     alerts: int
+
+
+class EvaluationOut(BaseModel):
+    available: bool
+    version: str | None
+    message: str
+    baseline_name: str = "seasonal-naive-1w"
+    model_metrics: Metrics | None = None
+    baseline_metrics: Metrics | None = None
+    buildings: list[BuildingScore] = Field(default_factory=list)
+    total: int = 0
+    limit: int
+    offset: int

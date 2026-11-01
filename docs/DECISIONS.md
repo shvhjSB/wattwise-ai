@@ -1991,6 +1991,33 @@ links to the entry that replaces it.
 
 ---
 
+## D055 — Model lab displays recorded evaluation with explicit coverage and availability
+- **Date:** 2026-11-01 · **Task:** T033 · **Status:** Accepted
+- **Decision:**
+  - Saved T043 test reports supply the baseline and per-building breakdown through
+    `/models/evaluation`. The API checks the dataset fingerprint, split hash, model settings
+    (apart from the early-stopping tree limit), family, variant and reproduced test metrics
+    against the promoted artifact before exposing results. Missing or mismatched reports have an
+    explicit unavailable response. Requests do not train models or scan the readings table.
+  - Baseline and model errors use the predictions available to each forecaster. Scored and missing
+    prediction counts are visible; the UI does not infer a common-row percentage improvement.
+    Expected-consumption errors use observed weather and are labelled accordingly.
+  - Dataset health uses stored ingestion totals and per-dataset provenance. Missing share is
+    missing values divided by stored rows; absent hours are not part of that denominator.
+    Duplicate, gap, flatline and out-of-range audits are not retained by the API and remain
+    explicitly unavailable. Analysis records represent recent uploads without retaining their
+    contents or filenames, and unrecorded analyses cannot appear in the history.
+  - Panels load independently and validate responses. Version disagreements hide results rather
+    than mixing metadata and metrics. Building filters and pagination are shareable URL state.
+- **Alternatives considered:** computing evaluation on demand would repeat expensive analysis;
+  displaying the saved reports without checking the model could misattribute stale results;
+  treating absent quality audits as zero would imply checks that were never stored.
+- **Consequences:** a deployment must provide matching report files under
+  `WATTWISE_EVALUATION_ROOT` to expose the breakdown. Persisting detailed quality audits and upload
+  contents requires a separate task and retention decision.
+
+---
+
 ## Open decisions (tracked in tasks)
 
 | Topic | Decide in | Notes |

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
+from pydantic import ValidationError
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -14,6 +15,7 @@ from wattwise.api.schemas.catalog import Page
 from wattwise.api.schemas.models import (
     METRIC_DEFINITIONS,
     AnalysisRunOut,
+    EvaluationOut,
     ModelMetadataOut,
     ModelMetricsOut,
     RoleMetrics,
@@ -21,6 +23,7 @@ from wattwise.api.schemas.models import (
 )
 from wattwise.core.config import Settings
 from wattwise.db.models import AnalysisRun
+from wattwise.ml.evaluation import EvaluationReport
 from wattwise.ml.registry import (
     IncompatibleModelError,
     Metadata,
@@ -29,6 +32,7 @@ from wattwise.ml.registry import (
     current,
     verify,
 )
+from wattwise.ml.splits import Role
 
 router = APIRouter(tags=["models"])
 
@@ -119,6 +123,82 @@ def model_metrics(
     ]
     return ModelMetricsOut(
         version=metadata.version, roles=roles, definitions=METRIC_DEFINITIONS, note=METRICS_NOTE
+    )
+
+
+@router.get("/models/evaluation", summary="Recorded test baseline and per-building errors")
+def model_evaluation(
+    settings: Annotated[Settings, Depends(get_app_settings)],
+    limit: Limit = 25,
+    offset: Offset = 0,
+    q: str = "",
+) -> EvaluationOut:
+    metadata = promoted(settings.registry_root)
+    version = None if isinstance(metadata, Unavailable) else metadata.version
+
+    def unavailable(message: str) -> EvaluationOut:
+        return EvaluationOut(
+            available=False, version=version, message=message, limit=limit, offset=offset
+        )
+
+    if isinstance(metadata, Unavailable):
+        return unavailable(metadata.message)
+    try:
+        reports = [
+            EvaluationReport.model_validate_json(
+                (settings.evaluation_root / filename).read_text(encoding="utf-8")
+            )
+            for filename in ("chosen.json", "seasonal-naive-1w.json")
+        ]
+        for report in reports:
+            if (
+                report.data.fingerprint != metadata.training.data_fingerprint
+                or report.split.get("config_sha256") != metadata.training.split_config_sha256
+            ):
+                return unavailable(
+                    "Evaluation reports do not match the served model's data and split."
+                )
+        chosen, baseline = reports
+        expected = {
+            key: value for key, value in metadata.model.settings.items() if key != "n_estimators"
+        }
+        if (
+            any(chosen.forecaster.params.get(key) != value for key, value in expected.items())
+            or chosen.forecaster.params.get("family") != metadata.model.family
+            or chosen.forecaster.params.get("variant") != metadata.model.variant
+            or baseline.forecaster.name != "seasonal-naive-1w"
+        ):
+            return unavailable("Evaluation reports describe another model or baseline.")
+        scores = [
+            next(score for score in report.scores if score.role is Role.TEST) for report in reports
+        ]
+        if any(
+            scores[0].overall.model_dump().get(key) != value
+            for key, value in metadata.metrics.get("test", {}).items()
+        ) or not metadata.metrics.get("test"):
+            return unavailable(
+                "The evaluation report does not reproduce the served model's test metrics."
+            )
+    except (OSError, ValidationError, StopIteration):
+        return unavailable(
+            "Recorded baseline and building evaluation reports are unavailable or invalid."
+        )
+    buildings = sorted(
+        (score for score in scores[0].per_building if q.casefold() in score.building_id.casefold()),
+        key=lambda score: score.building_id,
+    )
+    return EvaluationOut(
+        available=True,
+        version=version,
+        message="Recorded test errors on the same data and split. Each forecaster is scored on its "
+        "available predictions; row coverage can differ. These are expected-consumption errors "
+        "using observed weather, not future-weather forecast accuracy.",
+        model_metrics=scores[0].overall,
+        baseline_metrics=scores[1].overall,
+        buildings=buildings[offset : offset + limit],
+        total=len(buildings),
+        limit=limit,
+        offset=offset,
     )
 
 

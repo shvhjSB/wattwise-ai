@@ -74,15 +74,15 @@ describe('App shell', () => {
     expect(screen.getAllByRole('link', { current: 'page' })).toHaveLength(1);
   });
 
-  it('says plainly that a later page is not built yet, and which task builds it', () => {
+  it('opens the model lab with its loading states', () => {
     stubApi([]);
     window.history.replaceState(null, '', '/models');
 
     render(<App />);
 
     expect(screen.getByRole('heading', { level: 2, name: 'Model lab' })).toBeInTheDocument();
-    expect(screen.getByText('Not built yet')).toBeInTheDocument();
-    expect(screen.getByText(/roadmap task T033/)).toBeInTheDocument();
+    expect(screen.getByText('Loading served model...')).toBeInTheDocument();
+    expect(screen.queryByText('Not built yet')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'API connection' })).not.toBeInTheDocument();
   });
 

@@ -7,6 +7,12 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Model lab with recorded validation/test metrics, UTC evaluation windows, training metadata,
+  baseline row coverage, searchable per-building errors, dataset missingness and recent upload
+  analysis records. Resources load independently with explicit missing/error/retry states. (T033)
+- `GET /api/v1/models/evaluation` serves saved test reports only when they match the served
+  model's data, split, settings and recorded metrics; `WATTWISE_EVALUATION_ROOT` configures the
+  report folder. The endpoint never trains or scores a model. (T033)
 - Repository hygiene: `.gitignore` (secrets, datasets, model artifacts, local databases),
   `.gitattributes` (LF normalisation), `.editorconfig`. (T001)
 - Project records: roadmap, project status, decisions log, work log, this changelog. (T001)

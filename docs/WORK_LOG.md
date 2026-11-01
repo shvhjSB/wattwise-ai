@@ -2501,3 +2501,40 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   **250 passed** (242 before, 8 new).
 - Backend: `uv lock --check`, ruff format/check and strict mypy are clean; `pytest -W error`
   **868 passed** (863 before, 5 new).
+
+---
+
+## 2026-11-01 — T033 Model evaluation lab, dataset and model information (local implementation)
+
+**Implemented**
+- `/models` replaces the last planned frontend page with served-model metadata, recorded
+  validation/test metrics and UTC windows, metric definitions, baseline comparison, searchable
+  paginated building errors, per-dataset ingestion/missingness, and recent upload analysis records.
+- Panels load independently with runtime-validated responses, loading, retry, empty and explicit
+  unavailable states. Version disagreements hide metrics. Filters and both pagers use URL state.
+- `GET /api/v1/models/evaluation` reads saved reports from `WATTWISE_EVALUATION_ROOT`, checking the
+  data fingerprint, split, model settings/family/variant and reproduced test metrics. Missing or
+  stale reports return unavailable; no training or evaluation runs during the request (D055).
+- Baseline/model coverage counts remain visible because each score uses its available predictions.
+  No common-row improvement is inferred. Dataset missingness describes stored rows, and quality
+  audits the API does not retain are marked unavailable. Upload history does not retain files.
+
+**Validation** (Windows)
+- Backend: Ruff check/format and strict mypy passed; the complete pytest run against the configured
+  local test database passed **876 tests** in 395.88 s (868 before, 8 added). Focused evaluation
+  endpoint tests: **8 passed**. Dependencies and lockfile were unchanged.
+- Frontend: ESLint with zero warnings, Prettier, `tsc -b` and production build passed. Vitest with
+  `--maxWorkers=2`: **259 passed** across 23 files in 58.09 s (250 before, 9 added).
+- The earlier unrestricted parallel run had one existing Explorer test exceed its 5 s timeout;
+  all tests passed with two workers. No Explorer implementation or timeout settings were changed.
+- Local HTTP smoke check: `/models` returned 200, and `/api/v1/models/evaluation?limit=1` matched
+  promoted artifact `20261027T121334Z-eeec81e9592c`, returned one of 1,148 building records, and
+  reported model MAE 13.720335 and baseline MAE 15.720365 (separate available-row populations).
+- Browser visual verification could not be completed: Computer Use stopped because it could not
+  determine the current Windows browser URL reliably enough to enforce its policy. HTTP and
+  component tests do not substitute for a visual review; no visual-pass claim is made.
+
+**Checkpoint**
+- Implementation and project records remain local, uncommitted and unpushed. T033 remains
+  In progress under the roadmap's committed-and-pushed completion rule. A browser visual review
+  remains open; T034 is the next implementation task after the T033 checkpoint.

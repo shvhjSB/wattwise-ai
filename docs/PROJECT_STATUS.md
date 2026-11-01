@@ -442,20 +442,22 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T033 | Model evaluation lab, dataset and model information | 2026-11-01 |
 | T034 | API integration and pipeline end-to-end tests | 2026-11-01 |
 | T035 | Browser end-to-end tests for key flows | 2026-11-01 |
+| T036 | Dockerfiles and Docker Compose | 2026-11-01 |
 
 ## Current task
 
-**T036 — Dockerfiles and Docker Compose:** API and Nginx images build locally; the separate
-synthetic PostgreSQL demo starts with health-gated migrations/initialization. HTTP smoke checks
-and nine browser scenarios pass through the actual Nginx/container API. Restart/recovery tests
-pass; final persistence, regression and CI verification are in progress.
+None. T036 is pushed as `010805b`; CI run `41324653540` passed backend, frontend and container
+jobs. Both images build locally and in CI; Compose startup, proxying, browser workflows and
+review/model persistence after recreation are verified. All 887 backend and 259 frontend tests
+pass. Nine browser scenarios pass through Compose and through the standalone runner. The local
+synthetic demo is running at `http://127.0.0.1:8080`; see CONTAINERS.md. Waiting for the next task.
 
 T033 and T034 are pushed with successful CI runs `41318517157` and `41319423663`. T035's browser
 tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-After T036: **T037 — Security hardening** (M12): request/CORS controls, safe errors and logging,
+**T037 — Security hardening** (M12): request/CORS controls, safe errors and logging,
 dependency audits and secret scanning in CI.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
@@ -478,7 +480,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 6 / 6 |
 | M11 Integration | T034–T035 | 2 / 2 |
-| M12 Operations and docs | T036–T039 | 0 / 4 |
+| M12 Operations and docs | T036–T039 | 1 / 4 |
 
 ## Blockers
 

@@ -63,7 +63,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T033 | Model evaluation lab, dataset and model information | M10 | T027, T028 | Done |
 | T034 | API integration and pipeline end-to-end tests | M11 | T026, T027 | Done |
 | T035 | Browser end-to-end tests for key flows | M11 | T031, T033 | Done |
-| T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | In progress |
+| T036 | Dockerfiles and Docker Compose | M12 | T023, T028 | Done |
 | T037 | Security hardening | M12 | T026 | Not started |
 | T038 | Deployment recipe and guide | M12 | T036 | Not started |
 | T039 | Final documentation | M12 | T034, T038 | Not started |
@@ -815,7 +815,10 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Implementation:** digest-pinned API/Nginx images, health-gated demo initialization and named
   PostgreSQL/artifact volumes. Shared initializer checkpoints prevent retraining/replacing reviews
   on restart. Source-only build context; no native database or real data mounts. CI exercises the
-  Compose stack with smoke/browser checks and container recreation. Final validation pending.
+  Compose stack with smoke/browser checks and container recreation. Commit `010805b` is pushed;
+  CI run `41324653540` passed all three jobs. Locally: 887 backend tests, 259 frontend tests, nine
+  container browser scenarios and nine standalone browser scenarios passed; restart persistence
+  is verified. Startup and operating instructions: [CONTAINERS.md](CONTAINERS.md).
 
 ### T037 — Security hardening
 - **Scope:**

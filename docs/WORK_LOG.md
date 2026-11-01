@@ -2652,6 +2652,15 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   with the same model, and the restored smoke check found its saved review and unchanged totals.
 - Backend Ruff/format/strict mypy pass; the full backend suite passed **887 tests** in 350.36 s
   (884 before, three added). Frontend ESLint/Prettier/TypeScript pass; **259 tests** pass in
-  37.38 s. Workflow actionlint passed. GitHub CI remains to verify before closing the task.
+  37.38 s. Workflow actionlint passed. The standalone browser runner also passed all nine scenarios
+  in 29.6 s after the initializer refactor and confirmed cleanup of its separate test schema.
+- Additional local HTTP checks confirmed the Impact API can read its packaged reference tables
+  and the building catalog contains all four synthetic buildings through Nginx.
+- Pushed `010805bed2bcb48e14a77a3d8acedab0c1d8be39` to `origin/main`; `git ls-remote` matched.
+  GitHub attributes author and committer to `shvhjSB`.
+- [CI run 41324653540](https://github.com/shvhjSB/wattwise-ai/actions/runs/41324653540) passed all
+  three jobs, including both image builds, startup, HTTP smoke, nine container browser scenarios,
+  full container recreation, model/review persistence and cleanup of the disposable CI volumes.
+- T036 is complete. Next: T037 security hardening.
 - Local `wattwise-demo` volumes and the running loopback demo are retained for the owner. No
   unrelated containers, host database data or user files were removed.

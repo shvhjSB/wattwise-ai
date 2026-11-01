@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-01 · **Current milestone:** M11 — Integration and end-to-end testing
+**Last updated:** 2026-11-01 · **Current milestone:** M12 — Operations and documentation (M11 complete)
 
 ## Summary
 
@@ -441,20 +441,22 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T032 | Cost-impact analysis and tariff configuration | 2026-10-31 |
 | T033 | Model evaluation lab, dataset and model information | 2026-11-01 |
 | T034 | API integration and pipeline end-to-end tests | 2026-11-01 |
+| T035 | Browser end-to-end tests for key flows | 2026-11-01 |
 
 ## Current task
 
-**T035 — Browser end-to-end tests for key flows:** nine Playwright scenarios pass against the
-production build, real API, isolated PostgreSQL schema and temporary model, across desktop
-light/dark and 390 CSS px mobile. Screenshots reviewed; a synthetic metric-provenance issue found
-by the review is fixed. Final regression checks and the CI checkpoint are being verified.
+None. T035 is pushed as `5ed01c8`; CI run `41321709833` passed all three jobs: **884 backend
+tests, 259 frontend tests and nine browser scenarios**. Desktop light/dark and 390 CSS px mobile
+screenshots reviewed; the discovered synthetic metric-provenance issue is fixed and covered by
+regressions. Build, lint, formatting, typing, the PostgreSQL pipeline guard and browser cleanup
+are verified. Waiting for the next task.
 
 T033 and T034 are pushed with successful CI runs `41318517157` and `41319423663`. T035's browser
 tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-After T035: **T036 — Dockerfiles and Docker Compose** (M12): API and frontend images, PostgreSQL,
+**T036 — Dockerfiles and Docker Compose** (M12): API and frontend images, PostgreSQL,
 health checks, migrations and a reproducible synthetic demo startup.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
@@ -476,7 +478,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
 | M10 Frontend workflows | T028–T033 | 6 / 6 |
-| M11 Integration | T034–T035 | 1 / 2 |
+| M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039 | 0 / 4 |
 
 ## Blockers

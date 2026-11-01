@@ -2606,4 +2606,11 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   provenance/fixture-safety focused run: **7 passed** in 2.27 s. Ruff check/format and strict mypy
   pass after the fix. After the client guard change, frontend ESLint, Prettier and `tsc -b` pass;
   all **259 Vitest tests** pass in 50.14 s. The browser runner's production build passes too.
-- CI verification of the final code is pending; T035 remains In progress until it passes.
+- Pushed commit `5ed01c8627a20cc82779c0597128d68e7350ba29` to `origin/main`; `git ls-remote`
+  matched. GitHub author and committer are both `shvhjSB`.
+- [CI run 41321709833](https://github.com/shvhjSB/wattwise-ai/actions/runs/41321709833) passed all
+  three jobs. Logs confirm **884 backend tests** (78.44 s), **259 frontend tests**, and **nine
+  Chromium scenarios** (9.1 s) with browser schema cleanup. These include the final provenance fix,
+  lint/format/type checks, production build and the PostgreSQL pipeline guard.
+- T035 and M11 are complete. T033's earlier visual-review gap is closed. Next: T036 Dockerfiles,
+  Compose and a reproducible synthetic demo startup. Firefox/WebKit remain outside this checkpoint.

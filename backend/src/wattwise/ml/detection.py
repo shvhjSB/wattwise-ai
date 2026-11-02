@@ -287,16 +287,30 @@ def rolling_same_hour(
     days: int = ROLLING_DAYS,
     min_days: int = ROLLING_MIN_DAYS,
     floor_fraction: float = 0.01,
+    statistic: str = "mean",
 ) -> tuple[pd.Series, pd.Series]:
     """Each reading's z-score against the same hour on the previous `days` days (past only),
-    and that mean. Both are indexed like `readings`; NaN with fewer than `min_days` days. The
-    standard deviation is at least `floor_fraction` of the mean's magnitude."""
+    and that centre. Both are indexed like `readings`; NaN with fewer than `min_days` days. The
+    scale is at least `floor_fraction` of the centre's magnitude.
+
+    `statistic="mean"` (the default detector) uses the mean and standard deviation;
+    `"median"` uses the median and the MAD scaled to a standard deviation (times 1.4826), so one
+    earlier anomaly in the window does not inflate the scale (T054)."""
+    if statistic not in ("mean", "median"):
+        raise ValueError(f"statistic must be 'mean' or 'median', not {statistic!r}")
     z = np.full(len(readings), np.nan)
     mean_out = np.full(len(readings), np.nan)
     for _, group in readings.groupby("meter_id", sort=True):
         hours = pd.date_range(group["timestamp"].min(), group["timestamp"].max(), freq="h")
         values = group.set_index("timestamp")["value"].reindex(hours).to_numpy(dtype=float)
         n = len(values)
+        position = hours.get_indexer(pd.DatetimeIndex(group["timestamp"]))
+        rows = readings.index.get_indexer(group.index)
+        if statistic == "median":
+            center, scale = _robust_same_hour(values, days, min_days, floor_fraction)
+            z[rows] = ((values - center) / scale)[position]
+            mean_out[rows] = center[position]
+            continue
         total = np.zeros(n)
         squares = np.zeros(n)
         count = np.zeros(n)
@@ -316,11 +330,33 @@ def rolling_same_hour(
         std = np.sqrt(np.clip(variance, 0.0, None))
         std = np.maximum(std, np.maximum(floor_fraction * np.abs(mean), 1e-9))
         score = (values - mean) / std
-        position = hours.get_indexer(pd.DatetimeIndex(group["timestamp"]))
-        rows = readings.index.get_indexer(group.index)
         z[rows] = score[position]
         mean_out[rows] = mean[position]
     return pd.Series(z, index=readings.index), pd.Series(mean_out, index=readings.index)
+
+
+def _robust_same_hour(
+    values: FloatArray, days: int, min_days: int, floor_fraction: float
+) -> tuple[FloatArray, FloatArray]:
+    """Median and scaled MAD of the same hour on the previous `days` days, for an hourly
+    series; NaN where fewer than `min_days` of those days have a reading."""
+    n = len(values)
+    past = np.full((n, days), np.nan)
+    for d in range(1, days + 1):
+        lag = 24 * d
+        if lag >= n:
+            break
+        past[lag:, d - 1] = values[:-lag]
+    enough = (~np.isnan(past)).sum(axis=1) >= min_days
+    center = np.full(n, np.nan)
+    scale = np.full(n, np.nan)
+    if enough.any():
+        window = past[enough]
+        middle = np.nanmedian(window, axis=1)
+        mad = MAD_TO_SIGMA * np.nanmedian(np.abs(window - middle[:, None]), axis=1)
+        center[enough] = middle
+        scale[enough] = np.maximum(mad, np.maximum(floor_fraction * np.abs(middle), 1e-9))
+    return center, scale
 
 
 def adaptive_scores(

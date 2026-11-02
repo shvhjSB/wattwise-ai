@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from wattwise import __version__
 from wattwise.api.dependencies import get_app_settings
@@ -12,6 +12,12 @@ from wattwise.core.config import Settings
 SERVICE_NAME = "wattwise-api"
 
 router = APIRouter(tags=["health"])
+
+
+@router.head("/health", include_in_schema=False)
+def health_head() -> Response:
+    """The liveness check for HEAD requests (uptime monitors often send HEAD)."""
+    return Response(status_code=200)
 
 
 @router.get("/health", summary="Liveness check")
@@ -25,4 +31,5 @@ def health(settings: Annotated[Settings, Depends(get_app_settings)]) -> HealthRe
         service=SERVICE_NAME,
         version=__version__,
         environment=settings.environment,
+        read_only=settings.read_only,
     )

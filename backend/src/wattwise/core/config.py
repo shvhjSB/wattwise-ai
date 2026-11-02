@@ -36,6 +36,10 @@ class Settings(BaseSettings):
     registry_root: Path = Path("../artifacts/models")
     evaluation_root: Path = Path("../data/processed/evaluation/fullscale/test")
     model_data_kind: Literal["observed", "synthetic"] = "observed"
+    #: The public demo (T046): refuse every API request that is not GET, HEAD or OPTIONS.
+    read_only: bool = False
+    #: A built frontend to serve on the same origin as the API (the single-service deployment).
+    static_dir: Path | None = None
 
     @field_validator("cors_origins")
     @classmethod

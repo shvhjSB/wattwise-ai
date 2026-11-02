@@ -8,7 +8,7 @@ from tests.conftest import SYNTHETIC_SAMPLE
 from wattwise.api.main import create_app
 from wattwise.core.config import Settings
 from wattwise.db.migrate import downgrade
-from wattwise.demo import initialize_demo
+from wattwise.demo import build_artifacts, initialize_demo
 from wattwise.ml.registry import versions
 
 
@@ -66,3 +66,36 @@ def test_demo_can_restore_a_fresh_database_from_its_existing_model(
     assert restored.model_version == first.model_version
     assert restored.readings == first.readings
     assert versions(tmp_path / "models") == [first.model_version]
+
+
+def test_a_model_built_without_a_database_seeds_it_without_training(
+    schema_engine: Engine, tmp_path: Path
+) -> None:
+    checkpoint = build_artifacts(SYNTHETIC_SAMPLE, tmp_path)
+    assert (tmp_path / "evaluation" / "chosen.json").exists()  # baked into the image (T046)
+
+    seeded = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path)
+
+    assert seeded.seeded is True
+    assert seeded.model_version == checkpoint.model_version
+    assert versions(tmp_path / "models") == [checkpoint.model_version]
+    assert build_artifacts(SYNTHETIC_SAMPLE, tmp_path) == checkpoint  # kept, not retrained
+
+
+def test_the_public_demo_replaces_a_demo_made_with_another_model(
+    schema_engine: Engine, tmp_path: Path
+) -> None:
+    old = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "old")
+    new = build_artifacts(SYNTHETIC_SAMPLE, tmp_path / "new")
+    assert new.model_version != old.model_version
+
+    kept = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new")
+    assert kept.seeded is False  # without the flag, existing data is never replaced
+
+    replaced = initialize_demo(
+        schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new", replace_stale=True
+    )
+    assert replaced.seeded is True
+    assert replaced.model_version == new.model_version
+    again = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new", replace_stale=True)
+    assert again.seeded is False  # up to date: a restart changes nothing

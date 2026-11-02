@@ -14,3 +14,6 @@ class HealthResponse(BaseModel):
     service: str = Field(description="Service identifier.")
     version: str = Field(description="Installed wattwise package version.")
     environment: Environment = Field(description="Deployment environment (WATTWISE_ENVIRONMENT).")
+    read_only: bool = Field(
+        False, description="True on the public demo: requests that change data answer 403."
+    )

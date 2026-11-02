@@ -70,6 +70,10 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017, T045 | Done |
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Done |
 | T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
+| T046 | Public read-only synthetic demo on Render | M12 | T036, T038 | Done (owner applies the Blueprint) |
+| T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Not started |
+| T048 | Data drift in the model lab | M10 | T033, T019b | Not started |
+| T049 | What-if (counterfactual) lab | M10 | T030, T032 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
@@ -859,6 +863,39 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
   `LICENSES.md` (data terms, and every shipped dependency's licence read from its own metadata,
   including psycopg's LGPL-3.0); `docs/DATASETS.md` brought up to date (acquired sources, a
   corrected row count, the owner's decisions recorded). Every relative link and anchor checked.
+
+## Added after the final review (2026-11-02)
+
+The owner asked for the remaining gaps against the original specification and a public deployment
+(D064). Deployment first, then the three UI gaps, one task at a time.
+
+### T046 — Public read-only synthetic demo on Render
+- **Scope:** a Render Blueprint (`render.yaml`, free plan), a single image serving the API and the
+  frontend, the demo model trained at build time, seeding at startup, `WATTWISE_READ_ONLY`.
+- **Acceptance:** the image passes `deploy/render/verify.sh` under 0.1 CPU and 512 MB, locally
+  and in CI; writes answer 403; only synthetic data is deployed.
+- **Done (2026-11-02):** as above. Applying the Blueprint needs the owner's Render account
+  (DEPLOYMENT.md); the live site is verified once its URL exists.
+
+### T047 — Dataset health: store and show the data-quality audit
+- **Why:** the specification's dataset-health page lists missing data, duplicate timestamps,
+  flatlines, out-of-range values and recent uploads. The model lab shows rows, missing values and
+  date ranges, but says the other audit results "are not retained by this API".
+- **Scope:** run the T008 quality engine when a dataset is loaded or uploaded, store its results,
+  serve them, and show them on a Dataset health page (with recent uploads).
+- **Acceptance:** every figure comes from the stored audit; empty and error states; tests.
+
+### T048 — Data drift in the model lab
+- **Scope:** per meter and month, how the recent inputs and residuals compare with the training
+  window (for example the shift in the level of consumption and in residual scale), from stored
+  data only, shown in the model lab with its definition.
+- **Acceptance:** drift is described, not called a failure; no figure without data; tests.
+
+### T049 — What-if (counterfactual) lab
+- **Scope:** for a meter and window, show recorded against expected consumption and let the user
+  change scenario parameters (for example the alert threshold, the interval level used for
+  potential excess, or a tariff) to see the effect, without changing stored data.
+- **Acceptance:** scenarios are labelled as such, history is never rewritten, tests.
 
 ## Added after T007b (supplementary data)
 

@@ -32,6 +32,12 @@ export function ApiHealthPanel() {
             <dd className="font-mono">{state.data.version}</dd>
             <dt className="text-muted">Environment</dt>
             <dd className="font-mono">{state.data.environment}</dd>
+            {state.data.read_only ? (
+              <>
+                <dt className="text-muted">Access</dt>
+                <dd>Read-only public demo</dd>
+              </>
+            ) : null}
           </dl>
         )}
       </div>

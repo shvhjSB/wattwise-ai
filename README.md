@@ -8,7 +8,9 @@ energy, cost and carbon, and lets an operator review each alert. It is built on 
 [Building Data Genome Project 2](#data-and-licences) (1,148 meters, 2016–2017), and says plainly
 what it does not know.
 
-> **Status.** Every roadmap task (T001–T045) is done ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> **Status.** The original roadmap (T001–T045) is done. A public, read-only demo of the
+> synthetic data is prepared for Render (T046, [how](docs/DEPLOYMENT.md#public-demo-on-render-t046-d064));
+> three UI additions (T047–T049) are planned ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
 > The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
 > has **no authentication**. Every result quoted below links to the section of
 > [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.

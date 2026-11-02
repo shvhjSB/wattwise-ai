@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Public read-only synthetic demo on Render (T046): `render.yaml` (free plan), one image
+  serving the API and the frontend (`deploy/render/Dockerfile`), the demo model trained at
+  build time, `WATTWISE_READ_ONLY`, a HEAD-capable health check, and
+  `deploy/render/verify.sh` (also in CI).
 - HKUST generalisation test (T041): `python -m wattwise.data.hkust` turns the campus's
   cumulative registers into hourly readings and fetches ERA5 weather; `python -m
   wattwise.ml.hkust_eval` scores the BDG2 model, not retrained, against the baselines

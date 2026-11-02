@@ -2,7 +2,8 @@
 
 **Status:** a deployment recipe, not a deployed service. No cloud resources, registry publication,
 DNS, TLS endpoint or remote host has been provisioned. The owner selected a private Docker host
-for T038. Local/CI verification uses only disposable synthetic data and is not evidence of
+for T038. The separate **public, read-only synthetic demo on Render** (T046) is described in
+[its own section](#public-demo-on-render-t046-d064). Local/CI verification uses only disposable synthetic data and is not evidence of
 real-building accuracy, production capacity or a hosted service.
 
 ## Boundary and prerequisites
@@ -281,6 +282,70 @@ It removes only resources it created after checking their ownership labels. It n
 owner's 8080 demo or uses the host PostgreSQL database. CI runs the same verifier after image and
 browser checks. Tests are synthetic; no registry push, remote host deployment, full-scale capacity
 test, disaster-recovery SLA or historical application-image rollback is claimed.
+
+## Public demo on Render (T046, D064)
+
+A separate, **public, read-only** deployment of the **synthetic demo only**, on Render's free
+plan, from [`render.yaml`](../render.yaml). It is not the private recipe above and shares nothing
+with it. Status: the Blueprint and image are built and verified (below); the site exists only
+once the owner applies the Blueprint in their Render account.
+
+**What is public:** the committed synthetic sample (4 buildings, 8 weeks, generated, not
+measured), a model trained on it inside the image, its alerts, expectations and evaluation. No
+BDG2, LEAD, Building 59 or HKUST data or model is deployed. Every page shows the synthetic-data
+banner.
+
+**Read-only:** `WATTWISE_READ_ONLY=true`. Every API request other than GET, HEAD and OPTIONS
+answers 403 with a plain reason, so reviews, uploads and analyses are off; the review form shows a
+notice instead. There are no accounts or logins. Request-size and time limits (D059) still apply.
+
+**How it runs:** one Docker web service (`deploy/render/Dockerfile`) serves the API and the
+built frontend on the same origin (no CORS), plus one free Render Postgres reachable only on
+Render's private network (`ipAllowList: []`). The demo model is trained at image build time; at
+startup `python -m wattwise.public_demo` converts Render's `DATABASE_URL`, seeds an empty
+database (or replaces a demo made by an older model), then serves on `$PORT`.
+
+### Set it up (owner, once)
+
+1. Sign in at <https://dashboard.render.com> with the GitHub account `shvhjSB` and allow Render
+   to read the repository `shvhjSB/wattwise-ai`.
+2. **New → Blueprint**, choose `shvhjSB/wattwise-ai`, branch `main`. Render reads `render.yaml`
+   and proposes the web service `wattwise-demo` and the database `wattwise-demo-db`, both free.
+3. **Apply.** The first deploy builds the image (a few minutes) and starts it; the first start
+   seeds the database (about 1.5 minutes at the free plan's 0.1 CPU, measured locally).
+4. Open the service URL Render shows (`https://wattwise-demo....onrender.com`). Later pushes to
+   `main` redeploy automatically **after GitHub CI passes** (`autoDeployTrigger: checksPass`).
+
+### Keep it awake with UptimeRobot (optional)
+
+A free web service sleeps after 15 minutes without traffic and takes about a minute to wake
+(Render's docs; our container then needs about 70 s at 0.1 CPU). A monitor that requests it
+every 5 minutes keeps it awake:
+
+- <https://uptimerobot.com> → **New monitor** → type **HTTP(s)**, URL
+  `https://<your-service>.onrender.com/api/v1/health`, interval **5 minutes**. HEAD and GET both
+  answer 200.
+- Budget: Render gives 750 free instance hours per workspace per month; one service awake all
+  month uses at most 744. **Do not run a second free web service** in the same workspace, or the
+  hours run out and Render suspends all free services until the next month.
+
+### Free-plan limits (Render's docs, checked 2026-11-02)
+
+| Limit | Effect here | What to do |
+|---|---|---|
+| Free Postgres **expires 30 days after creation**; 14-day grace, then deleted; no backups; 1 GB | The demo stops with a database error after 30 days | Delete the expired database and re-apply the Blueprint (or create `wattwise-demo-db` again); the next start reseeds it. Nothing is lost: the data is synthetic and the site is read-only |
+| One free Postgres per workspace | | Do not create another |
+| 0.1 CPU, 512 MB | First start about 1.5 min, restart about 1.2 min, 170-195 MB used (local runs with the same limits) | |
+| Ephemeral filesystem | Runtime files vanish on restart | The model and reports are baked into the image |
+| Sleep after 15 min idle | First visit after idle waits about a minute | UptimeRobot (above), within the hour budget |
+
+### Verify
+
+- Locally and in CI: `bash deploy/render/verify.sh` builds the image and runs it with
+  `--cpus 0.1 --memory 512m`, a platform-style `DATABASE_URL` and `PORT=10000`; it checks seeding,
+  the frontend, the synthetic data, the evaluation, a refused review (403), security headers, and
+  that a restart does not reseed. It removes only its own `wwverify-*` resources.
+- Live: `curl https://<your-service>.onrender.com/api/v1/health` must show `"read_only":true`.
 
 ## References
 

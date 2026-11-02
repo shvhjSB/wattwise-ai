@@ -2,6 +2,7 @@ import { useState, type SyntheticEvent } from 'react';
 
 import { addAlertFeedback, FEEDBACK_LABELS, type FeedbackLabel } from '../../api/alerts';
 import { ApiError } from '../../api/client';
+import { useReadOnly } from '../health/useReadOnly';
 import { sentence } from './format';
 
 const DESCRIPTIONS: Record<FeedbackLabel, string> = {
@@ -12,6 +13,7 @@ const DESCRIPTIONS: Record<FeedbackLabel, string> = {
 };
 
 export function FeedbackForm({ alertId, onSaved }: { alertId: number; onSaved: () => void }) {
+  const readOnly = useReadOnly();
   const [label, setLabel] = useState<FeedbackLabel>('needs_investigation');
   const [note, setNote] = useState('');
   const [reviewer, setReviewer] = useState('');
@@ -38,6 +40,15 @@ export function FeedbackForm({ alertId, onSaved }: { alertId: number; onSaved: (
       },
     );
   };
+
+  if (readOnly) {
+    return (
+      <p role="note" className="rounded-lg border border-edge bg-raised p-3 text-sm text-muted">
+        This public demo is read-only, so reviews cannot be recorded here. Run WattWise locally to
+        try the review workflow.
+      </p>
+    );
+  }
 
   return (
     <form onSubmit={submit} className="space-y-4">

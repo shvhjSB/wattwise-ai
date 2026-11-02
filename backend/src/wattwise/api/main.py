@@ -12,6 +12,7 @@ from sqlalchemy.exc import OperationalError
 from starlette.middleware.cors import CORSMiddleware
 
 from wattwise import __version__
+from wattwise.api.public import ReadOnlyMiddleware, SecurityHeadersMiddleware, mount_frontend
 from wattwise.api.routes import alerts, catalog, dashboard, health, impact, models, ready, uploads
 from wattwise.api.security import RequestLimitsMiddleware, configure_access_logging
 from wattwise.core.config import Settings, get_settings
@@ -57,6 +58,10 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
         timeout_seconds=settings.request_timeout_seconds,
         max_concurrent=settings.max_concurrent_requests,
     )
+    if settings.read_only:
+        app.add_middleware(ReadOnlyMiddleware)
+    if settings.static_dir is not None:
+        app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=list(settings.cors_origins),
@@ -73,6 +78,8 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     app.include_router(impact.router, prefix=API_V1_PREFIX)
     app.include_router(uploads.router, prefix=API_V1_PREFIX)
     app.include_router(models.router, prefix=API_V1_PREFIX)
+    if settings.static_dir is not None:
+        mount_frontend(app, settings.static_dir)
     return app
 
 

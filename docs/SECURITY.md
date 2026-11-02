@@ -1,7 +1,9 @@
 # Security controls and limits
 
 T037 hardens the demo/API; it does **not** make an authenticated public service. Keep the
-Compose deployment loopback-only. Before exposing private building data or feedback writes,
+Compose deployment loopback-only. The one public deployment (T046, D064) is the synthetic demo in
+**read-only mode** (`WATTWISE_READ_ONLY=true`): every API request other than GET, HEAD and
+OPTIONS answers 403, it holds no real or private data, and it has no accounts. Before exposing private building data or feedback writes,
 add authentication/authorization, TLS, edge rate limits and a deployment-specific origin policy.
 CORS only controls browser response access: it neither authenticates callers nor prevents
 non-browser requests or cross-origin simple POSTs. No cookies or credentialed CORS are enabled.

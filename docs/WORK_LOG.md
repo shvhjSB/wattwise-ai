@@ -2971,3 +2971,39 @@ The owner asked for T040's limits to be fixed before T041.
 **Validation**
 - Ruff, format, strict mypy; 17 new tests (synthetic workbooks, registers, resets, metadata,
   weather parsing and fetching, the split, baselines, common-row and per-meter comparisons).
+
+---
+
+## 2026-11-02 — T046 Public read-only synthetic demo on Render
+
+**Owner's choices** (asked before building): synthetic data only, read-only, Render free plan,
+deployment before the UI tasks; later, UptimeRobot to keep it awake. Recorded in D064, with
+T047–T049 added to the roadmap for the three gaps found in the final review.
+
+**Render's rules** (read from render.com/docs on 2026-11-02): free web services sleep after 15
+minutes, wake in about a minute, have 0.1 CPU and 512 MB, no disk and an ephemeral filesystem;
+750 free hours per workspace per month; free Postgres expires after 30 days (14-day grace, then
+deleted), one per workspace, 1 GB, no backups; `PORT` defaults to 10000.
+
+**Built**
+- `WATTWISE_READ_ONLY` (403 for every API request other than GET, HEAD, OPTIONS), `read_only` in
+  `/health`, and a notice in place of the review form.
+- `WATTWISE_STATIC_DIR`: the API serves the built frontend with the SPA fallback and the Nginx
+  security headers; files outside the folder are never served.
+- `wattwise.demo --build-only` (model, reports and checkpoint without a database) and
+  `replace_stale`; `wattwise.public_demo` (Render's `DATABASE_URL`, seeding, `$PORT`).
+- `deploy/render/Dockerfile`, `render.yaml`, `deploy/render/verify.sh`, and a CI job running it.
+
+**Found by the verifier**
+- `HEAD /` answered 405 (the frontend route was GET-only). Uptime monitors often use HEAD, so the
+  frontend route and `/api/v1/health` now answer HEAD; adding HEAD to the documented health route
+  duplicated its OpenAPI operation, so a separate, undocumented HEAD route is used.
+
+**Validation**
+- Image under `--cpus 0.1 --memory 512m`: first start 98 s (seeding), restart 72 s (no reseed),
+  171 MB; pages, synthetic data, evaluation, 403 on writes and headers checked; a real browser
+  showed the alerts page with the read-only notice and no save button.
+- Backend and frontend suites (see the commit); actionlint was not run (pulling its unpinned
+  container image was refused), so CI is the workflow check.
+- **Not done here:** applying the Blueprint needs the owner's Render account; the live URL is
+  verified once it exists.

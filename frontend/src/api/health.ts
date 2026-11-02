@@ -8,6 +8,8 @@ export interface HealthResponse {
   service: string;
   version: string;
   environment: DeploymentEnvironment;
+  /** True on the public demo: requests that change data are refused. Older APIs omit it. */
+  read_only?: boolean;
 }
 
 const ENVIRONMENTS: readonly unknown[] = ['development', 'test', 'production'];
@@ -19,7 +21,8 @@ export function isHealthResponse(value: unknown): value is HealthResponse {
     candidate.status === 'ok' &&
     typeof candidate.service === 'string' &&
     typeof candidate.version === 'string' &&
-    ENVIRONMENTS.includes(candidate.environment)
+    ENVIRONMENTS.includes(candidate.environment) &&
+    (candidate.read_only === undefined || typeof candidate.read_only === 'boolean')
   );
 }
 

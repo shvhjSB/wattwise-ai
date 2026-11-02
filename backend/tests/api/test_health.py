@@ -17,6 +17,7 @@ def test_health_reports_liveness(client: TestClient) -> None:
         "service": "wattwise-api",
         "version": __version__,
         "environment": "test",
+        "read_only": False,
     }
 
 

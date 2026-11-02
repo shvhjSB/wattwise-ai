@@ -1,0 +1,32 @@
+# Render Blueprint: the public, read-only WattWise demo on Render's free plan (T046, D064).
+# It shows explicitly synthetic data only; no BDG2, LEAD, Building 59 or HKUST data is deployed.
+# Setup and limits: docs/DEPLOYMENT.md#public-demo-on-render
+
+services:
+  - type: web
+    name: wattwise-demo
+    runtime: docker
+    plan: free
+    region: oregon
+    dockerfilePath: ./deploy/render/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    autoDeployTrigger: checksPass # deploy only after GitHub CI passes
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: wattwise-demo-db
+          property: connectionString
+      - key: WATTWISE_READ_ONLY
+        value: "true"
+      - key: WATTWISE_ENVIRONMENT
+        value: production
+
+databases:
+  - name: wattwise-demo-db
+    plan: free
+    region: oregon
+    databaseName: wattwise_demo
+    user: wattwise
+    postgresMajorVersion: "18"
+    ipAllowList: [] # private network only: no connections from the internet

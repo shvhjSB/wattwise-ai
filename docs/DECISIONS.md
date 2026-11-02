@@ -2201,6 +2201,30 @@ links to the entry that replaces it.
 - **Committed:** the report and per-meter statistics (derived from CC0 data); never the data.
 - **Scope:** reported separately from BDG2; it changes no BDG2 figure and promotes nothing.
 
+## D064 — A public, read-only synthetic demo on Render's free plan
+- **Date:** 2026-11-02 · **Task:** T046 · **Status:** Accepted (owner's choices)
+- **Owner's choices:** public on Render; **synthetic demo data only** (no BDG2-, LEAD-, Building
+  59- or HKUST-derived data or model, so D014 and D022 are untouched); **read-only** for
+  visitors; Render's **free plan**; deployment before the remaining UI tasks. UptimeRobot may keep
+  it awake (owner's suggestion).
+- **Read-only, not authenticated:** `WATTWISE_READ_ONLY=true` refuses every API request other than
+  GET, HEAD and OPTIONS with 403. There is nothing private to protect and no write to abuse, so no
+  accounts are added. Authentication remains a prerequisite for any deployment with real data or
+  writes (SECURITY.md).
+- **One service:** the API serves the built frontend on the same origin (`WATTWISE_STATIC_DIR`),
+  with the Nginx security headers. No CORS configuration, no coupling between two Render URLs,
+  and one service within the 750 free hours.
+- **Build-time model, startup seeding:** the free plan has no disk and 0.1 CPU, so the demo model
+  and its reports are trained into the image (`wattwise.demo --build-only`). At startup an empty
+  database is seeded; a stored demo from another model is dropped and reseeded
+  (`replace_stale`, only for a database holding the synthetic demo alone). This is the one place
+  a migration downgrade runs, on disposable synthetic data; the private recipe still never
+  downgrades (D060).
+- **Free database expiry:** after 30 days the database is recreated by the owner and reseeds
+  itself; no backup is needed because nothing in it is unique.
+- **Deploys after CI:** `autoDeployTrigger: checksPass`, and CI builds and verifies the image under
+  the free plan's limits (`deploy/render/verify.sh`).
+
 ---
 
 ## Open decisions (tracked in tasks)

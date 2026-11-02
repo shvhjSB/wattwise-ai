@@ -3138,3 +3138,39 @@ before starting: re-score the promoted model (no retraining), and upgrade the lo
 **Fixed in the records (docs only):** PROJECT_STATUS's milestone header, a broken DECISIONS
 anchor, DEPLOYMENT's wrong statement about the Cost impact tariff on the static demo, and the
 undocumented HTTP 404 status of deep links on GitHub Pages. No application code changed.
+
+---
+
+## 2026-11-02 — T052 Production architecture and hosting decision
+
+T051 was pushed as `9e89e38`; CI run 41427992623 passed all five jobs and Pages run 41428548135
+published it.
+
+**Owner's answers:** no BDG2 on the server; public, really working and **at no cost**.
+
+**Measured**
+- API memory with Windows process counters: 213 MiB after imports, **279 MiB peak** after 86
+  read-only requests on real BDG2 data. Upload analysis at its limits (48 meters, 193,536 rows)
+  answered 200 in 20 s with a **552 MiB peak**. So 512 MB plans fit read-only use but not uploads
+  at the limits.
+- Linux Python environment in the public image: **623 MB** (`du`; pyarrow 167 MB is the largest).
+- Database sizes: BDG2's evaluation window alone is 5.84 M readings, about 2.4 GB; full HKUST is
+  about 5.4 GB (estimate at 309 bytes per stored reading); an uploaded reading is 81.7 CSV bytes.
+
+**Prices and terms read (2026-11-02):**
+- Vercel limitations, Hobby, Python runtime and pricing pages.
+- Neon pricing and plans; Supabase pricing and billing.
+- Render pricing, Railway, Hetzner, DigitalOcean, Koyeb, Fly.io, Hugging Face, Azure for
+  Students.
+- Pyodide package lists.
+
+**Decision (D070):**
+- Vercel Hobby with Neon Free, both $0 and card-free by their pages. Pages stays as the
+  fallback.
+- CC0 data only on public servers, if the owner wants real data there (T053).
+- Read-only until T058.
+- Recorded in the [decision report](reports/t052-hosting-decision.md). T053, T058 and T059
+  were refined with the consequences.
+
+**Not done:** nothing was provisioned or signed up for; "no card" is the providers' statement
+and is first tested when the owner signs up in T059. No application code changed.

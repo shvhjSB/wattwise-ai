@@ -2301,6 +2301,43 @@ links to the entry that replaces it.
   database.
 - **Not in M13:** residential disaggregation (a separate M14 proposal if wanted).
 
+## D070 — Public hosting at no cost: Vercel Hobby with Neon Free, no BDG2 on any server
+- **Date:** 2026-11-02 · **Task:** T052 · **Status:** Accepted (owner's constraints); not yet
+  deployed. Evidence: [reports/t052-hosting-decision.md](reports/t052-hosting-decision.md).
+- **Owner's answers:** no BDG2 on the server; "deploy publicly with proper real world working
+  website without any cost".
+- **Choice:**
+  - **Vercel Hobby** serves the built frontend and the FastAPI app (one Python function) on one
+    origin.
+  - **Neon Free** is the PostgreSQL database (1 GB, "no credit card required", not paused for
+    inactivity).
+  - The live **GitHub Pages** snapshot (D068) stays as the fallback.
+  - The full real-data application (BDG2, LEAD) runs only on the owner's machine.
+- **Why:** it is the only combination found that runs the real backend and database for $0
+  without a card:
+  - Render, Koyeb and Fly.io ask for a card.
+  - Hugging Face Docker Spaces need a paid plan.
+  - A VPS or Render's paid plans cost $6 to $25 a month.
+  - Railway's $1 monthly credit lasts about 11 days of the API's measured memory.
+  - Supabase Free pauses after a week of inactivity.
+  - The owner's PC with a tunnel was declined (D068).
+  - Browser-side Python (Pyodide) ships pandas 2.3.3 and LightGBM 4.6.0, while WattWise needs
+    pandas 3.0 and LightGBM 4.7.
+- **Data:** public servers hold the labelled synthetic sample. They may also hold a subset of a
+  **CC0** real dataset (HKUST or LBNL Building 59), if the owner chooses it in T053. Never BDG2
+  readings, a BDG2-trained model or LEAD labels.
+- **Limits accepted:**
+  - 4 active CPU-hours a month; over the limit, the feature is blocked for up to 30 days.
+  - A 4.5 MB request body, which allows about 55,000 uploaded readings.
+  - A 500 MB Python bundle, against 623 MB as built.
+  - Non-commercial use.
+  - Neon's sleep after 5 minutes.
+- **Consequences:**
+  - Launch read-only.
+  - Uploads only after T058, with sessions and rate limits stored in PostgreSQL.
+  - T059 must show a bundle under the limit and stop if a card is asked for.
+  - Any paid host needs the owner's approval first.
+
 ---
 
 ## Open decisions (tracked in tasks)
@@ -2309,4 +2346,4 @@ links to the entry that replaces it.
 |---|---|---|
 | API type generation | T024 | Hand-written types and guards (D009) vs OpenAPI codegen |
 | Browser E2E tooling | Resolved in D057 | Playwright, real API fixture, desktop and mobile Chromium |
-| Public deployment security | Before public exposure | Private SSH-only recipe selected for T038 (D060); authentication/access controls and the tooling advisory (D059) remain prerequisites for public hosting |
+| Public deployment security | Before public exposure | Private SSH-only recipe selected for T038 (D060); authentication/access controls and the tooling advisory (D059) remain prerequisites for public hosting with writes. Hosting chosen in D070 (read-only launch); authentication in T058 |

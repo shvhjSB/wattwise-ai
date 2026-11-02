@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- T052 hosting decision ([report](docs/reports/t052-hosting-decision.md), D070): public
+  hosting at no cost on Vercel Hobby with Neon Free PostgreSQL, no BDG2 on any server, the
+  Pages snapshot kept as the fallback; measured memory and bundle needs, quoted prices.
+  Nothing provisioned yet.
 - M13 and the T051 gap analysis ([report](docs/reports/t051-gap-analysis.md)): the
   documented state checked against the running system, with the M13 roadmap (T051–T061).
 - Public static demo on GitHub Pages (T050): `python -m wattwise.snapshot` records the

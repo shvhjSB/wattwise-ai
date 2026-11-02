@@ -455,10 +455,24 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T049 | What-if (counterfactual) lab | 2026-11-02 |
 | T050 | Public static demo on GitHub Pages | 2026-11-02 |
 | T051 | Current-state verification and gap analysis | 2026-11-02 |
+| T052 | Production architecture and hosting decision | 2026-11-02 |
 
 ## Current task
 
-None. **T051 is complete** (D069): the [gap report](reports/t051-gap-analysis.md) checks the
+None. **T052 is complete** (D070): the [hosting decision](reports/t052-hosting-decision.md),
+within the owner's two constraints, no BDG2 on any server and no cost.
+
+- **Chosen:** **Vercel Hobby** for the frontend and the FastAPI app, with **Neon Free**
+  PostgreSQL. Both are $0 and card-free according to their own pages; this is not yet tested by
+  signing up.
+- **Fallback:** the live GitHub Pages snapshot stays.
+- **Real data:** the full BDG2/LEAD application stays on the owner's machine. Public historical
+  data is allowed only from CC0 sources (HKUST, LBNL Building 59) as a subset.
+- **Measured:** read-only API 279 MiB peak; upload analysis at its limits 552 MiB; the Linux
+  environment is 623 MB, against Vercel's 500 MB Python bundle.
+- **Launch:** read-only; uploads wait for T058. Nothing was provisioned.
+
+Earlier: **T051 is complete** (D069): the [gap report](reports/t051-gap-analysis.md) checks the
 documentation against the running system. The promoted model's test results reproduce exactly
 (MAE 13.720335; 13.700 against seasonal-naive's 16.705 on common rows); CI, the GitHub Pages
 demo, 1,002 backend tests, 293 frontend tests, 18 browser scenarios and every data checksum
@@ -542,10 +556,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T052 — Production architecture and hosting decision** (M13): compare hosting options with the
-measured requirements (6.7 GB database, 49 MB model, 0.1 CPU / 512 MB image) and licences, and
-record a decision; nothing paid without the owner's approval. See
-[ROADMAP.md](ROADMAP.md#t052--production-architecture-and-hosting-decision).
+**T053 — Production data-source separation** (M13): three explicit, labelled sources: historical
+measurements, validated uploads and synthetic data. It also covers no silent fallback between
+sources, and a clear error when a source is unavailable. The owner decides whether a CC0 real
+subset (HKUST or LBNL Building 59) joins the public demo (D070). See
+[ROADMAP.md](ROADMAP.md#t053--production-data-source-separation).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -568,7 +583,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
-| M13 ML reliability, deployment, product readiness | T051–T061 | 1 / 11 |
+| M13 ML reliability, deployment, product readiness | T051–T061 | 2 / 11 |
 
 ## Blockers
 

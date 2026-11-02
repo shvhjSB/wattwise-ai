@@ -81,7 +81,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T044b | Detector benchmark at full scale | M5b | T044a, T018 | Done |
 | T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Done |
 | T051 | Current-state verification and gap analysis | M13 | T050 | Done |
-| T052 | Production architecture and hosting decision | M13 | T051 | Not started |
+| T052 | Production architecture and hosting decision | M13 | T051 | Done |
 | T053 | Production data-source separation | M13 | T051 | Not started |
 | T054 | Improve real-world anomaly detection | M13 | T051 | Not started |
 | T055 | Prediction interval reliability | M13 | T051 | Not started |
@@ -1005,6 +1005,17 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   D014; LEAD stays local, D022) and whether a smaller real subset suffices.
 - **Acceptance:** a recorded decision with measured requirements and quoted prices; no paid
   infrastructure without the owner's approval.
+- **Done (2026-11-02):** [hosting decision](reports/t052-hosting-decision.md), D070. The owner
+  chose no BDG2 on any server and no cost. Decision:
+  - **Vercel Hobby** (frontend plus FastAPI as one Python function) with **Neon Free**
+    PostgreSQL, both $0 and card-free by their own pages.
+  - The live **GitHub Pages** snapshot stays as the fallback.
+  - The full BDG2/LEAD application stays on the owner's machine.
+  - Public historical data is allowed only from CC0 sources (HKUST, LBNL Building 59) as a
+    subset.
+
+  Measured: read-only API 279 MiB peak; upload analysis at its limits 552 MiB; Linux environment
+  623 MB, against Vercel's 500 MB Python bundle. Nothing provisioned.
 
 ### T053 — Production data-source separation
 - **Scope:** three explicit sources (BDG2 historical measurements, validated uploads, labelled
@@ -1012,7 +1023,9 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   badges (synthetic, observed, uploaded) and `dataset_id` in API responses. Never fall back
   silently between sources; never call history "live"; show model and dataset versions; a clear
   error when a source is unavailable. Storing uploads needs T058 first (uploads are not stored
-  today, T026); until then this task covers labelling and selection.
+  today, T026); until then this task covers labelling and selection. Public servers never hold
+  BDG2 data or a BDG2-trained model (D070). The owner decides whether a CC0 real subset (HKUST or
+  LBNL Building 59, sized for a 1 GB database) joins the public synthetic demo.
 - **Acceptance:** tests for each source, the no-fallback rule and the unavailable-source error.
 
 ### T054 — Improve real-world anomaly detection
@@ -1055,12 +1068,27 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
 - **Scope:** no authentication exists (T051); three write endpoints (feedback, upload, analyze).
   A maintained solution, not a custom one: sessions, protected uploads, dataset ownership, roles
   where needed, admin-only operations, rate limits, secrets, safe errors, database permissions.
-  The public demo stays read-only unless a secure alternative is approved.
+  The public demo stays read-only unless a secure alternative is approved. On Vercel (D070),
+  function instances share no memory, so sessions and rate limits live in PostgreSQL. Public
+  uploads wait for this task, because the free plan's 4 CPU-hours a month could be used up by
+  one visitor.
 - **Acceptance:** tests that unauthenticated writes and other users' private data are refused.
 
 ### T059 — End-to-end integration and deployment
-- **Scope:** deploy the real application on T052's approved architecture: persistent database,
-  migrations, versioned model, health and readiness, HTTPS, protected data, backups and rollback.
+- **Scope:** deploy the real application on T052's approved architecture (D070: Vercel Hobby +
+  Neon Free): persistent database, migrations, versioned model, health and readiness, HTTPS,
+  protected data, backups and rollback.
+  - Show a bundle under Vercel's 500 MB Python limit (623 MB as built).
+  - Lower the upload limit below the 4.5 MB request body.
+  - Build the demo model into the bundle in CI.
+  - Measure cold starts and memory with the synthetic model.
+
+  Owner actions:
+  1. Sign in to Vercel as `shvhjSB` and import the repository.
+  2. Create a Neon Free project.
+  3. Set the connection string in Vercel.
+
+  If either asks for a card, stop and keep the Pages snapshot.
 - **Acceptance:** the public application tested (startup, model, buildings, predictions, alerts,
   impact, authentication, authorised upload, refused access, deep links, restart, persistence,
   failures). If an account, payment or credentials are needed, stop and say exactly what.

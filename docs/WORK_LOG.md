@@ -2916,3 +2916,26 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
   spans, window overlap, end-use additivity, the whole run, strict JSON, the report marker).
 - The case study ran on the real data in about 30 s; the committed report is its output plus a
   hand-written narrative above the marker.
+
+## 2026-11-02 — T040 limits fixed from the authors' article (D062)
+
+The owner asked for T040's limits to be fixed before T041.
+
+- **The article is readable.** Europe PMC's public REST API serves the open-access full text
+  (PMC8983728); the authors' cleaning script is public on GitHub. Earlier routes (publisher
+  sign-in, PubMed Central CAPTCHA) were not worked around; this is a different, official route.
+- **Dated events now come from the authors** (Table 2): two wildfire damper-closure windows,
+  shelter-in-place from 2020-03-18, and four MPC tests, which were not known before. The earlier
+  BAAQMD and Berkeley Lab sources are kept only as corroboration in the narrative.
+- **Imputation:** Table 4's rule (linear below 10 hours) explains the straight runs. The masking
+  now flags only interior points and uses 5-point runs, calibrated on 2020 rounded to 0.1 kW.
+  The GitHub script uses a one-hour threshold, unlike the article; the article is followed.
+  Dryad has a single version and no raw files, so KNN and MF fills remain unidentifiable.
+- **New results:** the dampers were far more closed in both wildfire windows (22.4 vs 49.8 %,
+  12.6 vs 37.1 %) and no event overlaps either; HVAC was 15–56 % lower in the four MPC windows
+  than in the 14 days before, and the detector flagged one (4–6 December, south HVAC −818 kWh).
+- **Remaining limits, now documented with their sources:** no north lighting record (Table 3); the
+  clock is still inferred (UTC); KNN/MF fills stay in the data; occupancy covers May 2018 to
+  February 2019 only.
+- **Validation:** ruff, format, strict mypy; 21 tests in `test_lbnl59.py`; the full backend suite
+  before commit.

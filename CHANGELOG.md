@@ -9,7 +9,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ### Added
 - LBNL Building 59 case study (T040): `python -m wattwise.ml.lbnl59` runs the default detector
   on a real sub-metered office and compares its events with end uses, dampers, temperature,
-  occupancy and sourced dated events ([report](docs/reports/lbnl59-case-study.md)).
+  occupancy and the authors' dated events (wildfire damper closures, shelter-in-place, MPC
+  tests), with linear gap fills masked by the article's documented rule
+  ([report](docs/reports/lbnl59-case-study.md)).
 - Pinned Dryad acquisition (T045): `python -m wattwise.data.dryad` for LBNL Building 59 and
   HKUST, verified against Dryad's published SHA-256, with a token or a browser download.
 - Final documentation (T039): a rewritten README (architecture diagram, the application,

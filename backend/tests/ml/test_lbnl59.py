@@ -20,18 +20,18 @@ def utc(start: str, periods: int, freq: str = "15min") -> pd.DatetimeIndex:
 # --- suspected interpolation -------------------------------------------------------------
 
 
-def test_a_sloped_straight_run_is_suspected_from_six_points() -> None:
+def test_the_filled_points_of_a_sloped_straight_run_are_suspected() -> None:
     noise = [3.1, 2.7, 3.9, 2.2]
-    line = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]  # six points, equal non-zero steps
+    line = [1.0, 1.5, 2.0, 2.5, 3.0]  # five points: two real ends, three filled between them
     values = pd.Series(noise + line + noise)
 
     flags = lbnl59.suspected_interpolation(values)
 
-    assert flags.tolist() == [False] * 4 + [True] * 6 + [False] * 4
+    assert flags.tolist() == [False] * 5 + [True] * 3 + [False] * 5
 
 
-def test_five_points_on_a_line_are_not_enough() -> None:
-    values = pd.Series([3.1, 2.7, 1.0, 1.5, 2.0, 2.5, 3.0, 9.0, 2.2])
+def test_four_points_on_a_line_are_not_enough() -> None:
+    values = pd.Series([3.1, 2.7, 1.0, 1.5, 2.0, 2.5, 9.0, 2.2])
 
     assert not lbnl59.suspected_interpolation(values).any()
 
@@ -98,7 +98,7 @@ def test_suspected_interpolation_masks_the_hour_for_every_end_use() -> None:
     hourly, summary = lbnl59.hourly_end_uses(grid)
 
     assert hourly.notna().all(axis=1).tolist() == [True, False, False, True, True, True]
-    assert summary["mels_S"]["suspected_interpolation_share"] == round(8 / 24, 4)
+    assert summary["mels_S"]["suspected_interpolation_share"] == round(6 / 24, 4)  # interior
     assert summary["mels_S"]["raw_missing_rate"] == lbnl59.RAW_MISSING_RATE["mels_S"]
 
 
@@ -183,7 +183,7 @@ def synthetic_archive(path: Path) -> Path:
     local = index.tz_convert(lbnl59.TIMEZONE)
     rng = np.random.default_rng(7)
     working = (local.dayofweek < 5) & (local.hour >= 8) & (local.hour < 18)
-    level = np.where(local >= pd.Timestamp("2020-03-17", tz=lbnl59.TIMEZONE), 0.5, 1.0)
+    level = np.where(local >= pd.Timestamp("2020-03-18", tz=lbnl59.TIMEZONE), 0.5, 1.0)
     stamp = index.tz_localize(None).strftime("%Y-%m-%d %H:%M:%S")
     ele = pd.DataFrame({"date": stamp})
     for i, column in enumerate(lbnl59.END_USES):
@@ -225,14 +225,25 @@ def test_the_drop_shows_in_the_weeks_around_the_order(report: dict) -> None:  # 
     weeks = report["weeks_around_shelter_in_place"]
 
     assert weeks[3]["mean_kw"] > weeks[4]["mean_kw"]
-    assert report["dated_windows"][0]["kind"] == "shelter-in-place"
+    assert weeks[4]["week_from"] == "2020-03-18"
 
 
-def test_the_damper_window_is_found_outside_the_smoke_period(report: dict) -> None:  # type: ignore[type-arg]
+def test_the_authors_events_are_the_dated_windows(report: dict) -> None:  # type: ignore[type-arg]
+    authors = [w for w in report["dated_windows"] if w["basis"] == "authors' timeline"]
+
+    assert [w["number"] for w in authors] == [1, 2, 3, 4, 5, 6, 7]
+    assert [w["kind"] for w in authors].count("MPC testing") == 4
+    shelter = authors[1]
+    assert (shelter["start"], shelter["end"]) == ("2020-03-18", "2020-12-31")
+    assert shelter["hvac_kw"]["hours"] > 0
+
+
+def test_the_damper_window_is_found_outside_the_wildfire_windows(report: dict) -> None:  # type: ignore[type-arg]
     damper = [w for w in report["dated_windows"] if w["kind"] == "damper-at-minimum"]
 
     assert [(w["start"], w["end"], w["days"]) for w in damper] == [("2020-02-04", "2020-02-06", 3)]
-    assert damper[0]["in_smoke_alert_period"] is False
+    assert damper[0]["in_authors_wildfire_window"] is False
+    assert damper[0]["rtu_damper_pct"]["event_mean"] == pytest.approx(10.0)
 
 
 def test_every_event_breakdown_adds_up(report: dict) -> None:  # type: ignore[type-arg]
@@ -247,7 +258,7 @@ def test_the_outputs_are_strict_json_and_markdown(report: dict, tmp_path: Path) 
     json.loads(paths[0].read_text(encoding="utf-8"))  # strict: no NaN
     text = paths[1].read_text(encoding="utf-8")
     assert "Masking: suspected interpolation" in text
-    assert "Weeks around the shelter-in-place order" in text
+    assert "Weeks around the start of shelter-in-place" in text
 
 
 def test_the_report_keeps_the_narrative_above_the_marker(tmp_path: Path) -> None:

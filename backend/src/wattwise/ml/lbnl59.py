@@ -1,29 +1,32 @@
 """LBNL Building 59 case study (T040): does the whole-building detector react to known events?
 
 One office building in Berkeley, California, 2018-2020 (CC0, Dryad doi:10.7941/D1N33Q, obtained
-with `python -m wattwise.data.dryad fetch lbnl59`). It has five electricity sub-meters, rooftop-unit
-(RTU) control points and, for nine months, measured occupancy. This module runs WattWise's default
-detector (the rolling same-hour z-score, D030) on a whole-building series and compares its events
-with the end uses, the RTU outdoor-air dampers, outdoor temperature, occupancy, and dated events.
+with `python -m wattwise.data.dryad fetch lbnl59`), described in Luo et al. (2022), Scientific Data
+9:156, doi:10.1038/s41597-022-01257-x (read through Europe PMC, PMC8983728). This module runs
+WattWise's default detector (the rolling same-hour z-score, D030) on a whole-building series and
+compares its events with the end uses, the RTU outdoor-air dampers, outdoor temperature,
+occupancy, and the authors' dated events.
 
 What the data is, and what it is not (docs/reports/lbnl59-case-study.md has the evidence):
 
-- **The "whole-building" series is derived:** the sum of the five metered end uses (`mels_S`,
-  `lig_S`, `mels_N`, `hvac_N`, `hvac_S`, kW). There is no north-wing lighting column and no
-  whole-building meter in the files, so it is a sub-metered total, not the building's bill.
+- **The series is the sum of five panel meters** (`mels_S`, `mels_N`, `lig_S`, `hvac_S`,
+  `hvac_N`, kW). The article (Table 3, Table 4) says the north lighting panel has no record and
+  the HVAC panels also serve the elevators; common areas and emergency power are on other panels.
+  It is a sub-metered total, not the building's bill.
 - **Clocks are inferred, not documented.** Energy, weather, RTU and occupancy timestamps behave
   like UTC (solar radiation peaks near 20:30, and the morning lighting ramp moves one clock hour
   between winter and summer, as it would for people keeping daylight-saving time).
-- **Imputed values are not flagged.** The authors filled gaps (linear interpolation, KNN, matrix
-  factorisation) and published the raw missing rates per column. Only one kind of fill leaves a
-  trace: a run of points on an exact straight line. Those runs (at least `MIN_LINEAR_POINTS`
-  points, not constant) are masked as *suspected* interpolation. Constant runs are kept: lights
-  off at night are genuinely flat. KNN and matrix-factorisation fills cannot be identified, so
-  some imputed values remain; the report compares the masked share with the raw missing rate.
-- **Dated events:** the Bay Area shelter-in-place order (from 2020-03-17, sourced), and spans where
-  every RTU's outdoor-air damper was held at its 10 % minimum through the working day, found in the
-  data itself. That some of those spans coincide with sourced wildfire-smoke alerts is a
-  hypothesis about why the dampers closed, not something the dataset documents.
+- **Imputed values are not flagged.** For `ele.csv` the article (Table 4) gives the rule: gaps
+  under 10 hours filled by linear interpolation, 10 hours to 1 day by KNN, longer by matrix
+  factorisation. A linear fill leaves its filled points on one sloped straight line between two
+  real points; those interior points are masked when the run has at least `MIN_LINEAR_POINTS`
+  points (shorter runs occur by chance at 0.1 kW resolution; see `MIN_LINEAR_POINTS`). Constant
+  runs are kept: lights off at night are genuinely flat. KNN and matrix-factorisation fills
+  cannot be identified, so some imputed values remain; the report compares the masked share with
+  the authors' raw missing rate.
+- **Dated events are the authors' own** (article, Table 2): wildfire damper closures, the
+  shelter-in-place period and four model predictive control (MPC) tests. Spans with every RTU
+  damper held at its 10 % minimum are also found in the data, as a check on those dates.
 
 The end-use breakdown of an event is arithmetic (the total is the sum of the end uses, and the
 detector's baseline is a mean, so deviations add up). It says where the deviation was metered,
@@ -71,37 +74,28 @@ RAW_MISSING_RATE: Final = {
     "hvac_N": 0.0811,
     "hvac_S": 0.0810,
 }
-MIN_LINEAR_POINTS: Final = 6  # 1.5 hours of 15-minute points on one straight line
+#: Five points (three filled values, a 45-minute gap) on one sloped line. Calibrated on 2020, which
+#: has no straight runs: rounded to the 0.1 kW of 2018-2019, its chance runs cover at most 13.6 %
+#: of points at 3 points, 1.2 % at 4 and 0.13 % at 5 (T040 work log). Shorter fills stay unmasked.
+MIN_LINEAR_POINTS: Final = 5
 LINEAR_TOLERANCE: Final = 1e-6  # kW; the files store float32-like values
 DAMPER_MINIMUM: Final = 10.0  # % open: the value the RTU dampers are held at in the data
 DAMPER_TOLERANCE: Final = 0.5
 WORKDAY_HOURS: Final = range(8, 17)  # local clock hours checked for a damper held at minimum
 MIN_DAMPER_HOURS: Final = 6  # of those 9 hours
-SHELTER_IN_PLACE: Final = {
-    "name": "Bay Area shelter-in-place order",
-    "start": "2020-03-17",
-    "end": "2020-04-07",
-    "source": "https://elementsarchive.lbl.gov/2020/03/17/shelter-in-place-order-for-six-bay-area-counties/",
-    "quote": "Six Bay Area counties have ordered all residents to shelter-in-place beginning "
-    "March 17 and lasting until at least April 7. ... This includes the Lab.",
-}
-SMOKE_ALERTS: Final = (
-    {
-        "dates": "2020-08-18 to 2020-08-19",
-        "source": "https://www.baaqmd.gov/News-and-Events/Page-Resources/2020-News/081820-STA",
-        "quote": "Spare the Air Alerts for wildfire smoke for today, Tuesday, August 18, and "
-        "tomorrow, Wednesday, August 19",
-    },
-    {
-        "dates": "through 2020-09-11 (the 24th and 25th consecutive alert)",
-        "source": "https://www.baaqmd.gov/News-and-Events/Page-Resources/2020-News/090920-STA",
-        "quote": "extending the Spare the Air Alert for wildfire smoke through Friday, "
-        "September 11",
-    },
+ARTICLE: Final = "https://europepmc.org/article/PMC/PMC8983728"
+#: The authors' timeline (article, Table 2, "Key timeline of events for the building and data
+#: collection"): event number, kind, first and last day (local dates, inclusive).
+AUTHOR_EVENTS: Final = (
+    (1, "wildfire", date(2018, 11, 12), date(2018, 11, 20)),
+    (2, "shelter-in-place", date(2020, 3, 18), date(2020, 12, 31)),
+    (3, "wildfire", date(2020, 8, 24), date(2020, 9, 6)),
+    (4, "MPC testing", date(2020, 10, 20), date(2020, 10, 27)),
+    (5, "MPC testing", date(2020, 11, 2), date(2020, 11, 6)),
+    (6, "MPC testing", date(2020, 11, 13), date(2020, 11, 19)),
+    (7, "MPC testing", date(2020, 12, 4), date(2020, 12, 14)),
 )
-#: 2020-08-18 is the first sourced smoke alert; the end is the extension "through Friday,
-#: September 11", called as "the 24th and 25th consecutive" alert, which fits a run from Aug 18.
-SMOKE_PERIOD: Final = (date(2020, 8, 18), date(2020, 9, 11))
+SHELTER_IN_PLACE_START: Final = date(2020, 3, 18)
 TRAIN_END: Final = pd.Timestamp("2020-01-01", tz=TIMEZONE)  # the profile learns 2018-2019 only
 DEFAULT_ARCHIVE: Final = Path("../data/raw/lbnl59/Building_59.zip")
 DEFAULT_OUTPUT: Final = Path("../data/processed/lbnl59")
@@ -140,8 +134,9 @@ def suspected_interpolation(
     min_points: int = MIN_LINEAR_POINTS,
     tolerance: float = LINEAR_TOLERANCE,
 ) -> pd.Series:
-    """True for points in a run of at least `min_points` consecutive points on one non-flat
-    straight line (equal steps that are not zero). `values` is on a regular grid."""
+    """True for the interior points of a run of at least `min_points` consecutive points on one
+    non-flat straight line (equal steps that are not zero): the values a linear fill would have
+    written between two real points. `values` is on a regular grid."""
     v = values.to_numpy(dtype=float)
     step = np.diff(v)
     same_step = np.abs(np.diff(step)) < tolerance  # step i+1 equals step i
@@ -155,7 +150,7 @@ def suspected_interpolation(
         elif not linked and start is not None:
             points = i - start + 2  # links start..i-1 cover points start..i+1
             if points >= min_points:
-                flags[start : i + 2] = True
+                flags[start + 1 : i + 1] = True  # not the two real endpoints
             start = None
     return pd.Series(flags, index=values.index)
 
@@ -399,11 +394,15 @@ def weekly_around(total: pd.Series, start: date, weeks: int = 4) -> list[dict[st
     return rows
 
 
-def window_weather(temperature: pd.Series, first: date, last: date) -> dict[str, Any]:
-    """Mean outdoor temperature over local working hours during [first, last] and over the 14
-    days before."""
-    local = temperature.tz_convert(TIMEZONE)
-    work = local[pd.DatetimeIndex(local.index).hour.isin(list(WORKDAY_HOURS))].dropna()
+def window_mean(
+    series: pd.Series, first: date, last: date, working_hours: bool = True
+) -> dict[str, Any]:
+    """Mean of an hourly series during the local days [first, last] and over the 14 days before,
+    over local working hours only (default) or all hours."""
+    local = series.tz_convert(TIMEZONE)
+    if working_hours:
+        local = local[pd.DatetimeIndex(local.index).hour.isin(list(WORKDAY_HOURS))]
+    work = local.dropna()
     days = np.asarray(pd.DatetimeIndex(work.index).date)
     during = work[(days >= first) & (days <= last)]
     before = work[(days >= first - timedelta(days=14)) & (days < first)]
@@ -436,34 +435,39 @@ def run(archive: Path) -> dict[str, Any]:
         for i, (_, event) in enumerate(events.iterrows())
     ]
 
-    shelter_start = date.fromisoformat(SHELTER_IN_PLACE["start"])
-    shelter_end = date.fromisoformat(SHELTER_IN_PLACE["end"])
     damper_spans = spans(damper_minimum_days(dampers))
-    temperature = context["outdoor_temp_c"]
-    windows = [
-        {
-            "kind": "shelter-in-place",
-            "start": shelter_start.isoformat(),
-            "end": shelter_end.isoformat(),
-            "basis": "sourced date",
-            "events": overlapping(events, shelter_start, shelter_end),
-            "outdoor_temp_c": window_weather(temperature, shelter_start, shelter_end),
+    hvac = hourly["hvac_N"] + hourly["hvac_S"]
+
+    def window(first: date, last: date) -> dict[str, Any]:
+        return {
+            "start": first.isoformat(),
+            "end": last.isoformat(),
+            "events": overlapping(events, first, last),
+            "outdoor_temp_c": window_mean(context["outdoor_temp_c"], first, last),
+            "rtu_damper_pct": window_mean(context["rtu_damper_pct"], first, last),
+            "hvac_kw": window_mean(hvac, first, last, working_hours=False),
         }
+
+    wildfires = [(f, la) for _, kind, f, la in AUTHOR_EVENTS if kind == "wildfire"]
+    windows = [
+        {"kind": kind, "number": number, "basis": "authors' timeline", **window(first, last)}
+        for number, kind, first, last in AUTHOR_EVENTS
     ] + [
         {
             "kind": "damper-at-minimum",
-            "start": first.isoformat(),
-            "end": last.isoformat(),
             "days": count,
-            "basis": "observed in the RTU data",
-            "in_smoke_alert_period": first <= SMOKE_PERIOD[1] and last >= SMOKE_PERIOD[0],
-            "events": overlapping(events, first, last),
-            "outdoor_temp_c": window_weather(temperature, first, last),
+            "basis": "found in the RTU data",
+            "in_authors_wildfire_window": any(
+                first <= w_last and last >= w_first for w_first, w_last in wildfires
+            ),
+            **window(first, last),
         }
         for first, last, count in damper_spans
     ]
     total = readings.set_index("timestamp")["value"].reindex(hourly.index)
-    in_windows = {i for w in windows for i in cast(list[int], w["events"])}
+    in_windows = {
+        i for w in windows if w["kind"] != "shelter-in-place" for i in cast(list[int], w["events"])
+    }
     signatures = events.groupby(["signature", "direction"]).size() if len(events) else None
     total_hours = len(hourly)
     return {
@@ -487,8 +491,8 @@ def run(archive: Path) -> dict[str, Any]:
         },
         "yearly_levels": yearly_levels(hourly, grid),
         "baselines_2020_by_month": baseline_accuracy(readings),
-        "weeks_around_shelter_in_place": weekly_around(total, shelter_start),
-        "smoke_alert_period": [d.isoformat() for d in SMOKE_PERIOD],
+        "weeks_around_shelter_in_place": weekly_around(total, SHELTER_IN_PLACE_START),
+        "article": ARTICLE,
         "events_total": len(described),
         "events_by_signature": (
             {
@@ -499,8 +503,6 @@ def run(archive: Path) -> dict[str, Any]:
             else {}
         ),
         "dated_windows": windows,
-        "smoke_alert_sources": list(SMOKE_ALERTS),
-        "shelter_in_place_source": SHELTER_IN_PLACE,
         "events": described,
         "events_outside_windows": len(described) - len(in_windows),
     }
@@ -564,7 +566,9 @@ def to_markdown(report: dict[str, Any]) -> str:
         )
     lines += [
         "",
-        "### Weeks around the shelter-in-place order (7-day windows from 2020-03-17, local)",
+        "### Weeks around the start of shelter-in-place",
+        "",
+        "Seven-day windows from the authors' start date, 2020-03-18 (local).",
         "",
         "| Week from | Mean kW | Hours |",
         "|---|---|---|",
@@ -574,7 +578,7 @@ def to_markdown(report: dict[str, Any]) -> str:
     lines += [
         "",
         f"### Events: {report['events_total']} in total, "
-        f"{report['events_outside_windows']} outside the dated windows",
+        f"{report['events_outside_windows']} outside the wildfire, MPC and damper windows",
         "",
         "| Signature (direction) | Events |",
         "|---|---|",
@@ -585,27 +589,29 @@ def to_markdown(report: dict[str, Any]) -> str:
         "",
         "### Dated windows and the events that overlap them",
         "",
-        f"Smoke-alert period (sourced): {report['smoke_alert_period'][0]} to "
-        f"{report['smoke_alert_period'][1]}. Outdoor temperature is the working-hours mean in the "
-        "window and in the 14 days before it.",
+        f"Authors' windows are the article's Table 2 ({report['article']}); damper windows are "
+        "weekdays with every RTU damper at its 10 % minimum, found in the data. Damper % and "
+        "outdoor °C are working-hours means (08:00-17:00 local), HVAC kW an all-hours mean, each "
+        "in the window and in the 14 days before it. A window longer than a month lists only its "
+        "event count.",
         "",
-        "| Window (local dates) | Basis | In smoke-alert period | Outdoor °C (window / before) "
-        "| Overlapping events | Largest deviation by end use |",
+        "| Window (local dates) | Basis | Damper % | Outdoor °C | HVAC kW | Overlapping events |",
         "|---|---|---|---|---|---|",
     ]
     for window in report["dated_windows"]:
         label = f"{window['kind']} {window['start']} to {window['end']}"
-        smoke = {True: "yes", False: "no"}.get(window.get("in_smoke_alert_period"), "")
-        head = f"| {label} | {window['basis']} | {smoke} | {_pair(window['outdoor_temp_c'])} |"
-        if not window["events"]:
-            lines.append(f"{head} none | |")
-        for i in window["events"]:
-            e = report["events"][i]
-            lines.append(
-                f"{head} {e['direction']} {e['signature']}, {e['start_local']} to "
-                f"{e['end_local']}, {_num(e['deviation_kwh'])} kWh | `{e['largest_end_use']}` "
-                f"{_num(e['end_use_deviation_kwh'][e['largest_end_use']])} kWh |"
-            )
+        if window.get("in_authors_wildfire_window"):
+            label += " (in an authors' wildfire window)"
+        head = (
+            f"| {label} | {window['basis']} | {_pair(window['rtu_damper_pct'])} | "
+            f"{_pair(window['outdoor_temp_c'])} | {_pair(window['hvac_kw'])} |"
+        )
+        days = (date.fromisoformat(window["end"]) - date.fromisoformat(window["start"])).days
+        if days > 31:
+            lines.append(f"{head} {len(window['events'])} events |")
+            continue
+        found = [_event_text(report["events"][i]) for i in window["events"]]
+        lines.append(f"{head} {'; '.join(found) or 'none'} |")
     lines += [
         "",
         "### The ten largest events by absolute deviation",
@@ -681,6 +687,14 @@ def _round(value: float) -> float:
 
 def _num(value: float | None) -> str:
     return "n/a" if value is None or not np.isfinite(value) else f"{value:,.1f}"
+
+
+def _event_text(e: dict[str, Any]) -> str:
+    largest = e["largest_end_use"]
+    return (
+        f"{e['direction']} {e['signature']}, {e['start_local']} to {e['end_local']}, "
+        f"{_num(e['deviation_kwh'])} kWh (`{largest}` {_num(e['end_use_deviation_kwh'][largest])})"
+    )
 
 
 def _share(value: float | None) -> str:

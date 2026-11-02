@@ -451,15 +451,14 @@ The application foundation runs end to end locally, and CI checks it automatical
 
 ## Current task
 
-None. **T040 is complete** (D061): a one-building case study on LBNL Building 59,
-[lbnl59-case-study.md](reports/lbnl59-case-study.md). In short: the default detector did not
-flag the COVID shelter-in-place drop (a 46 % decline over three weeks that its 14-day baseline
-followed); dampers held at minimum were found in the RTU data, and the two spans in the sourced
-wildfire-smoke period produced no event; where the detector fires, the deviation is almost all
-HVAC. The building's data changes character between years (undocumented level and precision
-shifts), and the authors' imputed values are not flagged, so only suspected linear
-interpolation could be masked. Both Dryad datasets are downloaded and verified (`data/raw/`,
-git-ignored).
+None. **T040 is complete** (D061, revised by D062 from the authors' article): a one-building
+case study on LBNL Building 59, [lbnl59-case-study.md](reports/lbnl59-case-study.md). Against
+the authors' own timeline, the default detector did not flag the shelter-in-place drop (45 % over
+three weeks, followed by its 14-day baseline) or either wildfire damper closure, and flagged one
+of four MPC test windows; where it fires, the deviation is almost all HVAC. The data changes
+character between years (undocumented level and precision shifts). Linear gap fills are masked;
+KNN and matrix-factorisation fills cannot be identified. Both Dryad datasets are downloaded and
+verified (`data/raw/`, git-ignored).
 
 Earlier: T038 and T039 are complete. [CI run 41334971115](https://github.com/shvhjSB/wattwise-ai/actions/runs/41334971115)
 passed all four jobs at `8f20f39`, including the deployment verifier on the CI runner

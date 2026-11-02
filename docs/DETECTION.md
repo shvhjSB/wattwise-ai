@@ -161,8 +161,9 @@ written, with a note in place of the influences. A test covers this.
 
 The default detector on a real sub-metered office (Berkeley, 2018–2020), compared with end uses,
 dampers, temperature, occupancy and dated events: [docs/reports/lbnl59-case-study.md](reports/lbnl59-case-study.md).
-It did not flag the COVID shelter-in-place drop, which was spread over three weeks and followed by
-the 14-day rolling baseline: **gradual regime changes are not what this detector finds.** One
+Against the authors' dated events, it did not flag the COVID shelter-in-place drop (spread over
+three weeks and followed by the 14-day rolling baseline) or the wildfire damper closures, and it
+flagged one of four MPC test windows: **gradual regime changes are not what this detector finds.** One
 building, no labels; nothing here is a result for BDG2 buildings or a cause.
 
 ## Results on the BDG2 sample with the default detector (T018)

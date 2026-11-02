@@ -2139,7 +2139,8 @@ links to the entry that replaces it.
   historical application-image rollback, an accuracy result or a recovery SLA.
 
 ## D061 — The LBNL Building 59 case study: what is derived, inferred and masked
-- **Date:** 2026-11-02 · **Task:** T040 · **Status:** Accepted
+- **Date:** 2026-11-02 · **Task:** T040 · **Status:** Partly superseded by D062 (imputation
+  rule, dated events)
 - **Series:** the sum of the five metered end uses, labelled as derived. The files have no
   whole-building meter and no north-wing lighting column; it is not presented as the bill.
 - **Clock:** undocumented. Energy, weather, RTU and occupancy files are treated as UTC, from three
@@ -2160,6 +2161,26 @@ links to the entry that replaces it.
 - **Detector:** the default (rolling same-hour z-score, D030) with unchanged thresholds. Nothing
   is tuned on this building. The end-use breakdown is exact arithmetic, not attribution of cause.
 - **Scope:** one building's case study, no labels: not a validation, and nothing about BDG2.
+
+## D062 — T040 revised from the authors' article
+- **Date:** 2026-11-02 · **Task:** T040 · **Status:** Accepted
+- **Why:** D061 was written without the article (publisher sign-in, PubMed Central CAPTCHA). The
+  same open-access article is served by Europe PMC's public API (PMC8983728), and the authors'
+  cleaning code is public on GitHub (LBNL-ETA/Data-Cleaning). Both were read.
+- **Dated events:** the authors' Table 2 replaces the secondary sources: wildfire damper closures
+  2018-11-12 to 11-20 and 2020-08-24 to 09-06, shelter-in-place 2020-03-18 to 12-31, and four
+  MPC test windows in October to December 2020 (new). Damper-at-minimum spans found in the data
+  stay, as a check on those dates.
+- **Imputation:** Table 4 documents the rule for `ele.csv` (linear below 10 hours, KNN to a day,
+  matrix factorisation beyond). The GitHub script's one-hour linear threshold differs; the
+  article is followed, as it describes the published data. Only the interior points of a
+  straight run are masked now (the ends are real readings), and the minimum run is 5 points,
+  calibrated on 2020 data rounded to 0.1 kW (chance runs: 13.6 % of points at 3, 1.2 % at 4,
+  0.13 % at 5). No raw data is published (one Dryad version), so KNN and MF fills stay
+  unidentifiable.
+- **Series:** Table 3 confirms the five panels; the HVAC panels include the elevators and there is
+  no north lighting record. North lighting is not estimated.
+- **Clock:** still undocumented; the UTC inference of D061 stands.
 
 ---
 

@@ -662,15 +662,16 @@ the committed CSVs from the same files.
 
 | Dataset | What it adds | Licence | Size | Checked |
 |---|---|---|---|---|
-| [LBNL Building 59](https://doi.org/10.7941/D1N33Q) (Berkeley office, 2018–2020) | End uses (HVAC, lighting, plug loads), rooftop-unit and zone control points, **measured occupancy** (May 2018 to February 2019). Dated events are not in the dataset; T040 sourced the COVID shelter-in-place date and found damper closures in the RTU data ([case study](reports/lbnl59-case-study.md)) | CC0 | 263 MB zipped | Licence, size double-checked |
+| [LBNL Building 59](https://doi.org/10.7941/D1N33Q) (Berkeley office, 2018–2020) | End uses (HVAC, lighting, plug loads), rooftop-unit and zone control points, **measured occupancy** (May 2018 to February 2019). Dated events (wildfire damper closures, shelter-in-place, MPC tests) are in the article's Table 2, not in the files ([case study](reports/lbnl59-case-study.md)) | CC0 | 263 MB zipped | Licence, size double-checked |
 | [CU-BEMS](https://doi.org/10.6084/m9.figshare.11726517) (Bangkok office, 2018–2019, 1-minute) | Power for each air-conditioning unit, plus lighting and plug loads per zone | CC BY 4.0 | 16 files, 742 MB | Double-checked |
 | [HKUST campus smart meters](https://doi.org/10.5061/dryad.k3j9kd5h6) (Hong Kong, 2022–2024) | More than 1,400 meters in more than 20 buildings, device-level sub-meters, an independent region and recent years | CC0 | 1.43 GB | Licence, size double-checked |
 | EnerNOC GreenButton (100 US commercial sites, 2012, 5-minute) | Independent US multi-sector data | **CC BY-NC 3.0** | 67 MB | Source-checked |
 
 - **Caveats:**
   - Building 59's gaps were imputed by its authors **without flags** (raw missing rates 8–33 %
-    per end use). Only runs on an exact sloped line can be identified and masked as suspected
-    interpolation; KNN and matrix-factorisation fills cannot (D061).
+    per end use; the article's Table 4 gives the rule: linear below 10 hours, KNN to a day,
+    matrix factorisation beyond). Linear fills can be identified and masked; KNN and
+    matrix-factorisation fills cannot, and no raw data is published (D062).
   - Building 59's timestamps are undocumented; energy, weather, RTU and occupancy behave like
     UTC, Wi-Fi like local time (inferred in T040). There is no whole-building meter.
   - CU-BEMS is a cooling-only tropical building.

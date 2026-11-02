@@ -12,6 +12,7 @@ import { ProvenanceBadge } from '../design/Provenance';
 import { useSearch } from '../design/routes';
 import { Pager, Resource } from '../design/Panel';
 import { EmptyState, PageHeader } from '../design/states';
+import { DriftPanel } from '../features/models/DriftPanel';
 import { MetricTable } from '../features/models/MetricTable';
 
 const control = 'rounded-md border border-edge bg-raised px-3 py-2 text-sm disabled:opacity-50';
@@ -221,6 +222,7 @@ export function ModelsPage({ summary }: { summary: string }) {
           )
         }
       </Resource>
+      <DriftPanel />
       <Resource title="Dataset health" resource={datasets}>
         {(data) =>
           !data.datasets.length ? (
@@ -231,8 +233,11 @@ export function ModelsPage({ summary }: { summary: string }) {
             <>
               <p className="text-sm text-muted">
                 Missing share is missing values divided by stored rows; absent hours are not
-                counted. Duplicate, gap, flatline and out-of-range audit results are not retained by
-                this API and are unavailable here.
+                counted. Gaps, flatlines, out-of-range values and every other check are on the{' '}
+                <a href="/data" className="text-accent underline underline-offset-2">
+                  Data health
+                </a>{' '}
+                page.
               </p>
               <div className="grid gap-4 lg:grid-cols-2">
                 {data.datasets.map((dataset) => (

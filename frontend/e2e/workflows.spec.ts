@@ -104,3 +104,15 @@ test('data health shows the stored audit and filters meters', async ({ page }, i
   await noPageOverflow(page);
   await page.screenshot({ path: info.outputPath('data-health.png'), fullPage: true });
 });
+
+test('model lab shows data drift against the training period', async ({ page }) => {
+  await page.goto('/models');
+  const drift = page.getByRole('region', { name: 'Data drift' });
+  await expect(drift.getByRole('table')).toBeVisible();
+  await expect(drift.getByText(/not failure/)).toBeVisible();
+  await expect(drift.getByRole('columnheader', { name: /In interval/ })).toBeVisible();
+  await drift.getByLabel(/Group by/).selectOption('month');
+  await expect(page).toHaveURL(/driftPeriod=month/);
+  await expect(drift.getByRole('columnheader', { name: 'Month' })).toBeVisible();
+  await noPageOverflow(page);
+});

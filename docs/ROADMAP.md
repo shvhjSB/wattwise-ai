@@ -72,7 +72,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
 | T046 | Public read-only synthetic demo on Render | M12 | T036, T038 | Done (owner applies the Blueprint) |
 | T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Done |
-| T048 | Data drift in the model lab | M10 | T033, T019b | Not started |
+| T048 | Data drift in the model lab | M10 | T033, T019b | Done |
 | T049 | What-if (counterfactual) lab | M10 | T030, T032 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
@@ -895,6 +895,12 @@ The owner asked for the remaining gaps against the original specification and a 
   window (for example the shift in the level of consumption and in residual scale), from stored
   data only, shown in the model lab with its definition.
 - **Acceptance:** drift is described, not called a failure; no figure without data; tests.
+- **Done (2026-11-02, D066):** `GET /api/v1/models/drift` and a **Data drift** panel in the model
+  lab: per week or month of the stored evaluation window, the median meter's level against its
+  training-period mean, the model's WAPE and bias, and interval coverage against nominal; then the
+  meters of the latest period, largest level change first. Computed in SQL from stored readings
+  and expectations. On the synthetic demo the week of 15 February shows the injected anomalies:
+  level −16 %, WAPE 13 %, coverage 73 % against 90 % nominal.
 
 ### T049 — What-if (counterfactual) lab
 - **Scope:** for a meter and window, show recorded against expected consumption and let the user

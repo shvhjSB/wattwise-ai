@@ -7,6 +7,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Data drift (T048): `GET /api/v1/models/drift` and a Data drift panel in the model lab,
+  per week or month, against each meter's training-period level.
 - Data health (T047): each dataset's data-quality audit is stored when it is loaded
   (migration `0007`), served at `GET /api/v1/datasets/{id}/quality`, backfilled with
   `python -m wattwise.db.quality`, and shown on a new Data health page.

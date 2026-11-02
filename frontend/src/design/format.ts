@@ -24,3 +24,11 @@ export function formatShare(share: number): string {
 export function formatDate(iso: string): string {
   return iso.slice(0, 10);
 }
+
+/** A level ratio as a change against the training period, e.g. 0.84 → "−16%". */
+export function levelChange(ratio: number | null): string {
+  if (ratio === null) return 'n/a';
+  const change = Math.round((ratio - 1) * 100);
+  if (change === 0) return 'unchanged';
+  return `${change > 0 ? '+' : '−'}${String(Math.abs(change))}%`;
+}

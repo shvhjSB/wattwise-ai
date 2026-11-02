@@ -451,10 +451,16 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T041 | Generalisation test on independent buildings (HKUST) | 2026-11-02 |
 | T046 | Public read-only synthetic demo on Render (Blueprint; owner applies it) | 2026-11-02 |
 | T047 | Dataset health: store and show the data-quality audit | 2026-11-02 |
+| T048 | Data drift in the model lab | 2026-11-02 |
 
 ## Current task
 
-None. **T047 is complete** (D065): each dataset's data-quality audit is stored when it is loaded
+None. **T048 is complete** (D066): the model lab's **Data drift** panel shows, per week or month
+of the stored evaluation window, how meters' readings moved from their training-period level and
+how the model's WAPE, bias and interval coverage changed, from stored data only. Drift is
+described as change, not failure.
+
+Earlier: **T047 is complete** (D065): each dataset's data-quality audit is stored when it is loaded
 (migration `0007`) and shown on a new **Data health** page; datasets loaded earlier are audited
 with `python -m wattwise.db.quality --dataset-id ID`. On the synthetic sample it shows the two
 injected data faults (a 12-hour flatline and missing values).
@@ -515,8 +521,8 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T048 — Data drift in the model lab** (M10), then T049 (what-if lab). See
-[ROADMAP.md](ROADMAP.md#t048--data-drift-in-the-model-lab).
+**T049 — What-if (counterfactual) lab** (M10), the last planned task. See
+[ROADMAP.md](ROADMAP.md#t049--what-if-counterfactual-lab).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -536,7 +542,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033, T047–T049 | 7 / 9 |
+| M10 Frontend workflows | T028–T033, T047–T049 | 8 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046 | 5 / 5 |
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatCount, formatDate, formatEnergy, formatShare } from './format';
+import { formatCount, formatDate, formatEnergy, formatShare, levelChange } from './format';
 
 describe('formatEnergy', () => {
   it.each([
@@ -37,5 +37,14 @@ describe('formatCount and formatDate', () => {
 
   it('shows the UTC date of an ISO timestamp', () => {
     expect(formatDate('2016-01-04T00:00:00Z')).toBe('2016-01-04');
+  });
+});
+
+describe('levelChange', () => {
+  it('shows a level ratio as a signed change, or n/a', () => {
+    expect(levelChange(0.84)).toBe('−16%');
+    expect(levelChange(1.1038)).toBe('+10%');
+    expect(levelChange(1.001)).toBe('unchanged');
+    expect(levelChange(null)).toBe('n/a');
   });
 });

@@ -2239,6 +2239,22 @@ links to the entry that replaces it.
   the upload report, and the analysis runs stand in for recent uploads.
 - **A finding describes the data, not the building;** causes in messages are hypotheses.
 
+## D066 — Data drift from stored readings and expectations
+- **Date:** 2026-11-02 · **Task:** T048 · **Status:** Accepted
+- **Reference:** each meter's mean reading before the stored evaluation window, which is the
+  model's training period; the model files are not needed, so drift works wherever expectations
+  are stored.
+- **Per period** (week for windows under 120 days, otherwise month; selectable): the median over
+  meters of the period mean over the training mean (robust to a few large meters), the model's
+  WAPE (only with at least 1 unit of consumption, as in T011) and bias, and the share of readings
+  inside the stored interval, shown against its nominal level. Weeks before the interval begins
+  show "no interval yet", not a number.
+- **Per meter**, the latest period, largest level change first.
+- **Computed in SQL** (one grouped query per request), so BDG2's millions of stored expectations
+  are not loaded into Python.
+- **Wording:** drift describes change, not failure; causes (season, occupancy, equipment,
+  metering) are not inferred.
+
 ---
 
 ## Open decisions (tracked in tasks)

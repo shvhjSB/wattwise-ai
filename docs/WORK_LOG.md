@@ -3035,3 +3035,26 @@ review had called this "no dataset health page"; the accurate gap was the missin
 - Frontend: typecheck, lint, format, 269 unit tests, and 12 browser scenarios (the new one on
   desktop light and dark and on mobile), against a real API and database.
 - A screenshot shows the synthetic sample's two injected data faults and no others.
+
+---
+
+## 2026-11-02 — T048 Data drift in the model lab
+
+**Built:** `wattwise.api.routes.drift` (`GET /api/v1/models/drift`, one grouped SQL query), its
+schemas, and the model lab's **Data drift** panel (`features/models/DriftPanel.tsx`), with a
+week/month choice, the latest period's meters, definitions and the "not failure" note. The model
+lab's dataset-health note now links to the Data health page instead of saying audits are not
+retained (true before T047).
+
+**On the real demo pipeline** (trained model, stored expectations): weekly from 25 January; the
+first two weeks have no interval yet; the week of 15 February shows the synthetic anomalies
+(median level −16 %, WAPE 13.4 %, coverage 72.9 % against 90 %).
+
+**A flaky test from T046, fixed here:** `test_the_public_demo_replaces_a_demo_made_with_another_model`
+assumed two trainings get different version names. The model is deterministic and the name is the
+training second plus a hash, so on CI both trainings landed in one second (CI run 41401737393,
+T047's push, failed on it). The test now marks the stored demo as another model's directly.
+
+**Validation:** backend ruff, format, strict mypy, the new tests (exact figures on crafted
+expectations), the full suite; frontend typecheck, lint, format, 272 unit tests, 15 browser
+scenarios against a real API.

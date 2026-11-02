@@ -7,6 +7,56 @@ import { jsonResponse } from '../test/http';
 import { ANALYSIS, DATASET, EVALUATION, METADATA, MODEL_METRICS } from '../test/modelFixture';
 import { summaryOf } from '../test/summaryFixture';
 
+const DRIFT = {
+  available: true,
+  dataset_id: 'synthetic-sample',
+  data_kind: 'synthetic',
+  datasets: ['synthetic-sample'],
+  model_version: 'demo-model',
+  interval_nominal: 0.9,
+  period: 'week',
+  reference_end: '2016-01-25T00:00:00Z',
+  window_start: '2016-01-25T00:00:00Z',
+  window_end: '2016-02-29T00:00:00Z',
+  periods: [
+    {
+      start: '2016-01-25T00:00:00Z',
+      readings: 672,
+      meters: 4,
+      median_level_ratio: 0.97,
+      wape: 0.094,
+      bias: 3.75,
+      coverage: null,
+    },
+    {
+      start: '2016-02-15T00:00:00Z',
+      readings: 672,
+      meters: 4,
+      median_level_ratio: 0.84,
+      wape: 0.134,
+      bias: 1.49,
+      coverage: 0.729,
+    },
+  ],
+  latest_period: '2016-02-15T00:00:00Z',
+  meters: {
+    items: [
+      {
+        meter_id: 'syn-office-d:electricity',
+        readings: 168,
+        level_ratio: 0.758,
+        wape: 0.32,
+        coverage: 0.607,
+      },
+    ],
+    total: 4,
+    limit: 10,
+    offset: 0,
+  },
+  definitions: { level_ratio: 'A meter’s mean reading in the period over its training mean.' },
+  note: 'Drift describes change, not failure.',
+};
+
 function stubApi(
   options: { unavailable?: boolean; failure?: boolean; empty?: boolean; mismatch?: boolean } = {},
 ) {
@@ -45,6 +95,12 @@ function stubApi(
             }
           : EVALUATION,
       );
+    if (url.pathname.endsWith('/drift'))
+      return jsonResponse(
+        options.unavailable
+          ? { available: false, message: 'No dataset has stored expectations.', datasets: [] }
+          : DRIFT,
+      );
     if (url.pathname.endsWith('/analysis-runs'))
       return jsonResponse({
         items: options.empty ? [] : [ANALYSIS],
@@ -77,7 +133,11 @@ describe('Model lab', () => {
     expect(screen.getByText('2,100')).toBeInTheDocument();
     expect(screen.getByText('Building Alpha')).toBeInTheDocument();
     expect(screen.getByText('Missing values: 100 (2.5%)')).toBeInTheDocument();
-    expect(screen.getByText(/Duplicate, gap, flatline/)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Dataset health' })).getByRole('link', {
+        name: 'Data health',
+      }),
+    ).toHaveAttribute('href', '/data');
     expect(screen.getByText(/Unavailable: no model/)).toBeInTheDocument();
   });
 
@@ -143,5 +203,31 @@ describe('Model lab', () => {
     render(<App />);
     expect(await screen.findByText('Model version changed')).toBeInTheDocument();
     expect(screen.queryByText('Validation and test errors')).not.toBeInTheDocument();
+  });
+
+  it('shows drift by period against the training level, with the meters that moved most', async () => {
+    stubApi();
+    const user = userEvent.setup();
+    render(<App />);
+
+    const drift = await screen.findByRole('region', { name: 'Data drift' });
+    const table = await within(drift).findByRole('table');
+    expect(within(table).getByText('−16%')).toBeInTheDocument();
+    expect(within(table).getByText('No interval yet')).toBeInTheDocument();
+    expect(within(table).getByText('In interval (nominal 90%)')).toBeInTheDocument();
+    expect(within(drift).getByText(/syn-office-d/)).toBeInTheDocument();
+    expect(within(drift).getByText(/not failure/)).toBeInTheDocument();
+    await user.selectOptions(within(drift).getByLabelText(/Group by/), 'month');
+    expect(window.location.search).toContain('driftPeriod=month');
+  });
+
+  it('says why drift is unavailable', async () => {
+    stubApi({ unavailable: true });
+    render(<App />);
+
+    const drift = await screen.findByRole('region', { name: 'Data drift' });
+    expect(
+      await within(drift).findByText('No dataset has stored expectations.'),
+    ).toBeInTheDocument();
   });
 });

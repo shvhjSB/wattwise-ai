@@ -2,12 +2,13 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine
+from sqlalchemy import Engine, select, update
 
 from tests.conftest import SYNTHETIC_SAMPLE
 from wattwise.api.main import create_app
 from wattwise.core.config import Settings
 from wattwise.db.migrate import downgrade
+from wattwise.db.models import ExpectationSet
 from wattwise.demo import build_artifacts, initialize_demo
 from wattwise.ml.registry import versions
 
@@ -41,6 +42,11 @@ def test_demo_restart_preserves_model_readings_and_feedback(
         assert detail["feedback"][0]["note"] == "Keep this review across demo restarts"
         assert client.get("/api/v1/models/evaluation").json()["available"] is True
         assert client.get("/api/v1/models/metrics").json()["data_label"] == "synthetic"
+        drift = client.get("/api/v1/models/drift").json()
+        assert drift["available"] is True and drift["period"] == "week"
+        coverages = [p["coverage"] for p in drift["periods"]]
+        assert any(c is not None for c in coverages)  # early weeks have no interval yet
+        assert all(c is None or 0 <= c <= 1 for c in coverages)
 
 
 def test_demo_refuses_mismatched_artifacts_without_deleting_data(
@@ -85,17 +91,20 @@ def test_a_model_built_without_a_database_seeds_it_without_training(
 def test_the_public_demo_replaces_a_demo_made_with_another_model(
     schema_engine: Engine, tmp_path: Path
 ) -> None:
-    old = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "old")
-    new = build_artifacts(SYNTHETIC_SAMPLE, tmp_path / "new")
-    assert new.model_version != old.model_version
+    first = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path)
+    # A demo stored by another model. Set directly: two trainings of this deterministic model in
+    # the same second get the same version name, so retraining cannot be relied on to differ.
+    with schema_engine.begin() as connection:
+        connection.execute(update(ExpectationSet).values(model_version="an-older-model"))
 
-    kept = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new")
+    kept = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path)
     assert kept.seeded is False  # without the flag, existing data is never replaced
 
-    replaced = initialize_demo(
-        schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new", replace_stale=True
-    )
+    replaced = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path, replace_stale=True)
     assert replaced.seeded is True
-    assert replaced.model_version == new.model_version
-    again = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path / "new", replace_stale=True)
+    assert replaced.model_version == first.model_version
+    with schema_engine.connect() as connection:
+        stored = connection.scalar(select(ExpectationSet.model_version))
+    assert stored == first.model_version
+    again = initialize_demo(schema_engine, SYNTHETIC_SAMPLE, tmp_path, replace_stale=True)
     assert again.seeded is False  # up to date: a restart changes nothing

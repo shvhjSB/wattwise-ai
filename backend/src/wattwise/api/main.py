@@ -17,6 +17,7 @@ from wattwise.api.routes import (
     alerts,
     catalog,
     dashboard,
+    drift,
     health,
     impact,
     models,
@@ -89,6 +90,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     app.include_router(uploads.router, prefix=API_V1_PREFIX)
     app.include_router(models.router, prefix=API_V1_PREFIX)
     app.include_router(quality.router, prefix=API_V1_PREFIX)
+    app.include_router(drift.router, prefix=API_V1_PREFIX)
     if settings.static_dir is not None:
         mount_frontend(app, settings.static_dir)
     return app

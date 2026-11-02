@@ -3058,3 +3058,21 @@ T047's push, failed on it). The test now marks the stored demo as another model'
 **Validation:** backend ruff, format, strict mypy, the new tests (exact figures on crafted
 expectations), the full suite; frontend typecheck, lint, format, 272 unit tests, 15 browser
 scenarios against a real API.
+
+---
+
+## 2026-11-02 — T049 What-if (counterfactual) lab
+
+**Built:** `features/whatif/scenario.ts` (pure arithmetic: thresholds, potential excess before and
+after a cut, the cut in local hours, costs only for kWh with a valid tariff), `ScenarioChart`,
+the **What-if lab** page (meter picker with suggestions, window, controls, totals, chart, legend,
+caveats), `fetchBuilding` and `fetchMeterSuggestions`. No backend change.
+
+**Found in the screenshot review:** in the dark theme the recorded (teal) and scenario (green)
+lines were nearly the same colour. The scenario is now the text colour, drawn under the recorded
+line, so it is visible exactly where the cut changes consumption.
+
+**Validation:** typecheck, lint, format; 7 arithmetic tests with exact figures; 6 page tests
+(meter choice, totals, a cut in New York hours removing a daytime spike, tariff, margin rule,
+404 and unavailable); 285 frontend unit tests; 18 browser scenarios against a real API,
+including one checking that the recorded total is unchanged by a scenario.

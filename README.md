@@ -10,7 +10,7 @@ what it does not know.
 
 > **Status.** The original roadmap (T001–T045) is done. A public, read-only demo of the
 > synthetic data is prepared for Render (T046, [how](docs/DEPLOYMENT.md#public-demo-on-render-t046-d064));
-> T047 (Data health) and T048 (data drift) are done; one UI addition (T049) is planned ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> T047–T049 (Data health, data drift, What-if lab) are done ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
 > The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
 > has **no authentication**. Every result quoted below links to the section of
 > [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.
@@ -41,6 +41,7 @@ or that an influence is a cause. Synthetic data is labelled synthetic everywhere
 | **Buildings & meters** | A meter's readings against the model's expectation and 90% interval, the difference, and alert windows; an hour-by-hour readout and a data table |
 | **Alerts** | A priority-ordered queue with filters, each alert's evidence and explanation, and reviewer feedback (stored, never used to retrain) |
 | **Cost impact** | Potential energy per kind of data, an explicit tariff scenario, and carbon from sourced factors |
+| **What-if lab** | A meter's recorded use against the model's expectation, with the potential-excess rule, a hypothetical cut in chosen local hours and an optional entered tariff; nothing is saved and history is never changed |
 | **Data health** | Each dataset's stored data-quality audit: coverage, gaps, missing values, flatlines, zero runs, out-of-range values, duplicate handling, and recent uploads |
 | **Model lab** | The served model, its recorded test results against a baseline, data drift over the evaluation window, dataset health and recent analyses |
 

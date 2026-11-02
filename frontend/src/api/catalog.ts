@@ -101,6 +101,19 @@ export function fetchMeters(buildingId: string, signal?: AbortSignal): Promise<P
   return getJson(`/api/v1/meters?${query.toString()}`, isPage(isMeter), signal ? { signal } : {});
 }
 
+export function fetchBuilding(buildingId: string, signal?: AbortSignal): Promise<Building> {
+  return getJson(
+    `/api/v1/buildings/${encodeURIComponent(buildingId)}`,
+    isBuilding,
+    signal ? { signal } : {},
+  );
+}
+
+/** The first page of all meters (up to 200), for suggestions. */
+export function fetchMeterSuggestions(signal?: AbortSignal): Promise<Page<Meter>> {
+  return getJson('/api/v1/meters?limit=200', isPage(isMeter), signal ? { signal } : {});
+}
+
 export function fetchMeter(meterId: string, signal?: AbortSignal): Promise<Meter> {
   return getJson(
     `/api/v1/meters/${encodeURIComponent(meterId)}`,

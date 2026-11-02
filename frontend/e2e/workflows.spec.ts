@@ -116,3 +116,21 @@ test('model lab shows data drift against the training period', async ({ page }) 
   await expect(drift.getByRole('columnheader', { name: 'Month' })).toBeVisible();
   await noPageOverflow(page);
 });
+
+test('what-if lab tries a scenario without changing the recording', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'What-if lab', exact: true }).click();
+  await expect(page.getByText('Choose a meter', { exact: true })).toBeVisible();
+  await page.getByPlaceholder('Meter ID').fill('syn-office-a:electricity');
+  await page.getByRole('button', { name: 'Explore', exact: true }).click();
+  const scenario = page.getByRole('region', { name: 'Scenario' });
+  const totals = scenario.getByRole('table', { name: 'Scenario totals' });
+  await expect(totals.getByText('Recorded', { exact: true })).toBeVisible();
+  const recorded = await totals.getByRole('row').first().innerText();
+  await scenario.getByLabel('Cut, percent').fill('30');
+  await expect(totals.getByText('Consumption under the scenario', { exact: true })).toBeVisible();
+  expect(await totals.getByRole('row').first().innerText()).toBe(recorded);
+  await expect(scenario.getByRole('note')).toContainText('recorded readings are unchanged');
+  await noPageOverflow(page);
+  await page.screenshot({ path: info.outputPath('what-if.png'), fullPage: true });
+});

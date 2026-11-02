@@ -34,6 +34,12 @@ export const ROUTES: readonly RouteInfo[] = [
     summary: 'Potential excess energy, cost with a configured tariff, and sourced carbon.',
   },
   {
+    path: '/whatif',
+    label: 'What-if lab',
+    task: 'T049',
+    summary: 'A meter’s recorded use against the model, with scenarios that never change history.',
+  },
+  {
     path: '/data',
     label: 'Data health',
     task: 'T047',

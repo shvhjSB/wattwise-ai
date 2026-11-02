@@ -452,10 +452,17 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T046 | Public read-only synthetic demo on Render (Blueprint; owner applies it) | 2026-11-02 |
 | T047 | Dataset health: store and show the data-quality audit | 2026-11-02 |
 | T048 | Data drift in the model lab | 2026-11-02 |
+| T049 | What-if (counterfactual) lab | 2026-11-02 |
 
 ## Current task
 
-None. **T048 is complete** (D066): the model lab's **Data drift** panel shows, per week or month
+None. **Every roadmap task is complete**, including the three gaps from the final review: T047
+(Data health), T048 (data drift) and **T049, the What-if lab** (D067): a meter's recorded use
+against the model's expectation, with the potential-excess rule, a hypothetical cut in chosen
+local hours and an optional entered tariff, computed in the browser and never saved. The public
+Render demo (T046) is ready and waits for the owner to apply the Blueprint.
+
+Earlier: **T048 is complete** (D066): the model lab's **Data drift** panel shows, per week or month
 of the stored evaluation window, how meters' readings moved from their training-period level and
 how the model's WAPE, bias and interval coverage changed, from stored data only. Drift is
 described as change, not failure.
@@ -521,8 +528,9 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T049 — What-if (counterfactual) lab** (M10), the last planned task. See
-[ROADMAP.md](ROADMAP.md#t049--what-if-counterfactual-lab).
+None scheduled: the roadmap is complete. The owner's remaining step is applying the Render
+Blueprint ([DEPLOYMENT.md](DEPLOYMENT.md#public-demo-on-render-t046-d064)); open decisions are listed
+in the latest end-of-task report.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -542,7 +550,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033, T047–T049 | 8 / 9 |
+| M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046 | 5 / 5 |
 

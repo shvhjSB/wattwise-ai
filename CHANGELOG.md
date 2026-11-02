@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- What-if lab (T049): a page to try the potential-excess rule, a hypothetical cut in
+  local hours and an entered tariff on a meter's stored readings and expectation;
+  computed in the browser, never saved.
 - Data drift (T048): `GET /api/v1/models/drift` and a Data drift panel in the model lab,
   per week or month, against each meter's training-period level.
 - Data health (T047): each dataset's data-quality audit is stored when it is loaded

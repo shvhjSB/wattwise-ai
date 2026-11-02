@@ -73,7 +73,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T046 | Public read-only synthetic demo on Render | M12 | T036, T038 | Done (owner applies the Blueprint) |
 | T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Done |
 | T048 | Data drift in the model lab | M10 | T033, T019b | Done |
-| T049 | What-if (counterfactual) lab | M10 | T030, T032 | Not started |
+| T049 | What-if (counterfactual) lab | M10 | T030, T032 | Done |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
@@ -907,6 +907,12 @@ The owner asked for the remaining gaps against the original specification and a 
   change scenario parameters (for example the alert threshold, the interval level used for
   potential excess, or a tariff) to see the effect, without changing stored data.
 - **Acceptance:** scenarios are labelled as such, history is never rewritten, tests.
+- **Done (2026-11-02, D067):** the **What-if lab** page. For a meter and window (last 7, 14 or
+  28 days, or the whole stored window) it shows recorded and expected consumption and the
+  potential excess, counted above the stored interval's upper bound or above expected plus a
+  chosen margin; a hypothetical percentage cut in chosen local hours (the building's time zone);
+  and costs only with a tariff the user enters, for kWh meters. Computed in the browser from the
+  existing expectation endpoint; nothing is saved, so it also works on the read-only public demo.
 
 ## Added after T007b (supplementary data)
 

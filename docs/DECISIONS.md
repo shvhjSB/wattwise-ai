@@ -2255,6 +2255,21 @@ links to the entry that replaces it.
 - **Wording:** drift describes change, not failure; causes (season, occupancy, equipment,
   metering) are not inferred.
 
+## D067 — The What-if lab computes scenarios in the browser and saves nothing
+- **Date:** 2026-11-02 · **Task:** T049 · **Status:** Accepted
+- **Inputs:** the existing expectation endpoint (readings, stored expectation and interval) and
+  the building's time zone. No new server state, so the lab works on the read-only public demo.
+- **Scenario parameters:**
+  - Potential excess counts above the stored interval's upper bound (default, as in T021) or
+    above expected plus a chosen margin.
+  - A hypothetical cut of a chosen percentage in chosen local hours.
+  - A tariff only if the user enters one, for kWh meters only.
+  - The interval's level is not a parameter: other levels are not stored, and recomputing them
+    in the browser would be a different, unvalidated calibration.
+- **Wording:** "hypothetical", "potential, not verified", "not a forecast"; the recorded readings
+  are shown unchanged next to every scenario figure, and hours without a threshold are counted
+  and said, not treated as zero excess silently.
+
 ---
 
 ## Open decisions (tracked in tasks)

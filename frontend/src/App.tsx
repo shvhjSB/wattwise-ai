@@ -5,6 +5,7 @@ import { useDataKinds, useSummary } from './features/summary/useSummary';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { DataHealthPage } from './pages/DataHealthPage';
+import { WhatIfPage } from './pages/WhatIfPage';
 import { ImpactPage } from './pages/ImpactPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { ModelsPage } from './pages/ModelsPage';
@@ -40,6 +41,8 @@ function Routes() {
         <AlertsPage summary={route.summary} />
       ) : route.path === '/impact' ? (
         <ImpactPage summary={route.summary} />
+      ) : route.path === '/whatif' ? (
+        <WhatIfPage summary={route.summary} />
       ) : route.path === '/data' ? (
         <DataHealthPage summary={route.summary} />
       ) : route.path === '/models' ? (

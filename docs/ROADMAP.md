@@ -68,7 +68,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T038 | Deployment recipe and guide | M12 | T036 | Done |
 | T039 | Final documentation | M12 | T034, T038 | Done |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017, T045 | Done |
-| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Not started (data acquired) |
+| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Done |
 | T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
@@ -898,3 +898,9 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Real-run metrics, or "not run" with the reason.
   - Coverage and missing data are reported per meter.
+- **Done (2026-11-02, D063):** `python -m wattwise.data.hkust` turns 1,246 of 1,329 meters'
+  cumulative registers into hourly kWh; `python -m wattwise.ml.hkust_eval` scores the BDG2 model
+  (not retrained) and the baselines on the chronological split ([report](reports/hkust-generalisation.md), per-meter
+  [CSV](reports/hkust-meters.csv)). The question fixed before the run (model MAE below
+  seasonal-naive on common test rows) is answered **yes**: −6.6 % with ERA5 weather, −5.5 %
+  without, against −18.0 % on BDG2's own test; the model wins on 872 of 1,160 meters.

@@ -8,8 +8,7 @@ energy, cost and carbon, and lets an operator review each alert. It is built on 
 [Building Data Genome Project 2](#data-and-licences) (1,148 meters, 2016–2017), and says plainly
 what it does not know.
 
-> **Status.** Roadmap tasks T001–T040 are done; one supplementary-data study (T041, HKUST)
-> remains ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> **Status.** Every roadmap task (T001–T045) is done ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
 > The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
 > has **no authentication**. Every result quoted below links to the section of
 > [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.
@@ -122,7 +121,9 @@ All on real BDG2 data at full scale; each links to its record.
 ## Limitations
 
 - **One dataset**, mostly university campuses, two years, North America and Europe. Results
-  elsewhere are unknown. The independent test (T041, HKUST) has not been run. A one-building
+  elsewhere are mostly unknown. On one independent campus (HKUST, Hong Kong, T041) the model,
+  not retrained, beat seasonal-naive by 6.6 % against 18.0 % on BDG2
+  ([report](docs/reports/hkust-generalisation.md)). A one-building
   case study on LBNL Building 59 (T040) found that the default detector does not flag a
   gradual regime change such as the COVID shutdown
   ([report](docs/reports/lbnl59-case-study.md)).

@@ -1,0 +1,9 @@
+{
+  "source": "Open-Meteo historical archive, model ERA5 (Copernicus); CC BY 4.0, 'Weather data by Open-Meteo.com'",
+  "url": "https://archive-api.open-meteo.com/v1/archive?latitude=22.3363&longitude=114.2634&start_date=2021-12-01&end_date=2024-05-31&hourly=temperature_2m%2Cdew_point_2m%2Cwind_speed_10m%2Cshortwave_radiation%2Ccloud_cover&models=era5&wind_speed_unit=ms&timezone=GMT&timeformat=iso8601",
+  "local_path": "data/raw/hkust/era5_campus.json",
+  "bytes": 917991,
+  "sha256": "a4913c472922181d44f5ea5d3d7d6b705a14281cb2104d22c58712877f34e0af",
+  "content_sha256": "b9703713e731a50242c9acb239226aba12099357345105a810c1f5bdf8eadcf6",
+  "fetched_at": "2026-11-02T03:36:46Z"
+}

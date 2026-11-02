@@ -25,8 +25,11 @@ command. Provenance and download instructions: [docs/DATASETS.md](docs/DATASETS.
 | [`data/reference/electricity_prices.csv`](data/reference/electricity_prices.csv) | Published price references (T021a) | Per row: EIA, **US Government Work (public domain)**; DESNZ Quarterly Energy Prices, **Open Government Licence v3.0**; CSO TMEGB04, **CC BY 4.0** | As above. A price is never applied by default; a user chooses it as a scenario (D054). |
 | `holidays` package data | Public-holiday features | MIT (package licence) | Installed dependency, see below |
 
-**Not yet used:** LBNL Building 59 (CC0) and the HKUST campus smart-meter database (CC0) are
-planned for T040 and T041. They are not downloaded or committed.
+**Supplementary studies:** LBNL Building 59 (CC0, T040) and the HKUST campus smart-meter
+database (CC0, T041) are downloaded locally from Dryad and git-ignored. Only derived results
+are committed: the two reports in `docs/reports/` and HKUST's per-meter statistics
+(`docs/reports/hkust-meters.csv`). T041's campus weather is ERA5 via Open-Meteo, under the
+terms in the row above.
 
 ## Third-party software shipped in the containers
 

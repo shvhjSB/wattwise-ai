@@ -97,8 +97,10 @@ the model gives context to alerts rather than raising them.
 
 ## Limitations
 
-- **One dataset, two years, mostly campuses.** Accuracy on other building types, regions or years
-  is unknown; the HKUST test (T041) has not been run.
+- **One training dataset, two years, mostly campuses.** On one independent campus (HKUST, Hong
+  Kong, 2023–2024, mostly device meters; T041), without retraining, the model's MAE was 6.6 %
+  below seasonal-naive, against 18.0 % on BDG2's own test window
+  ([report](reports/hkust-generalisation.md)). Other building types and regions are untested.
 - **Uploaded buildings** have no ERA5 enrichment and no holidays for unknown sites, so their
   expectations are an extrapolation that has not been validated (D048).
 - **Clock changes:** a cluster of events on 5 November (the US clock change) has not been checked

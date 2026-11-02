@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- HKUST generalisation test (T041): `python -m wattwise.data.hkust` turns the campus's
+  cumulative registers into hourly readings and fetches ERA5 weather; `python -m
+  wattwise.ml.hkust_eval` scores the BDG2 model, not retrained, against the baselines
+  ([report](docs/reports/hkust-generalisation.md)).
 - LBNL Building 59 case study (T040): `python -m wattwise.ml.lbnl59` runs the default detector
   on a real sub-metered office and compares its events with end uses, dampers, temperature,
   occupancy and the authors' dated events (wildfire damper closures, shelter-in-place, MPC

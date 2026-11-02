@@ -12,7 +12,7 @@ git-ignored. Only the small synthetic sample and provenance manifests are commit
 | LEAD 1.0 human anomaly labels | Checking the detectors against human labels (T018b, T044c) | **No.** Local evaluation only, never redistributed (D022); manifest [`data/manifests/lead.json`](../data/manifests/lead.json) | `uv run python -m wattwise.data.lead fetch`, then `prepare` ([below](#real-anomaly-labels-lead-10)) |
 | ERA5 radiation and cloud cover, via Open-Meteo | Weather enrichment features (T007d) | **No.** Fetched by an explicit command into `data/raw/era5` | `uv run python -m wattwise.data.era5 fetch`, `verify`, `prepare` ([below](#weather-enrichment)) |
 | Carbon factors and electricity prices | Sourced references for impact (T021a) | **Yes:** two small cited tables in [`data/reference/`](../data/reference/), each row with its source, licence and file hash | Committed ([below](#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)) |
-| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040, done) and an independent test (T041) | **No.** Downloaded into git-ignored `data/raw/lbnl59` and `data/raw/hkust`, verified against Dryad's SHA-256 | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
+| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041), both done | **No.** Downloaded into git-ignored `data/raw/lbnl59` and `data/raw/hkust`, verified against Dryad's SHA-256 | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
 
 Licences for all of these, and for the software WattWise ships, are summarised in
 [LICENSES.md](../LICENSES.md).
@@ -676,6 +676,10 @@ the committed CSVs from the same files.
     UTC, Wi-Fi like local time (inferred in T040). There is no whole-building meter.
   - CU-BEMS is a cooling-only tropical building.
   - HKUST's 15-minute meters are 23–52% missing.
+  - HKUST's files are cumulative kWh registers, on Hong Kong time (inferred, T041). Hourly
+    consumption is the register difference; resets and restart jumps are set missing, never
+    filled (D063). The dataset has no weather: T041 uses ERA5 for the campus (Open-Meteo,
+    [manifest](../data/manifests/hkust_era5.json)) as a modelled substitute.
 - **Not independent of BDG2:**
   - Building Data Genome 1: 390 of its 507 buildings have a BDG2 building's exact floor area
     (an inference, not an ID match).
@@ -685,8 +689,9 @@ the committed CSVs from the same files.
 - **Data from another building cannot confirm a cause in a BDG2 building.** It can only test
   whether a detector reacts to a known kind of event. Causes in BDG2 remain hypotheses.
 - **Status (2026-11-02):** Building 59 and HKUST are downloaded and verified. Building 59 is used
-  in the T040 case study ([report](reports/lbnl59-case-study.md)); HKUST is for T041. CU-BEMS and
-  EnerNOC are not planned.
+  in the T040 case study ([report](reports/lbnl59-case-study.md)); HKUST in the T041
+  generalisation test ([report](reports/hkust-generalisation.md)). CU-BEMS and EnerNOC are not
+  planned.
 
 ### Decisions for the owner (all decided)
 

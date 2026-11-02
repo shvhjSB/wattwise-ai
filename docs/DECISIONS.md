@@ -2182,6 +2182,25 @@ links to the entry that replaces it.
   no north lighting record. North lighting is not estimated.
 - **Clock:** still undocumented; the UTC inference of D061 stands.
 
+## D063 — The HKUST generalisation test
+- **Date:** 2026-11-02 · **Task:** T041 · **Status:** Accepted
+- **Question, fixed before the run:** does the promoted BDG2 evaluation model, not retrained,
+  have a lower MAE than seasonal-naive on the HKUST test rows both predict? The ERA5-weather
+  variant is primary; the no-weather variant and the hour-of-week profile are reported too.
+- **Readings:** the clean files are cumulative kWh registers. Hourly consumption is the register
+  difference at local hour boundaries (15-minute, 30-minute and hourly files; daily ones are not
+  used). Negative differences and jumps above 10 × the meter's 99th percentile are set missing,
+  never filled. Meters whose valid hours are all zero are not used. Each meter is its own unit.
+- **Clock:** Hong Kong time, inferred (the 1970-01-01 08:00 padding; the 05:00 minimum).
+- **Weather:** ERA5 for the campus from Open-Meteo, substituted for observed weather, fetched once
+  and recorded by hash (`data/manifests/hkust_era5.json`).
+- **Split:** chronological on local midnights; training 2022-01-01 to 2023-07-01 (profile only),
+  validation to 2023-10-01, test to 2024-05-28.
+- **Parsing:** the workbooks are read with the standard library (zip and XML) rather than adding
+  an Excel dependency; the format is fixed and tested.
+- **Committed:** the report and per-meter statistics (derived from CC0 data); never the data.
+- **Scope:** reported separately from BDG2; it changes no BDG2 figure and promotes nothing.
+
 ---
 
 ## Open decisions (tracked in tasks)

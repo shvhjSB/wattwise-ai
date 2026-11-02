@@ -448,10 +448,19 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T039 | Final documentation | 2026-11-01 |
 | T045 | Pinned acquisition of the Dryad datasets | 2026-11-01 |
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | 2026-11-02 |
+| T041 | Generalisation test on independent buildings (HKUST) | 2026-11-02 |
 
 ## Current task
 
-None. **T040 is complete** (D061, revised by D062 from the authors' article): a one-building
+None. **Every roadmap task is complete.** T041 is the last (D063): the BDG2 model, not
+retrained, applied to 1,246 HKUST campus meters in Hong Kong (2022–2024) and scored with the
+T011 harness on a chronological split ([hkust-generalisation.md](reports/hkust-generalisation.md)). On the 3.9 million
+test rows every forecaster predicted, its MAE is **6.6 % lower than seasonal-naive** with ERA5
+weather (5.5 % without), against 18.0 % on BDG2's own test window and 8.5 % for unseen BDG2
+sites; it wins on 872 of 1,160 meters. Coverage and data problems are reported per meter
+([CSV](reports/hkust-meters.csv)).
+
+**T040 is complete** (D061, revised by D062 from the authors' article): a one-building
 case study on LBNL Building 59, [lbnl59-case-study.md](reports/lbnl59-case-study.md). Against
 the authors' own timeline, the default detector did not flag the shelter-in-place drop (45 % over
 three weeks, followed by its 14-day baseline) or either wildfire damper closure, and flagged one
@@ -492,10 +501,8 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T041 — Generalisation test on independent buildings** (M5): evaluate the chosen forecaster
-on the HKUST campus meters (CC0, 1.43 GB, downloaded and verified on 2026-11-02) with the T011
-harness and T010 splits, reported separately from BDG2, with coverage and missing data per meter.
-See [ROADMAP.md](ROADMAP.md#t041--generalisation-test-on-independent-buildings).
+None scheduled: the roadmap is complete. Owner decisions that remain open are listed under
+Decisions needed in the latest end-of-task report and below.
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -509,7 +516,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
-| M5 Improved model | T013–T015, T041 | 3 / 4 |
+| M5 Improved model | T013–T015, T041 | 4 / 4 |
 | M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 5 / 5 |
 | M6 Anomaly detection | T016–T018, T018b, T040 | 5 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |

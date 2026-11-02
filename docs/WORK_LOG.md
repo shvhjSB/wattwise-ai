@@ -2939,3 +2939,35 @@ The owner asked for T040's limits to be fixed before T041.
   February 2019 only.
 - **Validation:** ruff, format, strict mypy; 21 tests in `test_lbnl59.py`; the full backend suite
   before commit.
+
+---
+
+## 2026-11-02 — T041 Generalisation test on independent buildings (HKUST)
+
+**Data**
+- The article (Europe PMC, PMC11599614) documents kWh registers and no imputation; it does not
+  state the clock. Hong Kong time was inferred from the 1970-01-01 08:00 padding rows (the epoch
+  in UTC+8) and the 05:00 minimum of campus load.
+- `wattwise.data.hkust prepare` read 1,329 workbooks with the standard library in 437 s:
+  1,246 meters used (26 daily-only, 56 all-zero, 1 without a valid hour), 17,419,328 hourly
+  readings. Register resets (46,088 hours, 285 meters) and restart jumps (1,518 hours, 271
+  meters) are set missing.
+- `fetch-weather` saved one ERA5 response for the campus (917,991 bytes, hash in
+  `data/manifests/hkust_era5.json`).
+
+**Result** ([report](reports/hkust-generalisation.md))
+- The question was written into the module before the run. Answer: yes. On 3,896,520 common
+  test rows (1,158 meters) the model's MAE is 4.977 against seasonal-naive's 5.328 (−6.6 %);
+  without weather −5.5 %; the hour-of-week profile +29.6 %. Validation: −5.5 %. Per meter, the
+  model wins on 872 of 1,160.
+- The run took 1,124 s (19 min) and peaked near the machine's memory limit (0.9 GB free of
+  15.3 GB at one check).
+
+**Corrections before commit**
+- Group medians first came out "n/a" because two meters had a zero seasonal-naive MAE (no
+  consumption in their test hours), which makes the ratio undefined. The median now skips those
+  meters; the groups were recomputed from the saved per-meter table, the same data the run used.
+
+**Validation**
+- Ruff, format, strict mypy; 17 new tests (synthetic workbooks, registers, resets, metadata,
+  weather parsing and fetching, the split, baselines, common-row and per-meter comparisons).

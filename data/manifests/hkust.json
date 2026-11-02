@@ -1,0 +1,26 @@
+{
+  "dataset": "A 2.5-year campus-level smart meter database with equipment data for energy analytics",
+  "doi": "doi:10.5061/dryad.k3j9kd5h6",
+  "dryad_version": 308602,
+  "licence": "CC0 1.0",
+  "citation": "Li, M., Wang, Z., Qu, Y., Chui, K. M., Leung-Shea, M. (2024). A 2.5-year campus-level smart meter database with equipment data for energy analytics. Dryad, https://doi.org/10.5061/dryad.k3j9kd5h6. Article: Scientific Data, https://doi.org/10.1038/s41597-024-04106-1. Licence: CC0 1.0.",
+  "documentation": "docs/DATASETS.md",
+  "files": {
+    "All_Data.zip": {
+      "dryad_url": "https://datadryad.org/api/v2/files/3365419/download",
+      "local_path": "data/raw/hkust/All_Data.zip",
+      "bytes": 1432480964,
+      "sha256": "f2446158573311bda2b1fbd8a114bb1479ac8d4a0e11c395ca3b920676eb0c8a",
+      "obtained_at": "2026-11-02T02:51:33Z",
+      "last_verified_at": "2026-11-02T02:51:33Z"
+    },
+    "README.md": {
+      "dryad_url": "https://datadryad.org/api/v2/files/3365421/download",
+      "local_path": "data/raw/hkust/README.md",
+      "bytes": 4104,
+      "sha256": "e7af1d78fccd7e16176ddc271957a1f44dec0ea3e663052a0350def3d2e8ca8a",
+      "obtained_at": "2026-11-02T02:51:33Z",
+      "last_verified_at": "2026-11-02T02:51:33Z"
+    }
+  }
+}

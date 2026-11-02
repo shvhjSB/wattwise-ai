@@ -41,6 +41,7 @@ def test_unknown_route_returns_json_404(client: TestClient) -> None:
 
 def test_app_reads_settings_from_environment_by_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WATTWISE_ENVIRONMENT", "production")
+    monkeypatch.setenv("WATTWISE_MODEL_DATA_KIND", "synthetic")
     get_settings.cache_clear()
     try:
         with TestClient(create_app()) as client:

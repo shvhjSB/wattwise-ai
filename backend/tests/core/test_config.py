@@ -14,8 +14,29 @@ def test_environment_defaults_to_development(monkeypatch: pytest.MonkeyPatch) ->
 
 def test_environment_variable_overrides_default(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("WATTWISE_ENVIRONMENT", "production")
+    monkeypatch.setenv("WATTWISE_MODEL_DATA_KIND", "synthetic")
 
     assert Settings().environment == "production"
+
+
+def test_production_needs_an_explicit_model_label(monkeypatch: pytest.MonkeyPatch) -> None:
+    # The label decides whether model metrics are shown as real-world results; production never
+    # assumes it (T053).
+    monkeypatch.setenv("WATTWISE_ENVIRONMENT", "production")
+    monkeypatch.delenv("WATTWISE_MODEL_DATA_KIND", raising=False)
+
+    with pytest.raises(ValidationError, match="WATTWISE_MODEL_DATA_KIND"):
+        Settings()
+    assert Settings(model_data_kind="observed").model_data_kind == "observed"
+    monkeypatch.setenv("WATTWISE_MODEL_DATA_KIND", "synthetic")
+    assert Settings().model_data_kind == "synthetic"
+
+
+def test_development_keeps_the_observed_default(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("WATTWISE_MODEL_DATA_KIND", raising=False)
+
+    assert Settings(environment="development").model_data_kind == "observed"
+    assert Settings(environment="test").model_data_kind == "observed"
 
 
 def test_invalid_environment_is_rejected(monkeypatch: pytest.MonkeyPatch) -> None:

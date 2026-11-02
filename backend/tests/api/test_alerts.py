@@ -47,7 +47,6 @@ def test_alerts_are_listed_highest_priority_first(alert_client: TestClient) -> N
         ({"kind": "below_expected"}, 1),
         ({"kind": "meter_problem"}, 1),
         ({"dataset_id": "synthetic-sample"}, 5),
-        ({"dataset_id": "other"}, 0),
         ({"review_status": "unreviewed"}, 5),
         ({"review_status": "confirmed_waste"}, 0),
         # Overlap with [start, end): the 2016-01-20 spike and the 72 h event from 2016-02-08.
@@ -58,6 +57,14 @@ def test_alerts_are_listed_highest_priority_first(alert_client: TestClient) -> N
 )
 def test_alerts_filter(alert_client: TestClient, params: dict[str, str], expected: int) -> None:
     assert alerts(alert_client, **params)["total"] == expected
+
+
+def test_alerts_of_a_dataset_that_is_not_stored_are_an_error(alert_client: TestClient) -> None:
+    # Never an empty page that reads as "no alerts" (T053): the source itself is unavailable.
+    response = alert_client.get(f"{API}/alerts", params={"dataset_id": "other"})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "dataset not found"}
 
 
 def test_alerts_filter_by_severity_band(alert_client: TestClient) -> None:

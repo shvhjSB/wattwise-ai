@@ -20,6 +20,14 @@ describe('ProvenanceBadge', () => {
 
     expect(screen.getByTitle(/not measurements from real buildings/i)).toBeInTheDocument();
   });
+
+  it('never calls observed history live', () => {
+    render(<ProvenanceBadge kind="observed" />);
+
+    expect(screen.getByTitle('Measured by real meters: historical records, not live data.')).toBe(
+      screen.getByText('Observed').closest('span[title]'),
+    );
+  });
 });
 
 describe('DemoBanner', () => {

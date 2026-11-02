@@ -48,6 +48,25 @@ def test_buildings_filter_by_site(sample_client: TestClient) -> None:
     assert page["total"] == 2
 
 
+def test_buildings_filter_by_dataset(sample_client: TestClient) -> None:
+    page = sample_client.get(
+        f"{API}/buildings", params={"dataset_id": SAMPLE_INFO.dataset_id}
+    ).json()
+
+    assert page["total"] == 4
+    assert {b["data_kind"] for b in page["items"]} == {"synthetic"}
+
+
+def test_buildings_of_a_dataset_that_is_not_stored_are_an_error(
+    sample_client: TestClient,
+) -> None:
+    # A source that is not there is reported as unavailable, not as an empty source (T053).
+    response = sample_client.get(f"{API}/buildings", params={"dataset_id": "bdg2-cleaned-all"})
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "dataset not found"}
+
+
 def test_buildings_paginate(sample_client: TestClient) -> None:
     first = sample_client.get(f"{API}/buildings", params={"limit": 3, "offset": 0}).json()
     second = sample_client.get(f"{API}/buildings", params={"limit": 3, "offset": 3}).json()
@@ -221,6 +240,7 @@ def test_the_summary_counts_what_is_stored(
     assert dataset["readings"] == len(readings)
     kwh = readings["value"].sum()  # all four sample meters are kWh meters
     assert dataset["measured_kwh"] == pytest.approx(kwh)
+    assert dataset["loaded_at"].endswith("Z")  # the dataset's version: when it was loaded
     (kind,) = summary["by_kind"]
     assert kind["kind"] == "synthetic"
     assert kind["measured_kwh"] == pytest.approx(kwh)

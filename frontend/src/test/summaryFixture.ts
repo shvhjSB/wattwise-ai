@@ -1,4 +1,10 @@
-import type { AlertTotals, DashboardSummary, KindSummary, StoredKind } from '../api/summary';
+import type {
+  AlertTotals,
+  DashboardSummary,
+  DatasetSummary,
+  KindSummary,
+  StoredKind,
+} from '../api/summary';
 
 export function alertTotals(overrides: Partial<AlertTotals> = {}): AlertTotals {
   return {
@@ -31,8 +37,36 @@ export function kindSummary(kind: StoredKind, overrides: Partial<KindSummary> = 
   };
 }
 
+const DATASET_NAMES: Record<StoredKind, [string, string]> = {
+  synthetic: ['synthetic-sample', 'WattWise synthetic sample (seed 2016)'],
+  observed: [
+    'bdg2-cleaned-all',
+    'BDG2 cleaned, all eligible electricity meters (local only, D014)',
+  ],
+};
+
+/** One stored dataset per kind, matching that kind's totals. */
+export function datasetOf(kind: KindSummary): DatasetSummary {
+  const [dataset_id, name] = DATASET_NAMES[kind.kind];
+  return {
+    dataset_id,
+    name,
+    kind: kind.kind,
+    buildings: kind.buildings,
+    meters: kind.meters,
+    readings: kind.readings,
+    first_reading: kind.first_reading,
+    last_reading: kind.last_reading,
+    loaded_at: '2026-10-28T17:34:34Z',
+  };
+}
+
 export function summaryOf(...kinds: KindSummary[]): DashboardSummary {
-  return { data_kinds: kinds.map((k) => k.kind).sort(), by_kind: kinds };
+  return {
+    datasets: kinds.map(datasetOf),
+    data_kinds: kinds.map((k) => k.kind).sort(),
+    by_kind: kinds,
+  };
 }
 
 /** A realistic observed summary with alerts (the shape and scale of the full-scale data). */

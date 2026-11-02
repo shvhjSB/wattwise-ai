@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 Environment = Literal["development", "test", "production"]
@@ -70,6 +70,17 @@ class Settings(BaseSettings):
         if value is not None and not value.get_secret_value().startswith(DATABASE_DRIVER_PREFIX):
             raise ValueError(f"database_url must start with {DATABASE_DRIVER_PREFIX}")
         return value
+
+    @model_validator(mode="after")
+    def _explicit_model_label_in_production(self) -> "Settings":
+        # The label decides whether the model's metrics are presented as real-world (observed) or
+        # synthetic results. In production it is never assumed (T053): a synthetic model must not
+        # be labelled observed because a deployment forgot to say so.
+        if self.environment == "production" and "model_data_kind" not in self.model_fields_set:
+            raise ValueError(
+                "set WATTWISE_MODEL_DATA_KIND to observed or synthetic explicitly in production"
+            )
+        return self
 
 
 @lru_cache

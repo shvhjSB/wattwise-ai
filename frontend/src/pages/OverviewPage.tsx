@@ -1,4 +1,4 @@
-import type { KindSummary } from '../api/summary';
+import type { DatasetSummary, KindSummary } from '../api/summary';
 import { KpiCard } from '../design/KpiCard';
 import { formatCount, formatDate, formatEnergy, formatShare } from '../design/format';
 import { ProvenanceBadge } from '../design/Provenance';
@@ -91,6 +91,68 @@ function KindOverview({ kind }: { kind: KindSummary }) {
   );
 }
 
+/**
+ * Every stored source, with its label and version (when it was loaded). Sources are never merged
+ * or substituted for one another; uploads are never stored, so they are not listed here.
+ */
+function DataSources({ datasets }: { datasets: readonly DatasetSummary[] }) {
+  return (
+    <section aria-labelledby="data-sources" className="space-y-3">
+      <h3 id="data-sources" className="text-lg font-semibold">
+        Data sources
+      </h3>
+      <p className="text-sm text-muted">
+        Stored datasets are historical records, not live data. Uploaded files are analysed by the
+        API without being stored and are labelled Uploaded.
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full min-w-[36rem] text-left text-sm">
+          <caption className="sr-only">Stored datasets, their provenance and version</caption>
+          <thead className="text-muted">
+            <tr>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Dataset
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Provenance
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Period recorded (UTC)
+              </th>
+              <th scope="col" className="py-2 pr-4 text-right font-medium">
+                Readings
+              </th>
+              <th scope="col" className="py-2 pr-4 font-medium">
+                Version (loaded)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {datasets.map((d) => (
+              <tr key={d.dataset_id} className="border-t border-line align-top">
+                <td className="py-2 pr-4">
+                  <span className="font-medium">{d.name}</span>
+                  <span className="block font-mono text-xs text-muted">{d.dataset_id}</span>
+                </td>
+                <td className="py-2 pr-4">
+                  <ProvenanceBadge kind={d.kind} />
+                </td>
+                <td className="py-2 pr-4">
+                  {d.first_reading && d.last_reading
+                    ? `${formatDate(d.first_reading)} to ${formatDate(d.last_reading)}`
+                    : 'No readings'}
+                </td>
+                <td className="py-2 pr-4 text-right tabular-nums">{formatCount(d.readings)}</td>
+                <td className="py-2 pr-4">{formatDate(d.loaded_at)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 export function OverviewPage({ summary }: { summary: ReturnType<typeof useSummary> }) {
   const { state, retry } = summary;
   return (
@@ -123,6 +185,10 @@ export function OverviewPage({ summary }: { summary: ReturnType<typeof useSummar
 
       {state.status === 'success' &&
         state.data.by_kind.map((kind) => <KindOverview key={kind.kind} kind={kind} />)}
+
+      {state.status === 'success' && state.data.datasets.length > 0 && (
+        <DataSources datasets={state.data.datasets} />
+      )}
 
       <ApiHealthPanel />
     </>

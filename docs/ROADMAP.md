@@ -82,7 +82,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Done |
 | T051 | Current-state verification and gap analysis | M13 | T050 | Done |
 | T052 | Production architecture and hosting decision | M13 | T051 | Done |
-| T053 | Production data-source separation | M13 | T051 | Not started |
+| T053 | Production data-source separation | M13 | T051 | Done |
 | T054 | Improve real-world anomaly detection | M13 | T051 | Not started |
 | T055 | Prediction interval reliability | M13 | T051 | Not started |
 | T056 | Known data and model defects (incl. T051's confirmed defects) | M13 | T051 | Not started |
@@ -1027,6 +1027,16 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   BDG2 data or a BDG2-trained model (D070). The owner decides whether a CC0 real subset (HKUST or
   LBNL Building 59, sized for a 1 GB database) joins the public synthetic demo.
 - **Acceptance:** tests for each source, the no-fallback rule and the unavailable-source error.
+- **Done (2026-11-02, D071):**
+  - A `dataset_id` that is not stored now answers **404** on buildings and alerts. Before, it
+    answered an empty page, which read as "nothing found".
+  - Production refuses to start without an explicit `WATTWISE_MODEL_DATA_KIND`, so a synthetic
+    model can never be shown as observed by default.
+  - The dashboard summary gives each dataset's version (`loaded_at`).
+  - The Overview lists every stored source with its provenance, period and version, and says
+    stored data is historical, not live; the Observed badge no longer names BDG2.
+  - Uploads keep their `uploaded` label and are not stored.
+  - The CC0 subset is **not loaded**: the owner's choice is still open.
 
 ### T054 — Improve real-world anomaly detection
 - **Scope:** why the default detector finds 18.9 % of labelled segments. T051's starting point

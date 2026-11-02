@@ -179,3 +179,33 @@ describe('Overview page', () => {
     expect(summaryCalls).toHaveLength(1);
   });
 });
+
+describe('Data sources', () => {
+  it('lists each stored source separately with its provenance and version', async () => {
+    stub(() => jsonResponse(summaryOf(OBSERVED_WITH_ALERTS, kindSummary('synthetic'))));
+
+    render(<App />);
+
+    const sources = await screen.findByRole('region', { name: 'Data sources' });
+    const rows = within(sources).getAllByRole('row').slice(1); // after the header row
+    expect(rows).toHaveLength(2);
+    const [observed, synthetic] = rows as [HTMLElement, HTMLElement];
+    expect(observed).toHaveTextContent('bdg2-cleaned-all');
+    expect(within(observed).getByText('Observed')).toBeInTheDocument();
+    expect(observed).toHaveTextContent('2016-01-01 to 2018-01-01');
+    expect(observed).toHaveTextContent('20,137,056');
+    expect(observed).toHaveTextContent('2026-10-28'); // the version: when it was loaded
+    expect(synthetic).toHaveTextContent('synthetic-sample');
+    expect(within(synthetic).getByText('Synthetic')).toBeInTheDocument();
+    expect(sources).toHaveTextContent('historical records, not live data');
+  });
+
+  it('is absent when nothing is stored', async () => {
+    stub(() => jsonResponse(summaryOf()));
+
+    render(<App />);
+
+    await screen.findByText('No data loaded');
+    expect(screen.queryByRole('region', { name: 'Data sources' })).not.toBeInTheDocument();
+  });
+});

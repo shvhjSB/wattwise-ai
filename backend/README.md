@@ -84,8 +84,10 @@ The browser runner (`npm run test:e2e` from `frontend/`) uses `tests/browser_fix
 prepare a separate synthetic schema and model registry, serve the API on loopback, and clean up.
 It requires a `postgresql+psycopg` test URL whose database name ends in `_test`. The application
 database URL and existing schemas are not used. Set `WATTWISE_MODEL_DATA_KIND=synthetic` when
-serving generated training data; the default `observed` value describes the production BDG2
-registry. The Model lab's metric badge and explanatory note follow this explicit setting.
+serving generated training data; the `observed` value describes the BDG2 registry. Outside
+production it defaults to `observed`; with `WATTWISE_ENVIRONMENT=production` it **must be set**,
+and the API refuses to start without it (T053). The Model lab's metric badge and explanatory note
+follow this explicit setting.
 
 ## Changing dependencies
 
@@ -128,14 +130,14 @@ commands for migrations and pinned model/report checks. See [DEPLOYMENT.md](../d
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/api/v1/health` | Liveness only: the process is up. It does **not** check dependencies. |
-| GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id`, `dataset_id` or `q` (a case-insensitive match on id or primary use). |
+| GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id`, `dataset_id` or `q` (a case-insensitive match on id or primary use). A `dataset_id` that is not stored is a 404, never an empty page (T053). |
 | GET | `/api/v1/buildings/{building_id}` | One building; 404 if unknown. |
 | GET | `/api/v1/meters` | Meters, a page at a time, filtered by `building_id` or `meter_type`. |
 | GET | `/api/v1/meters/{meter_id}` | One meter; 404 if unknown. |
 | GET | `/api/v1/meters/{meter_id}/expectation` | A meter's readings with the model's expectation and 90% interval (and the model, window and measured coverage), for the evaluation windows only; `available: false` with a reason elsewhere. Readings of hours with no expectation have `expected: null`. |
 | GET | `/api/v1/meters/{meter_id}/series` | Readings in [`start`, `end`) (ISO 8601 with an offset), at most `limit` points, with `truncated`. Missing readings are `null`. |
-| GET | `/api/v1/dashboard/summary` | Per dataset and per kind of data (observed and synthetic are never added together): counts, measured kWh, missing values, time range, and alert totals (open, high severity, potential excess as an estimate, expected and observed kWh in alert windows). Read from stored totals, not scanned. |
-| GET | `/api/v1/alerts` | Alerts, highest priority first, filtered by building, meter, dataset, `signature`, `severity`, `kind`, `review_status` and an overlap with [`start`, `end`); superseded ones only with `include_superseded=true`. |
+| GET | `/api/v1/dashboard/summary` | Per dataset (with `loaded_at`, its version) and per kind of data (observed and synthetic are never added together): counts, measured kWh, missing values, time range, and alert totals (open, high severity, potential excess as an estimate, expected and observed kWh in alert windows). Read from stored totals, not scanned. |
+| GET | `/api/v1/alerts` | Alerts, highest priority first, filtered by building, meter, dataset, `signature`, `severity`, `kind`, `review_status` and an overlap with [`start`, `end`); superseded ones only with `include_superseded=true`. A dataset that is not stored is a 404. |
 | GET | `/api/v1/alerts/{alert_id}` | One alert with its evidence bundle, explanation, every review and the caveats; 404 if unknown. |
 | POST | `/api/v1/alerts/{alert_id}/feedback` | A reviewer's verdict: `label` (`confirmed_waste`, `expected_behaviour`, `sensor_or_data_fault`, `needs_investigation`), optional `note` and `reviewer`. 201; 422 for anything invalid. Stored only: no model is retrained. |
 | GET | `/api/v1/impact/summary` | Potential excess energy and sourced carbon by data kind and region, excluding meter problems. An optional tariff scenario requires `tariff_geography`, `currency` and `rate_per_kwh` together; it is calculated only for that geography and is not stored. Also returns applicable published price references for explicit selection. |

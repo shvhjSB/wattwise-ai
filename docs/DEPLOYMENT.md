@@ -138,7 +138,8 @@ Use the evaluation model described in D039, with held-out validation/test window
 all-data production refit that cannot calibrate honest intervals. `CURRENT` must name exactly
 `WATTWISE_MODEL_VERSION`. Reports must match its data fingerprint, split, family/settings and
 recorded test scores. Set `WATTWISE_MODEL_DATA_KIND=synthetic` for generated models; never use
-`observed` to relabel synthetic results. Registry integrity checks are not an accuracy claim.
+`observed` to relabel synthetic results. In production the setting is required: without it the
+API refuses to start rather than assume a label (T053). Registry integrity checks are not an accuracy claim.
 Only trusted model artifacts are permitted; hashes detect corruption, not a malicious publisher.
 
 Copy into a **new, empty** per-release volume; never overwrite the live bundle:

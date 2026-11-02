@@ -8,7 +8,7 @@ from sqlalchemy import Select, func, select, update
 from sqlalchemy.orm import Session
 
 from wattwise.api.dependencies import get_session
-from wattwise.api.routes.catalog import Limit, Offset
+from wattwise.api.routes.catalog import NO_DATASET, Limit, Offset, require_dataset
 from wattwise.api.schemas.alerts import (
     CAVEATS,
     AlertDetail,
@@ -69,7 +69,7 @@ def _summary_fields(
     }
 
 
-@router.get("/alerts", summary="List alerts, highest priority first")
+@router.get("/alerts", summary="List alerts, highest priority first", responses=NO_DATASET)
 def list_alerts(
     session: SessionDep,
     limit: Limit = 50,
@@ -95,6 +95,8 @@ def list_alerts(
     The score orders review; it is not a probability that an alert is real."""
     if start is not None and end is not None and start >= end:
         raise HTTPException(status_code=422, detail="start must be before end")
+    if dataset_id is not None:
+        require_dataset(session, dataset_id)
     query = _alerts()
     filters = {
         Meter.building_id: building_id,

@@ -8,7 +8,7 @@ const LABELS: Record<DataKind, { text: string; title: string; className: string 
   },
   observed: {
     text: 'Observed',
-    title: 'Measured by real meters (BDG2).',
+    title: 'Measured by real meters: historical records, not live data.',
     className: 'bg-observed-soft text-observed',
   },
   uploaded: {

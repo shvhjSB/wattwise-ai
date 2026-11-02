@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Data sources (T053, D071): the Overview lists each stored dataset with its provenance, period
+  and version (`loaded_at`, now in the dashboard summary), and says stored data is historical,
+  not live.
 - T052 hosting decision ([report](docs/reports/t052-hosting-decision.md), D070): public
   hosting at no cost on Vercel Hobby with Neon Free PostgreSQL, no BDG2 on any server, the
   Pages snapshot kept as the fallback; measured memory and bundle needs, quoted prices.
@@ -409,6 +412,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   cleaned), and the licence evidence with WattWise's conservative handling. (T007)
 
 ### Changed
+- T053: `GET /api/v1/buildings` and `GET /api/v1/alerts` answer 404 for a `dataset_id` that is
+  not stored, instead of an empty page; in production the API refuses to start without an
+  explicit `WATTWISE_MODEL_DATA_KIND`; the Observed badge no longer names BDG2.
 - This repository now commits and pushes as the owner's personal account, `shvhjSB`, through
   repository-local git configuration (D006). (T002)
 - Backend setup now uses uv (`uv sync --locked`, `uv run --locked ...`). The pip

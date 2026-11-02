@@ -68,6 +68,10 @@ class DatasetSummary(BaseModel):
     first_reading: UtcDatetime | None
     last_reading: UtcDatetime | None
     measured_kwh: float = Field(description="Sum of recorded values of the dataset's kWh meters.")
+    loaded_at: UtcDatetime = Field(
+        description="When this dataset was loaded into this database: the version shown with it. "
+        "Stored datasets are historical records, never live data."
+    )
 
 
 class AlertTotals(BaseModel):

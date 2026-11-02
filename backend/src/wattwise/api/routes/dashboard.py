@@ -123,6 +123,7 @@ def dashboard_summary(session: Annotated[Session, Depends(get_session)]) -> Dash
                 "first_reading": d.first_reading,
                 "last_reading": d.last_reading,
                 "measured_kwh": d.measured_kwh,
+                "loaded_at": d.loaded_at,
             }
         )
         for d in session.scalars(select(Dataset).order_by(Dataset.dataset_id))

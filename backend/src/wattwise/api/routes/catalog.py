@@ -32,6 +32,16 @@ Offset = Annotated[int, Query(ge=0, description="Items to skip.")]
 
 
 LIKE_ESCAPE = "\\"  # one backslash
+NO_DATASET: dict[int | str, dict[str, Any]] = {404: {"description": "No such dataset."}}
+
+
+def require_dataset(session: Session, dataset_id: str) -> Dataset:
+    """The stored dataset, or 404. A filter on a dataset that is not stored is an error, never an
+    empty answer that could be read as "nothing found" in another source (T053)."""
+    dataset = session.get(Dataset, dataset_id)
+    if dataset is None:
+        raise HTTPException(status_code=404, detail="dataset not found")
+    return dataset
 
 
 def _contains(text: str) -> str:
@@ -99,7 +109,7 @@ def _meter_out(meter: Meter, dataset_id: str, kind: str) -> MeterOut:
     )
 
 
-@router.get("/buildings", summary="List buildings")
+@router.get("/buildings", summary="List buildings", responses=NO_DATASET)
 def list_buildings(
     session: SessionDep,
     limit: Limit = DEFAULT_PAGE,
@@ -121,6 +131,7 @@ def list_buildings(
     if site_id is not None:
         query = query.where(Building.site_id == site_id)
     if dataset_id is not None:
+        require_dataset(session, dataset_id)
         query = query.where(Building.dataset_id == dataset_id)
     rows, total = _page(session, query, limit, offset)
     return Page[BuildingOut](

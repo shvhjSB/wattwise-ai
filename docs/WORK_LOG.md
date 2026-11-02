@@ -3174,3 +3174,42 @@ published it.
 
 **Not done:** nothing was provisioned or signed up for; "no card" is the providers' statement
 and is first tested when the owner signs up in T059. No application code changed.
+
+---
+
+## 2026-11-02 — T053 Production data-source separation
+
+T052 was pushed as `eab6560`; CI run 41441943603 passed all five jobs and Pages run 41442497850
+published it.
+
+**Found:** the labels already existed: `observed` and `synthetic` datasets, `data_kind` and
+`dataset_id` on every stored item, and `uploaded` on analysis results. Two silent behaviours
+remained:
+
+- On the dev database, `GET /api/v1/buildings?dataset_id=nope` and `GET /api/v1/alerts?dataset_id=nope`
+  answered **200 with an empty page**, while `GET /api/v1/datasets/nope/quality` answered 404.
+- `WATTWISE_MODEL_DATA_KIND` defaulted to `observed` everywhere, so a production server that
+  forgot it would present a synthetic model's scores as real-world results.
+
+Nothing in the frontend called history "live".
+
+**Done (D071)**
+- Backend: a shared `require_dataset` gives **404 "dataset not found"** on buildings and alerts.
+- Backend: the production settings refuse to start without an explicit model label. The Render
+  image, both Compose files and the public demo already set it.
+- Backend: `loaded_at` (the dataset's version) added to the dashboard summary's datasets.
+- Frontend: a **Data sources** table on the Overview (name, id, provenance badge, period,
+  readings, version), with the note that stored data is historical and uploads are not stored.
+- Frontend: the Observed badge says "historical records, not live data" instead of naming BDG2.
+- Tests: an existing alert-filter case that expected 0 for an unknown dataset now expects 404.
+  New tests cover the buildings filter by dataset, the 404s, the production rule and its
+  development default, `loaded_at`, the summary guard, the Data sources table and the badge
+  wording.
+
+**Validation**
+- Backend: ruff, format and strict mypy clean; **1,006 of 1,006 tests**.
+- Frontend: typecheck, lint, format and build pass; Vitest **300 of 300**.
+- Browser: **18 of 18** scenarios against a real API and database.
+
+**Not done:** no CC0 real subset loaded (owner's choice, D070); uploads are still not stored
+(T058 first).

@@ -31,8 +31,25 @@ export interface KindSummary {
   alerts: AlertTotals;
 }
 
+/**
+ * Mirrors `DatasetSummary`: one stored source. Stored datasets are historical records, never live
+ * data; `loaded_at` (when it was loaded) is the version shown with it.
+ */
+export interface DatasetSummary {
+  dataset_id: string;
+  name: string;
+  kind: StoredKind;
+  buildings: number;
+  meters: number;
+  readings: number;
+  first_reading: string | null;
+  last_reading: string | null;
+  loaded_at: string;
+}
+
 /** The parts of `DashboardSummary` the application uses. */
 export interface DashboardSummary {
+  datasets: DatasetSummary[];
   data_kinds: StoredKind[];
   by_kind: KindSummary[];
 }
@@ -86,9 +103,26 @@ export function isKindSummary(value: unknown): value is KindSummary {
   );
 }
 
+export function isDatasetSummary(value: unknown): value is DatasetSummary {
+  return (
+    isRecord(value) &&
+    typeof value.dataset_id === 'string' &&
+    typeof value.name === 'string' &&
+    STORED_KINDS.includes(value.kind) &&
+    typeof value.buildings === 'number' &&
+    typeof value.meters === 'number' &&
+    typeof value.readings === 'number' &&
+    isStringOrNull(value.first_reading) &&
+    isStringOrNull(value.last_reading) &&
+    typeof value.loaded_at === 'string'
+  );
+}
+
 export function isDashboardSummary(value: unknown): value is DashboardSummary {
   return (
     isRecord(value) &&
+    Array.isArray(value.datasets) &&
+    value.datasets.every(isDatasetSummary) &&
     Array.isArray(value.data_kinds) &&
     value.data_kinds.every((kind) => STORED_KINDS.includes(kind)) &&
     Array.isArray(value.by_kind) &&

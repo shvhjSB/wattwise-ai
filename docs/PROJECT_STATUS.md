@@ -456,10 +456,22 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T050 | Public static demo on GitHub Pages | 2026-11-02 |
 | T051 | Current-state verification and gap analysis | 2026-11-02 |
 | T052 | Production architecture and hosting decision | 2026-11-02 |
+| T053 | Production data-source separation | 2026-11-02 |
 
 ## Current task
 
-None. **T052 is complete** (D070): the [hosting decision](reports/t052-hosting-decision.md),
+None. **T053 is complete** (D071): data sources are explicit and never swapped silently.
+
+- Asking for a dataset that is not stored now answers **404** on buildings and alerts. Before,
+  it answered an empty page.
+- In production the API refuses to start without `WATTWISE_MODEL_DATA_KIND`, so a synthetic
+  model can never be presented as observed by default.
+- The Overview lists every stored source with its provenance, period and version (when it was
+  loaded), and says stored data is historical, not live.
+- Uploads stay labelled Uploaded and are not stored.
+- No CC0 real subset was loaded: that choice is still the owner's.
+
+Earlier: **T052 is complete** (D070): the [hosting decision](reports/t052-hosting-decision.md),
 within the owner's two constraints, no BDG2 on any server and no cost.
 
 - **Chosen:** **Vercel Hobby** for the frontend and the FastAPI app, with **Neon Free**
@@ -556,11 +568,15 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T053 — Production data-source separation** (M13): three explicit, labelled sources: historical
-measurements, validated uploads and synthetic data. It also covers no silent fallback between
-sources, and a clear error when a source is unavailable. The owner decides whether a CC0 real
-subset (HKUST or LBNL Building 59) joins the public demo (D070). See
-[ROADMAP.md](ROADMAP.md#t053--production-data-source-separation).
+**T054 — Improve real-world anomaly detection** (M13): find out why the default detector finds
+18.9 % of human-labelled LEAD segments, starting from 1–2 hour segments: 70 % of the labels,
+13.0 % found. Selection rules and acceptance criteria are written before any final evaluation:
+tune on a development part of the labels, score the held-out part once, keep the alert budget
+explicit, and promote only if the criteria are met. See
+[ROADMAP.md](ROADMAP.md#t054--improve-real-world-anomaly-detection).
+
+Owner decision still open from T052/T053: whether a CC0 real subset (HKUST or LBNL Building 59)
+joins the public demo (D070, D071).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -583,7 +599,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
-| M13 ML reliability, deployment, product readiness | T051–T061 | 2 / 11 |
+| M13 ML reliability, deployment, product readiness | T051–T061 | 3 / 11 |
 
 ## Blockers
 

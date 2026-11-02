@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { jsonResponse } from '../test/http';
-import { alertTotals, kindSummary, summaryOf } from '../test/summaryFixture';
+import { alertTotals, datasetOf, kindSummary, summaryOf } from '../test/summaryFixture';
 import { fetchSummary, isAlertTotals, isDashboardSummary, isKindSummary } from './summary';
 
 afterEach(() => {
@@ -44,13 +44,35 @@ describe('isKindSummary', () => {
 
 describe('isDashboardSummary', () => {
   it('accepts an empty database', () => {
-    expect(isDashboardSummary({ data_kinds: [], by_kind: [] })).toBe(true);
+    expect(isDashboardSummary({ datasets: [], data_kinds: [], by_kind: [] })).toBe(true);
+  });
+
+  it('accepts stored sources with their version', () => {
+    expect(isDashboardSummary(summaryOf(kindSummary('observed'), kindSummary('synthetic')))).toBe(
+      true,
+    );
   });
 
   it.each([
-    ['unknown kinds', { data_kinds: ['simulated'], by_kind: [] }],
-    ['no by_kind', { data_kinds: [] }],
-    ['an invalid kind entry', { data_kinds: [], by_kind: [{ kind: 'observed' }] }],
+    ['unknown kinds', { datasets: [], data_kinds: ['simulated'], by_kind: [] }],
+    ['no by_kind', { datasets: [], data_kinds: [] }],
+    ['no datasets', { data_kinds: [], by_kind: [] }],
+    [
+      'a dataset without its version',
+      {
+        ...summaryOf(kindSummary('synthetic')),
+        datasets: [{ dataset_id: 'x', kind: 'synthetic' }],
+      },
+    ],
+    [
+      'an uploaded dataset, which is never stored',
+      {
+        datasets: [{ ...datasetOf(kindSummary('synthetic')), kind: 'uploaded' }],
+        data_kinds: [],
+        by_kind: [],
+      },
+    ],
+    ['an invalid kind entry', { datasets: [], data_kinds: [], by_kind: [{ kind: 'observed' }] }],
     ['text', 'synthetic'],
   ])('rejects %s', (_name, value) => {
     expect(isDashboardSummary(value)).toBe(false);

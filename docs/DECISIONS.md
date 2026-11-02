@@ -2338,6 +2338,26 @@ links to the entry that replaces it.
   - T059 must show a bundle under the limit and stop if a card is asked for.
   - Any paid host needs the owner's approval first.
 
+## D071 — Three labelled data sources, and no silent fallback between them
+- **Date:** 2026-11-02 · **Task:** T053 · **Status:** Accepted
+- **Sources:**
+  - **Stored historical datasets:** `observed` (real meters) or `synthetic` (generated). Each is
+    listed with its name, provenance, period and version (`loaded_at`), and is never called live.
+  - **Uploaded files:** analysed in the request, labelled `uploaded`, never stored (T026), until
+    T058 adds ownership.
+  - Every stored item in the API keeps `dataset_id` and `data_kind`.
+- **No silent fallback:**
+  - Asking for a dataset that is not stored is a **404 "dataset not found"** on every endpoint
+    that takes one. Buildings and alerts used to return an empty page, which read as "nothing
+    found" in a source that does not exist.
+  - The model's data label is never assumed in production: `WATTWISE_MODEL_DATA_KIND` must be
+    set, or the API does not start. Outside production the `observed` default stays for local
+    BDG2 work.
+- **Not a fallback:** the drift panel picks the first dataset with stored expectations when none
+  is named. Its response names that dataset and its kind.
+- **Not done:** loading a CC0 real subset (HKUST or LBNL Building 59) for the public demo (D070)
+  waits for the owner's choice.
+
 ---
 
 ## Open decisions (tracked in tasks)

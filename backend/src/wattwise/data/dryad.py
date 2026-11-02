@@ -24,6 +24,7 @@ import argparse
 import json
 import os
 import sys
+import urllib.error
 import urllib.request
 from collections.abc import Generator, Sequence
 from contextlib import contextmanager
@@ -40,6 +41,7 @@ from wattwise.data.acquisition import (
     Opener,
     RemoteFile,
     ensure,
+    open_url,
     target_path,
     verify,
 )
@@ -132,8 +134,22 @@ DATASETS: Final[dict[str, DryadDataset]] = {
 }  # fmt: skip
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    """Do not follow redirects: urllib would carry the Authorization header to the new host."""
+
+    def redirect_request(self, *args: object, **kwargs: object) -> None:
+        return None
+
+
+REDIRECTS: Final = frozenset({301, 302, 303, 307, 308})
+
+
 def token_opener(token: str) -> Opener:
-    """An opener that sends the token to Dryad only, over HTTPS, and nowhere else."""
+    """An opener that sends the token to Dryad's API only, over HTTPS, and nowhere else.
+
+    Dryad answers a download with a redirect to a pre-signed storage URL (Amazon S3). That URL is
+    followed **without** the token: S3 rejects a request that carries both (HTTP 400), and the
+    token must not reach another host anyway."""
 
     @contextmanager
     def open_with_token(url: str, timeout: float) -> Generator[BinaryIO]:
@@ -142,8 +158,22 @@ def token_opener(token: str) -> Opener:
         request = urllib.request.Request(
             url, headers={"User-Agent": USER_AGENT, "Authorization": f"Bearer {token}"}
         )
-        with urllib.request.urlopen(request, timeout=timeout) as response:
-            yield response
+        location = None
+        try:
+            response = urllib.request.build_opener(_NoRedirect).open(request, timeout=timeout)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in REDIRECTS:
+                raise
+            location = exc.headers.get("Location", "")
+            exc.close()
+        if location is None:
+            with response:
+                yield response
+            return
+        if not location.startswith("https://"):
+            raise AcquisitionError("Dryad redirected the download to a non-HTTPS location.")
+        with open_url(location, timeout) as redirected:  # no token
+            yield redirected
 
     return open_with_token
 

@@ -1,8 +1,10 @@
+import email.message
 import hashlib
 import io
 import json
 import re
 import urllib.error
+import urllib.request
 from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import UTC, datetime
@@ -138,18 +140,64 @@ def test_the_token_is_sent_only_to_the_dryad_api() -> None:
     assert TOKEN not in str(raised.value)
 
 
-def test_the_token_goes_in_an_authorization_header(monkeypatch: pytest.MonkeyPatch) -> None:
+class _Opener:
+    """Stands in for urllib's opener: records headers and answers with Dryad's redirect."""
+
+    def __init__(self, sent: dict[str, str], redirect: bool) -> None:
+        self.sent, self.redirect = sent, redirect
+
+    def open(self, request: urllib.request.Request, timeout: float) -> io.BytesIO:
+        self.sent.update(dict(request.header_items()))
+        if self.redirect:
+            headers = email.message.Message()
+            headers["Location"] = "https://bucket.s3.amazonaws.com/file?X-Amz-Signature=abc"
+            raise urllib.error.HTTPError(request.full_url, 302, "Found", headers, io.BytesIO())
+        return io.BytesIO(b"direct")
+
+
+def test_the_token_goes_to_dryad_only_and_the_redirect_is_followed_without_it(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     sent: dict[str, str] = {}
+    followed: list[str] = []
 
-    def fake_urlopen(request: object, timeout: float) -> io.BytesIO:
-        sent.update(dict(request.header_items()))  # type: ignore[attr-defined]
-        return io.BytesIO(b"")
+    @contextmanager
+    def fake_open_url(url: str, timeout: float) -> Generator[BinaryIO]:
+        followed.append(url)  # open_url sends no Authorization header
+        yield io.BytesIO(b"from storage")
 
-    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
-    with dryad.token_opener(TOKEN)(f"{dryad.API}/files/1/download", 5):
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: _Opener(sent, redirect=True))
+    monkeypatch.setattr(dryad, "open_url", fake_open_url)
+    with dryad.token_opener(TOKEN)(f"{dryad.API}/files/1/download", 5) as stream:
+        body = stream.read()
+
+    assert sent["Authorization"] == f"Bearer {TOKEN}"  # sent to Dryad's API
+    assert followed == ["https://bucket.s3.amazonaws.com/file?X-Amz-Signature=abc"]
+    assert body == b"from storage"
+
+
+def test_a_direct_answer_is_used_as_is(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: _Opener({}, redirect=False))
+
+    with dryad.token_opener(TOKEN)(f"{dryad.API}/files/1/download", 5) as stream:
+        assert stream.read() == b"direct"
+
+
+def test_a_redirect_to_plain_http_is_refused(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Insecure(_Opener):
+        def open(self, request: urllib.request.Request, timeout: float) -> io.BytesIO:
+            headers = email.message.Message()
+            headers["Location"] = "http://insecure.example/file"
+            raise urllib.error.HTTPError(request.full_url, 302, "Found", headers, io.BytesIO())
+
+    monkeypatch.setattr(urllib.request, "build_opener", lambda *_: Insecure({}, redirect=True))
+
+    opener = dryad.token_opener(TOKEN)
+    with (
+        pytest.raises(AcquisitionError, match="non-HTTPS"),
+        opener(f"{dryad.API}/files/1/download", 5),
+    ):
         pass
-
-    assert sent["Authorization"] == f"Bearer {TOKEN}"
 
 
 def test_a_refused_download_is_explained(tmp_path: Path) -> None:

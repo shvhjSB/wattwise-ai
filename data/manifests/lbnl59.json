@@ -1,0 +1,42 @@
+{
+  "dataset": "A three-year building operational performance dataset for informing energy efficiency",
+  "doi": "doi:10.7941/D1N33Q",
+  "dryad_version": 162054,
+  "licence": "CC0 1.0",
+  "citation": "Hong, T., Luo, N., Blum, D., Wang, Z. (2022). A three-year building operational performance dataset for informing energy efficiency. Dryad, https://doi.org/10.7941/D1N33Q. Article: Scientific Data, https://doi.org/10.1038/s41597-022-01257-x. Licence: CC0 1.0.",
+  "documentation": "docs/DATASETS.md",
+  "files": {
+    "Building_59.zip": {
+      "dryad_url": "https://datadryad.org/api/v2/files/1305095/download",
+      "local_path": "data/raw/lbnl59/Building_59.zip",
+      "bytes": 263162077,
+      "sha256": "1e224dd7479bb196a8e0368fceb70aa6f699c1d39e1e895ceba7f3b25150b1b4",
+      "obtained_at": "2026-11-02T02:44:38Z",
+      "last_verified_at": "2026-11-02T02:44:38Z"
+    },
+    "data_description_table_3year_clean_data.xlsx": {
+      "dryad_url": "https://datadryad.org/api/v2/files/1305096/download",
+      "local_path": "data/raw/lbnl59/data_description_table_3year_clean_data.xlsx",
+      "bytes": 75069,
+      "sha256": "6cf5be4565afe60ab17500c0d65d769df14b61e0c6447a7ff6b161b9eac0e63a",
+      "obtained_at": "2026-11-02T02:44:38Z",
+      "last_verified_at": "2026-11-02T02:44:38Z"
+    },
+    "metadata_Dryad_Bldg59.docx": {
+      "dryad_url": "https://datadryad.org/api/v2/files/1305094/download",
+      "local_path": "data/raw/lbnl59/metadata_Dryad_Bldg59.docx",
+      "bytes": 17917,
+      "sha256": "104821176a2ff75a85259d5b0377e282ff00312b31e6521581725006a3295599",
+      "obtained_at": "2026-11-02T02:44:38Z",
+      "last_verified_at": "2026-11-02T02:44:38Z"
+    },
+    "README_Dryad_Bldg59.txt": {
+      "dryad_url": "https://datadryad.org/api/v2/files/1305097/download",
+      "local_path": "data/raw/lbnl59/README_Dryad_Bldg59.txt",
+      "bytes": 6714,
+      "sha256": "44c1b0834e087f2d277ffe11adca5141d260e2918facc746bba2a19cec0c77b2",
+      "obtained_at": "2026-11-02T02:44:38Z",
+      "last_verified_at": "2026-11-02T02:44:38Z"
+    }
+  }
+}

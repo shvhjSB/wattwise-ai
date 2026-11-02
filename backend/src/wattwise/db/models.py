@@ -285,3 +285,24 @@ class Expectation(Base):
     expected: Mapped[float | None] = mapped_column(REAL)
     lower: Mapped[float | None] = mapped_column(REAL)
     upper: Mapped[float | None] = mapped_column(REAL)
+
+
+class DatasetQuality(Base):
+    """The data-quality audit (T008) of a dataset's stored readings, taken when it is loaded
+    (T047). One row per dataset; a reload replaces it. Findings describe the data, not the
+    buildings: they flag where the data may be unreliable."""
+
+    __tablename__ = "dataset_quality"
+
+    dataset_id: Mapped[str] = mapped_column(
+        ForeignKey("datasets.dataset_id", ondelete="CASCADE"), primary_key=True
+    )
+    quality_version: Mapped[str] = mapped_column(String(16))
+    contract_version: Mapped[str] = mapped_column(String(16))
+    assessed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now()
+    )
+    #: QualityThresholds, QualitySummary and the per-meter results, as the engine produced them.
+    thresholds: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    summary: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    meters: Mapped[list[dict[str, Any]]] = mapped_column(JSONB)

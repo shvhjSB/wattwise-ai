@@ -2225,6 +2225,20 @@ links to the entry that replaces it.
 - **Deploys after CI:** `autoDeployTrigger: checksPass`, and CI builds and verifies the image under
   the free plan's limits (`deploy/render/verify.sh`).
 
+## D065 — Store each dataset's data-quality audit with it
+- **Date:** 2026-11-02 · **Task:** T047 · **Status:** Accepted
+- **What:** `load_dataset` runs the T008 engine on the readings it loads and stores the whole
+  report (thresholds, summary, per-meter results) as JSONB in `dataset_quality`, one row per
+  dataset, replaced on reload, deleted with the dataset. JSONB rather than tables per finding:
+  the report is read whole, never queried by finding, and keeps its own versions.
+- **Cost:** the audit runs in the load's transaction; `--no-audit` skips it for a very large
+  load, and `python -m wattwise.db.quality` audits a stored dataset afterwards (also for datasets
+  loaded before T047, which otherwise show "not audited yet", never invented figures).
+- **Duplicates and uploads:** stored data has no duplicate timestamps (the contract rejects them),
+  so the page says so instead of showing a count. Uploads are not stored (T026); their audit is
+  the upload report, and the analysis runs stand in for recent uploads.
+- **A finding describes the data, not the building;** causes in messages are hypotheses.
+
 ---
 
 ## Open decisions (tracked in tasks)

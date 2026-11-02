@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Data health (T047): each dataset's data-quality audit is stored when it is loaded
+  (migration `0007`), served at `GET /api/v1/datasets/{id}/quality`, backfilled with
+  `python -m wattwise.db.quality`, and shown on a new Data health page.
 - Public read-only synthetic demo on Render (T046): `render.yaml` (free plan), one image
   serving the API and the frontend (`deploy/render/Dockerfile`), the demo model trained at
   build time, `WATTWISE_READ_ONLY`, a HEAD-capable health check, and

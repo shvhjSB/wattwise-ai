@@ -34,6 +34,12 @@ export const ROUTES: readonly RouteInfo[] = [
     summary: 'Potential excess energy, cost with a configured tariff, and sourced carbon.',
   },
   {
+    path: '/data',
+    label: 'Data health',
+    task: 'T047',
+    summary: 'Each dataset’s data-quality audit: coverage, gaps, flatlines, out-of-range values.',
+  },
+  {
     path: '/models',
     label: 'Model lab',
     task: 'T033',

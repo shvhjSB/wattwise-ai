@@ -3007,3 +3007,31 @@ deleted), one per workspace, 1 GB, no backups; `PORT` defaults to 10000.
   container image was refused), so CI is the workflow check.
 - **Not done here:** applying the Blueprint needs the owner's Render account; the live URL is
   verified once it exists.
+
+---
+
+## 2026-11-02 — T047 Dataset health: store and show the data-quality audit
+
+**What existed:** the model lab's "Dataset health" panel showed rows, missing values and dates,
+and said gap, flatline and out-of-range results "are not retained by this API". My end-of-roadmap
+review had called this "no dataset health page"; the accurate gap was the missing stored audit.
+
+**Built**
+- Migration `0007` and `DatasetQuality`; `wattwise.db.quality` (`store_quality`, `assess_stored`,
+  CLI); `load_dataset(..., audit=True)` and `--no-audit`.
+- `GET /api/v1/datasets/{id}/quality`: every check with its definition and meter count, the
+  thresholds, the summary, the duplicate and upload notes, and the meters (filters, paging,
+  warnings first); "not audited yet" with the command for older datasets.
+- The **Data health** page (navigation between Cost impact and Model lab); the model lab's
+  `Resource` and `Pager` moved to `design/Panel.tsx` for reuse.
+
+**Corrections before commit**
+- Test-side only: the migration test's table list, a Core `scalar` that returns one column, a
+  text match that also hit a select option, Playwright's substring matching, and a regex whose
+  backslash a script dropped.
+
+**Validation**
+- Backend: ruff, format, strict mypy, the new API and database tests, then the full suite.
+- Frontend: typecheck, lint, format, 269 unit tests, and 12 browser scenarios (the new one on
+  desktop light and dark and on mobile), against a real API and database.
+- A screenshot shows the synthetic sample's two injected data faults and no others.

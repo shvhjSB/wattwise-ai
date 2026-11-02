@@ -450,10 +450,16 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T040 | Detector checks on a sub-metered building (LBNL Building 59) | 2026-11-02 |
 | T041 | Generalisation test on independent buildings (HKUST) | 2026-11-02 |
 | T046 | Public read-only synthetic demo on Render (Blueprint; owner applies it) | 2026-11-02 |
+| T047 | Dataset health: store and show the data-quality audit | 2026-11-02 |
 
 ## Current task
 
-None. **T046 is complete** (D064): a Render Blueprint for a public, read-only demo of the
+None. **T047 is complete** (D065): each dataset's data-quality audit is stored when it is loaded
+(migration `0007`) and shown on a new **Data health** page; datasets loaded earlier are audited
+with `python -m wattwise.db.quality --dataset-id ID`. On the synthetic sample it shows the two
+injected data faults (a 12-hour flatline and missing values).
+
+Earlier: **T046 is complete** (D064): a Render Blueprint for a public, read-only demo of the
 synthetic data only, on the free plan. The image passes `deploy/render/verify.sh` under Render's
 free limits (0.1 CPU, 512 MB): first start 98 s including seeding, restart 72 s without
 reseeding, 171 MB used. **It is not live yet:** the owner must apply the Blueprint in their Render
@@ -509,9 +515,8 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T047 — Dataset health: store and show the data-quality audit** (M10), then T048 (data drift
-in the model lab) and T049 (what-if lab). See
-[ROADMAP.md](ROADMAP.md#t047--dataset-health-store-and-show-the-data-quality-audit).
+**T048 — Data drift in the model lab** (M10), then T049 (what-if lab). See
+[ROADMAP.md](ROADMAP.md#t048--data-drift-in-the-model-lab).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -531,7 +536,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
-| M10 Frontend workflows | T028–T033, T047–T049 | 6 / 9 |
+| M10 Frontend workflows | T028–T033, T047–T049 | 7 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046 | 5 / 5 |
 

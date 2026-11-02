@@ -18,7 +18,14 @@ describe('routes', () => {
   });
 
   it('names the task that builds each page', () => {
-    expect(ROUTES.map((route) => route.task)).toEqual(['T029', 'T030', 'T031', 'T032', 'T033']);
+    expect(ROUTES.map((route) => route.task)).toEqual([
+      'T029',
+      'T030',
+      'T031',
+      'T032',
+      'T047',
+      'T033',
+    ]);
   });
 
   it('finds a route by path, ignoring a trailing slash', () => {

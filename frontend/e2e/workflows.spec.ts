@@ -88,3 +88,19 @@ test('model lab recovers from an API failure and handles no matching building', 
   ).toHaveCount(5);
   await noPageOverflow(page);
 });
+
+test('data health shows the stored audit and filters meters', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Data health', exact: true }).click();
+  await expect(page.getByRole('heading', { level: 2, name: 'Data health' })).toBeVisible();
+  const audit = page.getByRole('region', { name: 'Data-quality audit' });
+  await expect(audit.getByText(/of expected intervals/)).toBeVisible();
+  await expect(
+    audit.getByRole('table').getByText('Duplicate timestamps', { exact: true }),
+  ).toBeVisible();
+  await audit.getByRole('checkbox', { name: 'Warnings only' }).check();
+  await expect(page).toHaveURL(/warnings=1/);
+  await expect(audit.getByText(/^\d+ warnings?$/).first()).toBeVisible();
+  await noPageOverflow(page);
+  await page.screenshot({ path: info.outputPath('data-health.png'), fullPage: true });
+});

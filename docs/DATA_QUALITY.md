@@ -90,6 +90,17 @@ uv run python -m wattwise.data.quality \
     --title "synthetic sample (data/sample/synthetic)"
 ```
 
+### Stored with each dataset (T047)
+
+`load_dataset` runs `assess` on the readings it loads and stores the report in the
+`dataset_quality` table (`--no-audit` skips it, for a very large load). A dataset loaded before
+T047 has none; `uv run --env-file .env python -m wattwise.db.quality --dataset-id ID` audits its
+stored readings. `GET /api/v1/datasets/{id}/quality` serves the audit with every check's
+definition and the meters (filter by `check` or `warnings_only`, paged, warnings first), and the
+**Data health** page shows it. Duplicate timestamps never reach storage: the contract rejects them
+(`duplicate_key`). Uploaded files are not stored, so their audit is the upload report itself; the
+page lists the analysis runs as recent uploads.
+
 The command exits with 1 if the input fails the contract. The committed example,
 [`docs/reports/synthetic-data-quality.md`](reports/synthetic-data-quality.md) (and `.json`), is
 kept up to date by a test.

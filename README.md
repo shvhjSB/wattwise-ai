@@ -10,7 +10,7 @@ what it does not know.
 
 > **Status.** The original roadmap (T001–T045) is done. A public, read-only demo of the
 > synthetic data is prepared for Render (T046, [how](docs/DEPLOYMENT.md#public-demo-on-render-t046-d064));
-> three UI additions (T047–T049) are planned ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> T047 (Data health) is done; two UI additions (T048, T049) are planned ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
 > The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
 > has **no authentication**. Every result quoted below links to the section of
 > [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.
@@ -41,10 +41,12 @@ or that an influence is a cause. Synthetic data is labelled synthetic everywhere
 | **Buildings & meters** | A meter's readings against the model's expectation and 90% interval, the difference, and alert windows; an hour-by-hour readout and a data table |
 | **Alerts** | A priority-ordered queue with filters, each alert's evidence and explanation, and reviewer feedback (stored, never used to retrain) |
 | **Cost impact** | Potential energy per kind of data, an explicit tariff scenario, and carbon from sourced factors |
+| **Data health** | Each dataset's stored data-quality audit: coverage, gaps, missing values, flatlines, zero runs, out-of-range values, duplicate handling, and recent uploads |
 | **Model lab** | The served model, its recorded test results against a baseline, dataset health and recent analyses |
 
 Behind it is a FastAPI service with OpenAPI docs (`/docs`). It covers buildings, meters,
-expectations, alerts and feedback, impact, CSV upload and analysis, and model information.
+expectations, alerts and feedback, impact, data-quality audits, CSV upload and analysis,
+and model information.
 
 ## Architecture
 

@@ -71,7 +71,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Done |
 | T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
 | T046 | Public read-only synthetic demo on Render | M12 | T036, T038 | Done (owner applies the Blueprint) |
-| T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Not started |
+| T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Done |
 | T048 | Data drift in the model lab | M10 | T033, T019b | Not started |
 | T049 | What-if (counterfactual) lab | M10 | T030, T032 | Not started |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
@@ -884,6 +884,11 @@ The owner asked for the remaining gaps against the original specification and a 
 - **Scope:** run the T008 quality engine when a dataset is loaded or uploaded, store its results,
   serve them, and show them on a Dataset health page (with recent uploads).
 - **Acceptance:** every figure comes from the stored audit; empty and error states; tests.
+- **Done (2026-11-02, D065):** migration `0007` (`dataset_quality`), the audit stored by
+  `load_dataset`, `python -m wattwise.db.quality` for datasets loaded earlier,
+  `GET /api/v1/datasets/{id}/quality`, and the **Data health** page (summary, every check with
+  its definition and meter count, duplicate handling, thresholds, filterable meters, recent
+  uploads).
 
 ### T048 — Data drift in the model lab
 - **Scope:** per meter and month, how the recent inputs and residuals compare with the training

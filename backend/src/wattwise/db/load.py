@@ -35,9 +35,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from wattwise.core.config import get_settings
 from wattwise.data.contracts import BUILDINGS, READINGS, TableContract
 from wattwise.data.csv_io import read_csv
+from wattwise.data.quality import assess
 from wattwise.data.validation import ContractViolationError, to_canonical
 from wattwise.db.engine import create_db_engine
 from wattwise.db.models import Alert, Building, DataKind, Dataset, Meter, Reading
+from wattwise.db.quality import store_quality
 
 COPY_CHUNK_ROWS = 500_000  # rows per CSV chunk sent to COPY: bounded memory, few round trips
 
@@ -64,8 +66,11 @@ def load_dataset(
     info: DatasetInfo,
     buildings: pd.DataFrame,
     readings: pd.DataFrame,
+    *,
+    audit: bool = True,
 ) -> LoadSummary:
-    """Replace `info`'s dataset with these tables, inside the caller's transaction.
+    """Replace `info`'s dataset with these tables, inside the caller's transaction. With `audit`
+    (the default), the readings' data-quality audit (T008) is stored with them (T047).
 
     Buildings and meters are updated in place (so alerts that refer to them stay valid), the
     readings are replaced, and buildings or meters the new tables no longer contain are removed.
@@ -152,6 +157,8 @@ def load_dataset(
         )
     )
     _copy_readings(connection, readings)
+    if audit:
+        store_quality(connection, info.dataset_id, assess(readings, buildings))
     return LoadSummary(
         dataset_id=info.dataset_id,
         buildings=len(buildings),
@@ -254,6 +261,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         required=True,
         help="synthetic (generated) or observed (measured)",
     )
+    parser.add_argument(
+        "--no-audit",
+        action="store_true",
+        help="skip the data-quality audit (run python -m wattwise.db.quality later)",
+    )
     args = parser.parse_args(argv)
     url = get_settings().database_url
     if url is None:
@@ -265,7 +277,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         buildings = read_table(args.source, BUILDINGS)
         readings = read_table(args.source, READINGS)
         with engine.begin() as connection:
-            summary = load_dataset(connection, info, buildings, readings)
+            summary = load_dataset(connection, info, buildings, readings, audit=not args.no_audit)
     except ContractViolationError as exc:
         print(f"error: {exc}", file=sys.stderr)
         for issue in exc.report.errors:

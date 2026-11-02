@@ -13,7 +13,17 @@ from starlette.middleware.cors import CORSMiddleware
 
 from wattwise import __version__
 from wattwise.api.public import ReadOnlyMiddleware, SecurityHeadersMiddleware, mount_frontend
-from wattwise.api.routes import alerts, catalog, dashboard, health, impact, models, ready, uploads
+from wattwise.api.routes import (
+    alerts,
+    catalog,
+    dashboard,
+    health,
+    impact,
+    models,
+    quality,
+    ready,
+    uploads,
+)
 from wattwise.api.security import RequestLimitsMiddleware, configure_access_logging
 from wattwise.core.config import Settings, get_settings
 from wattwise.db.engine import create_db_engine
@@ -78,6 +88,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     app.include_router(impact.router, prefix=API_V1_PREFIX)
     app.include_router(uploads.router, prefix=API_V1_PREFIX)
     app.include_router(models.router, prefix=API_V1_PREFIX)
+    app.include_router(quality.router, prefix=API_V1_PREFIX)
     if settings.static_dir is not None:
         mount_frontend(app, settings.static_dir)
     return app

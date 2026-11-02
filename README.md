@@ -9,7 +9,7 @@ energy, cost and carbon, and lets an operator review each alert. It is built on 
 what it does not know.
 
 > **Status.** The original roadmap (T001–T045) is done. **Live demo (synthetic data, static,
-> read-only):** <https://shvhjsb.github.io/wattwise-ai/> once GitHub Pages is enabled (T050,
+> read-only):** <https://shvhjsb.github.io/wattwise-ai/> (T050,
 > [how](docs/DEPLOYMENT.md#public-static-demo-on-github-pages-t050-d068)); a server version is
 > ready for Render (T046);
 > T047–T049 (Data health, data drift, What-if lab) are done ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).

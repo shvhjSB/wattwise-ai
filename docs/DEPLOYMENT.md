@@ -350,8 +350,8 @@ every 5 minutes keeps it awake:
 
 ## Public static demo on GitHub Pages (T050, D068)
 
-The public demo that needs **no card**: <https://shvhjsb.github.io/wattwise-ai/> once GitHub Pages
-is enabled. Render (T046), Koyeb and Hugging Face's Docker Spaces all ask for a card or a paid
+The public demo that needs **no card**: <https://shvhjsb.github.io/wattwise-ai/>, live since
+2026-11-02 (Pages run 41421223255). Render (T046), Koyeb and Hugging Face's Docker Spaces all ask for a card or a paid
 plan (checked 2026-11-02); GitHub Pages is free for this public repository.
 
 **What it is:** the synthetic demo as a static site with no server. After CI passes on `main`,

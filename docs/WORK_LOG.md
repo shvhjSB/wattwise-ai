@@ -3100,3 +3100,9 @@ recorded here as a possible load-related flake rather than changed.
 **Validation:** locally, 92 answers (479 KB) recorded in 10 s; all 7 pages, alert detail, the
 read-only notice and navigation under the base passed in a browser from the static files; backend
 recorder test and frontend snapshot and routing tests; full suites before commit.
+
+**Live (2026-11-02):** the owner enabled Pages (Source: GitHub Actions). CI run 41420604624 passed
+all five jobs, then Pages run 41421223255 built, checked and published. On
+<https://shvhjsb.github.io/wattwise-ai/>: the home page and a deep link (`/alerts`, through
+`404.html`) load the app, the health answer says `read_only: true`, and all 7 pages loaded with
+data and no page errors in a browser.

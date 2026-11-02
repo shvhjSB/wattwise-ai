@@ -458,9 +458,8 @@ The application foundation runs end to end locally, and CI checks it automatical
 ## Current task
 
 None. **T050 is complete** (D068): Render needs a card, so the public demo is now a static
-snapshot on GitHub Pages, free and card-free, at <https://shvhjsb.github.io/wattwise-ai/> once the
-owner turns Pages on (Settings → Pages → Source: GitHub Actions). Locally, all 7 pages passed the
-browser check from 92 recorded answers.
+snapshot on GitHub Pages, free and card-free, **live at <https://shvhjsb.github.io/wattwise-ai/>** (Pages run 41421223255 after CI
+run 41420604624). All 7 pages loaded with data and no page errors in a browser on the live site.
 
 Earlier: **every roadmap task was complete**, including the three gaps from the final review: T047
 (Data health), T048 (data drift) and **T049, the What-if lab** (D067): a meter's recorded use

@@ -7,6 +7,8 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- M13 and the T051 gap analysis ([report](docs/reports/t051-gap-analysis.md)): the
+  documented state checked against the running system, with the M13 roadmap (T051–T061).
 - Public static demo on GitHub Pages (T050): `python -m wattwise.snapshot` records the
   read-only API's answers for the synthetic demo, the frontend answers from them in snapshot
   mode under `/wattwise-ai/`, and `.github/workflows/pages.yml` checks and publishes it.

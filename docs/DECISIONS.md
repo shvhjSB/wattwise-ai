@@ -1282,7 +1282,7 @@ links to the entry that replaces it.
 ## D037 — Reference tables: average US factors, the publisher's UK convention, Ontario left open
 
 - **Date:** 2026-10-26 · **Task:** T021a · **Status:** Accepted
-- **Decision:** `wattwise.data.reference` ([DATASETS.md](DATASETS.md#reference-tables-t021a)),
+- **Decision:** `wattwise.data.reference` ([DATASETS.md](DATASETS.md#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)),
   backed by committed tables at `data/reference/carbon_factors.csv` and
   `data/reference/electricity_prices.csv`. Every row carries its source name, URL, retrieval
   date, licence and the SHA-256 of the file it was read from.
@@ -2286,6 +2286,20 @@ links to the entry that replaces it.
 - **Safety:** the workflow deploys only after CI passed for a push from this repository, never
   for a fork's pull request; it runs with `pages: write` only in the deploy job.
 - **Kept:** the Render Blueprint (T046) for a server-backed demo later.
+
+## D069 — M13 starts from verified evidence, not from the documents
+- **Date:** 2026-11-02 · **Task:** T051 · **Status:** Accepted
+- **Context:** the owner opened M13 (T051–T061) to make WattWise reliable, securely deployable and
+  recruiter-ready, without restarting completed work.
+- **Rule:** an M13 task changes what T051 found, with its own evidence. A completed task is only
+  reopened with a reproduced regression. Documented metrics count as reproduced only when rerun
+  (T051 reproduced the promoted model's test results exactly; detector and HKUST figures were
+  checked against stored reports, not rerun).
+- **Scope adjustments from the evidence:** T056 starts with T051's confirmed defects (the drift
+  timeout on BDG2 and the unscalable audit backfill); T053's stored uploads wait for T058;
+  T054 starts from the stored LEAD breakdown by duration; T052 sizes hosting for a 6.7 GB
+  database.
+- **Not in M13:** residential disaggregation (a separate M14 proposal if wanted).
 
 ---
 

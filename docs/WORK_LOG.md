@@ -3106,3 +3106,35 @@ all five jobs, then Pages run 41421223255 built, checked and published. On
 <https://shvhjsb.github.io/wattwise-ai/>: the home page and a deep link (`/alerts`, through
 `404.html`) load the app, the health answer says `read_only: true`, and all 7 pages loaded with
 data and no page errors in a browser.
+
+---
+
+## 2026-11-02 — T051 Current-state verification and gap analysis (M13 starts)
+
+The owner opened M13 (T051–T061). T051 checks the documented state against the running system;
+the result is [reports/t051-gap-analysis.md](reports/t051-gap-analysis.md). Owner choices made
+before starting: re-score the promoted model (no retraining), and upgrade the local dev database.
+
+**Ran**
+- CI run 41421743043 (5 jobs) and Pages run 41422287090 on `89512fe`: success.
+- Backend: lock, ruff, format, strict mypy clean; **1,002 of 1,002 tests** alone (466 s).
+- Frontend: typecheck, lint (40 s), format, build; Vitest 293/293 three times; 18/18 browser
+  scenarios against a real API.
+- `bash deploy/render/verify.sh`: PASS (110 s first start, 72 s restart, 176 MiB).
+- Live Pages site: 7 pages, building search message, read-only notice, HTTPS enforced.
+- Local dev DB migrated 0006 → 0007; 22 GET calls against real BDG2 data: 21 answered 200 in
+  9–571 ms, **drift 504 after 60 s** (the query alone takes 74.7 s).
+- Registry: all four versions verify. **Re-score of CURRENT on the test window reproduced the
+  recorded metrics exactly** (13.720335 MAE; common rows 13.700259 vs 16.705278).
+- Provenance: every raw file and the 15 ERA5 responses match their SHA-256.
+- Data-quality backfill: synthetic dataset 5 s; BDG2 not run (1 M rows → 638 MiB, about
+  12.5 GiB for 20 M).
+
+**Problems on the way**
+- The machine had about 2 GB free (Docker Desktop's VM commits 7.7 GB). The re-score first ran
+  out of memory twice; a lean version reading only the test window from each store part
+  succeeded in 119 s. One backend test errored during that pressure and passed alone.
+
+**Fixed in the records (docs only):** PROJECT_STATUS's milestone header, a broken DECISIONS
+anchor, DEPLOYMENT's wrong statement about the Cost impact tariff on the static demo, and the
+undocumented HTTP 404 status of deep links on GitHub Pages. No application code changed.

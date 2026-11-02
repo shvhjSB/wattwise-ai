@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-02 · **Current milestone:** M12 — Operations and documentation (M11 complete)
+**Last updated:** 2026-11-02 · **Current milestone:** M13 — ML Reliability, Public Deployment & Product Readiness (M1–M12 complete)
 
 ## Summary
 
@@ -453,11 +453,20 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T047 | Dataset health: store and show the data-quality audit | 2026-11-02 |
 | T048 | Data drift in the model lab | 2026-11-02 |
 | T049 | What-if (counterfactual) lab | 2026-11-02 |
-| T050 | Public static demo on GitHub Pages (owner enables Pages) | 2026-11-02 |
+| T050 | Public static demo on GitHub Pages | 2026-11-02 |
+| T051 | Current-state verification and gap analysis | 2026-11-02 |
 
 ## Current task
 
-None. **T050 is complete** (D068): Render needs a card, so the public demo is now a static
+None. **T051 is complete** (D069): the [gap report](reports/t051-gap-analysis.md) checks the
+documentation against the running system. The promoted model's test results reproduce exactly
+(MAE 13.720335; 13.700 against seasonal-naive's 16.705 on common rows); CI, the GitHub Pages
+demo, 1,002 backend tests, 293 frontend tests, 18 browser scenarios and every data checksum
+pass. Confirmed problems: **the drift endpoint times out on the real BDG2 data** (74.7 s query,
+60 s deadline), the data-quality backfill would need about 12.5 GiB for BDG2, there is **no
+authentication**, and the real data needs a 6.7 GB database. M13 (T051–T061) is in the roadmap.
+
+Earlier: **T050 is complete** (D068): Render needs a card, so the public demo is now a static
 snapshot on GitHub Pages, free and card-free, **live at <https://shvhjsb.github.io/wattwise-ai/>** (Pages run 41421223255 after CI
 run 41420604624). All 7 pages loaded with data and no page errors in a browser on the live site.
 
@@ -533,9 +542,10 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-None scheduled: the roadmap is complete. The owner's remaining step is enabling GitHub Pages
-([DEPLOYMENT.md](DEPLOYMENT.md#public-static-demo-on-github-pages-t050-d068)); Render (T046)
-stays available for whenever a card can be added.
+**T052 — Production architecture and hosting decision** (M13): compare hosting options with the
+measured requirements (6.7 GB database, 49 MB model, 0.1 CPU / 512 MB image) and licences, and
+record a decision; nothing paid without the owner's approval. See
+[ROADMAP.md](ROADMAP.md#t052--production-architecture-and-hosting-decision).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -558,6 +568,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
+| M13 ML reliability, deployment, product readiness | T051–T061 | 1 / 11 |
 
 ## Blockers
 

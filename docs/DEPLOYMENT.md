@@ -363,9 +363,12 @@ and the previous site stays.
 
 **What works:** every page and chart, alert detail and evidence, the explorer, data health with
 all filters, drift by week or month, the model lab, and the What-if lab (computed in the browser).
-**What does not:** anything not recorded, such as free-text building search, alert date filters
-and a custom tariff on the Cost impact page, shows "not part of the static demo"; reviews and
-uploads are refused as on the read-only demo. Nothing sleeps and nothing expires.
+**What does not:** anything not recorded, such as free-text building search and alert date
+filters, shows "not part of the static demo"; reviews and uploads are refused as on the read-only
+demo. The Cost impact tariff form is disabled, because the synthetic sites have no tariff
+geography (the What-if lab's tariff works, in the browser). Nothing sleeps and nothing expires.
+Deep links such as `/wattwise-ai/alerts` load the app through `404.html`, so GitHub Pages answers
+them with HTTP status 404 even though the page renders (T051).
 
 ### Set it up (owner, once)
 

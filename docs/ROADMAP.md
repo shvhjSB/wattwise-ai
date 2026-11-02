@@ -74,12 +74,23 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Done |
 | T048 | Data drift in the model lab | M10 | T033, T019b | Done |
 | T049 | What-if (counterfactual) lab | M10 | T030, T032 | Done |
-| T050 | Public static demo on GitHub Pages (no card) | M12 | T046 | Done (owner enables Pages) |
+| T050 | Public static demo on GitHub Pages (no card) | M12 | T046 | Done |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
 | T044b | Detector benchmark at full scale | M5b | T044a, T018 | Done |
 | T044c | LEAD human-label check with a full-scale H1-2016 model | M5b | T044a, T018b | Done |
+| T051 | Current-state verification and gap analysis | M13 | T050 | Done |
+| T052 | Production architecture and hosting decision | M13 | T051 | Not started |
+| T053 | Production data-source separation | M13 | T051 | Not started |
+| T054 | Improve real-world anomaly detection | M13 | T051 | Not started |
+| T055 | Prediction interval reliability | M13 | T051 | Not started |
+| T056 | Known data and model defects (incl. T051's confirmed defects) | M13 | T051 | Not started |
+| T057 | Real-data product experience | M13 | T053 | Not started |
+| T058 | Security and authentication | M13 | T052 | Not started |
+| T059 | End-to-end integration and deployment | M13 | T052, T058 | Not started |
+| T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Not started |
+| T061 | Final independent quality audit | M13 | T051–T060 | Not started |
 
 ---
 
@@ -968,3 +979,104 @@ The owner asked for the remaining gaps against the original specification and a 
   [CSV](reports/hkust-meters.csv)). The question fixed before the run (model MAE below
   seasonal-naive on common test rows) is answered **yes**: −6.6 % with ERA5 weather, −5.5 %
   without, against −18.0 % on BDG2's own test; the model wins on 872 of 1,160 meters.
+
+---
+
+## M13 — ML Reliability, Public Deployment & Product Readiness (owner request, 2026-11-02)
+
+Goal: take the T050 state to a reliable, securely deployable, recruiter-ready product with
+reproducible evidence. Completed tasks stay closed unless a regression is reproduced. One task per
+run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analysis.md) (D069).
+
+### T051 — Current-state verification and gap analysis
+- **Done (2026-11-02):** [gap report](reports/t051-gap-analysis.md). The promoted model's test
+  results reproduce exactly (13.720335 MAE; 13.700 vs 16.705 on common rows); CI, Pages, browser
+  suites and provenance verified; confirmed defects: the drift endpoint times out on BDG2 (query
+  74.7 s, deadline 60 s) and the data-quality backfill needs about 12.5 GiB for BDG2; no
+  authentication; the real data needs a 6.7 GB database.
+
+### T052 — Production architecture and hosting decision
+- **Objective:** choose how the full FastAPI + React + PostgreSQL application runs publicly.
+- **Scope:** compare Render, Railway, a small VPS, managed PostgreSQL, the private Docker-host
+  recipe (T038) and the static Pages demo, on cost, CPU, memory, persistence, security and
+  maintenance. Evidence from T051: the real BDG2 data takes **6.7 GB** in PostgreSQL (readings
+  5.9 GB), the model is 49 MB, the single-service image runs in 0.1 CPU / 512 MB with synthetic
+  data (176 MiB). Decide whether a public read-only *historical* demo is allowed (BDG2 licence,
+  D014; LEAD stays local, D022) and whether a smaller real subset suffices.
+- **Acceptance:** a recorded decision with measured requirements and quoted prices; no paid
+  infrastructure without the owner's approval.
+
+### T053 — Production data-source separation
+- **Scope:** three explicit sources (BDG2 historical measurements, validated uploads, labelled
+  synthetic data), building on what exists: `Dataset.kind` (synthetic/observed), the provenance
+  badges (synthetic, observed, uploaded) and `dataset_id` in API responses. Never fall back
+  silently between sources; never call history "live"; show model and dataset versions; a clear
+  error when a source is unavailable. Storing uploads needs T058 first (uploads are not stored
+  today, T026); until then this task covers labelling and selection.
+- **Acceptance:** tests for each source, the no-fallback rule and the unavailable-source error.
+
+### T054 — Improve real-world anomaly detection
+- **Scope:** why the default detector finds 18.9 % of labelled segments. T051's starting point
+  (stored LEAD report): 1–2 h segments are 70 % of labels and only 13.0 % are found; 3–23 h
+  31.9 %; ≥24 h 36.4 %. Investigate short events, seasonality, weather masking, low-consumption
+  events, drift and sensor faults; compare adaptive thresholds, robust rolling statistics,
+  multi-resolution and change-point methods only where justified.
+- **Rules:** selection rules and acceptance criteria written before any final evaluation; tuning
+  on a development part of the labels, the held-out part scored once; alert budget explicit;
+  LEAD stays local. Promote only if the predeclared criteria are met.
+- **Acceptance:** segment recall, event precision, hour-level precision/recall, alerts per
+  meter-week, delay, and results by duration and type, improvements and regressions both shown.
+
+### T055 — Prediction interval reliability
+- **Scope:** the 87.2 % coverage against 90 % nominal (stored: 0.8723): coverage by meter, site,
+  season and consumption level, interval width, zero or near-zero meters, missing predictions,
+  drift; alternatives compared on validation data only.
+- **Acceptance:** coverage and width by subgroup; no promise of exact coverage under shift; no
+  "fix" that only widens intervals.
+
+### T056 — Known data and model defects
+- **Scope:** T051's confirmed defects first: **the drift endpoint times out on BDG2** (74.7 s
+  query, 504 at 60 s; a 504 does not cancel the query); **the data-quality backfill does not
+  scale** (about 12.5 GiB for 20 million rows); and the drift docstring and D066 claims. Then the
+  open M5b items: the 5 November event cluster, meters with very wide intervals, the 24 meters
+  without stored expectations, the evaluation vs production artifact (D039), and the model
+  detector's reversal between sample and full scale.
+- **Acceptance:** root causes with reproducible evidence; software defects fixed and tested at
+  full scale; genuine model limits documented, not masked.
+
+### T057 — Real-data product experience
+- **Scope:** with the backend, an operator selects a historical dataset, a building and meter,
+  compares recorded with expected use and intervals, investigates alerts with evidence and
+  explanations, estimates impact with a valid tariff, and reviews model performance and limits.
+  Real responses only; the static demo stays separate and labelled.
+- **Acceptance:** browser tests of the full workflow on real data (locally), no hardcoded metrics.
+
+### T058 — Security and authentication
+- **Scope:** no authentication exists (T051); three write endpoints (feedback, upload, analyze).
+  A maintained solution, not a custom one: sessions, protected uploads, dataset ownership, roles
+  where needed, admin-only operations, rate limits, secrets, safe errors, database permissions.
+  The public demo stays read-only unless a secure alternative is approved.
+- **Acceptance:** tests that unauthenticated writes and other users' private data are refused.
+
+### T059 — End-to-end integration and deployment
+- **Scope:** deploy the real application on T052's approved architecture: persistent database,
+  migrations, versioned model, health and readiness, HTTPS, protected data, backups and rollback.
+- **Acceptance:** the public application tested (startup, model, buildings, predictions, alerts,
+  impact, authentication, authorised upload, refused access, deep links, restart, persistence,
+  failures). If an account, payment or credentials are needed, stop and say exactly what.
+
+### T060 — Recruiter-ready ML presentation
+- **Scope:** model lab and documentation that explain the problem, data, features, training,
+  baselines, evaluation, measured results, detection limits, explainability, registry, API,
+  deployment and business implications; a reproducibility guide, an architecture diagram and a
+  short walkthrough with genuine results only.
+
+### T061 — Final independent quality audit
+- **Scope:** code quality, security, provenance, reproducibility, leakage, API, frontend,
+  accessibility, deployment, documentation, performance and limitations; a final report with
+  measured metrics, remaining risks, the deployment URL if real, reproduction commands and
+  recommended research. No production-readiness claim with unresolved security or reliability
+  issues.
+
+Residential appliance disaggregation is **not** part of M13; a separate M14 proposal would use
+residential datasets (REFIT, UK-DALE), and no room-level breakdown is ever inferred from bills.

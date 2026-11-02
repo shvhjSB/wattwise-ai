@@ -12,7 +12,7 @@ git-ignored. Only the small synthetic sample and provenance manifests are commit
 | LEAD 1.0 human anomaly labels | Checking the detectors against human labels (T018b, T044c) | **No.** Local evaluation only, never redistributed (D022); manifest [`data/manifests/lead.json`](../data/manifests/lead.json) | `uv run python -m wattwise.data.lead fetch`, then `prepare` ([below](#real-anomaly-labels-lead-10)) |
 | ERA5 radiation and cloud cover, via Open-Meteo | Weather enrichment features (T007d) | **No.** Fetched by an explicit command into `data/raw/era5` | `uv run python -m wattwise.data.era5 fetch`, `verify`, `prepare` ([below](#weather-enrichment)) |
 | Carbon factors and electricity prices | Sourced references for impact (T021a) | **Yes:** two small cited tables in [`data/reference/`](../data/reference/), each row with its source, licence and file hash | Committed ([below](#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)) |
-| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041) | **No.** Not yet acquired; files and SHA-256 pinned | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
+| LBNL Building 59, HKUST campus meters | A sub-metered case study (T040, done) and an independent test (T041) | **No.** Downloaded into git-ignored `data/raw/lbnl59` and `data/raw/hkust`, verified against Dryad's SHA-256 | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
 
 Licences for all of these, and for the software WattWise ships, are summarised in
 [LICENSES.md](../LICENSES.md).
@@ -662,13 +662,17 @@ the committed CSVs from the same files.
 
 | Dataset | What it adds | Licence | Size | Checked |
 |---|---|---|---|---|
-| [LBNL Building 59](https://doi.org/10.7941/D1N33Q) (Berkeley office, 2018–2020) | End uses (HVAC, lighting, plug loads), rooftop-unit and zone control points, **measured occupancy**, and dated real events (wildfire damper closures, COVID shelter-in-place) | CC0 | 263 MB zipped | Licence, size double-checked |
+| [LBNL Building 59](https://doi.org/10.7941/D1N33Q) (Berkeley office, 2018–2020) | End uses (HVAC, lighting, plug loads), rooftop-unit and zone control points, **measured occupancy** (May 2018 to February 2019). Dated events are not in the dataset; T040 sourced the COVID shelter-in-place date and found damper closures in the RTU data ([case study](reports/lbnl59-case-study.md)) | CC0 | 263 MB zipped | Licence, size double-checked |
 | [CU-BEMS](https://doi.org/10.6084/m9.figshare.11726517) (Bangkok office, 2018–2019, 1-minute) | Power for each air-conditioning unit, plus lighting and plug loads per zone | CC BY 4.0 | 16 files, 742 MB | Double-checked |
 | [HKUST campus smart meters](https://doi.org/10.5061/dryad.k3j9kd5h6) (Hong Kong, 2022–2024) | More than 1,400 meters in more than 20 buildings, device-level sub-meters, an independent region and recent years | CC0 | 1.43 GB | Licence, size double-checked |
 | EnerNOC GreenButton (100 US commercial sites, 2012, 5-minute) | Independent US multi-sector data | **CC BY-NC 3.0** | 67 MB | Source-checked |
 
 - **Caveats:**
-  - Building 59's gaps were imputed by its authors, so imputed spans must be masked.
+  - Building 59's gaps were imputed by its authors **without flags** (raw missing rates 8–33 %
+    per end use). Only runs on an exact sloped line can be identified and masked as suspected
+    interpolation; KNN and matrix-factorisation fills cannot (D061).
+  - Building 59's timestamps are undocumented; energy, weather, RTU and occupancy behave like
+    UTC, Wi-Fi like local time (inferred in T040). There is no whole-building meter.
   - CU-BEMS is a cooling-only tropical building.
   - HKUST's 15-minute meters are 23–52% missing.
 - **Not independent of BDG2:**
@@ -679,8 +683,9 @@ the committed CSVs from the same files.
     licence, "research purposes only"). It needs clarification before any use.
 - **Data from another building cannot confirm a cause in a BDG2 building.** It can only test
   whether a detector reacts to a known kind of event. Causes in BDG2 remain hypotheses.
-- **Status (2026-11-01):** none of these is downloaded or used yet. Building 59 is planned for T040
-  and HKUST for T041; CU-BEMS and EnerNOC are not planned.
+- **Status (2026-11-02):** Building 59 and HKUST are downloaded and verified. Building 59 is used
+  in the T040 case study ([report](reports/lbnl59-case-study.md)); HKUST is for T041. CU-BEMS and
+  EnerNOC are not planned.
 
 ### Decisions for the owner (all decided)
 

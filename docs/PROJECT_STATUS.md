@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-01 · **Current milestone:** M12 — Operations and documentation (M11 complete)
+**Last updated:** 2026-11-02 · **Current milestone:** M12 — Operations and documentation (M11 complete)
 
 ## Summary
 
@@ -447,10 +447,21 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T038 | Deployment recipe and guide | 2026-11-01 |
 | T039 | Final documentation | 2026-11-01 |
 | T045 | Pinned acquisition of the Dryad datasets | 2026-11-01 |
+| T040 | Detector checks on a sub-metered building (LBNL Building 59) | 2026-11-02 |
 
 ## Current task
 
-None. T038 and T039 are complete. [CI run 41334971115](https://github.com/shvhjSB/wattwise-ai/actions/runs/41334971115)
+None. **T040 is complete** (D061): a one-building case study on LBNL Building 59,
+[lbnl59-case-study.md](reports/lbnl59-case-study.md). In short: the default detector did not
+flag the COVID shelter-in-place drop (a 46 % decline over three weeks that its 14-day baseline
+followed); dampers held at minimum were found in the RTU data, and the two spans in the sourced
+wildfire-smoke period produced no event; where the detector fires, the deviation is almost all
+HVAC. The building's data changes character between years (undocumented level and precision
+shifts), and the authors' imputed values are not flagged, so only suspected linear
+interpolation could be masked. Both Dryad datasets are downloaded and verified (`data/raw/`,
+git-ignored).
+
+Earlier: T038 and T039 are complete. [CI run 41334971115](https://github.com/shvhjSB/wattwise-ai/actions/runs/41334971115)
 passed all four jobs at `8f20f39`, including the deployment verifier on the CI runner
 (928 backend tests, 259 frontend tests, 9 browser scenarios). T038 is a private Docker-host
 recipe (D060), also verified locally. Locally, static
@@ -482,11 +493,10 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T040 — Detector checks on a sub-metered building** (M6): download LBNL Building 59 (CC0,
-263 MB, pinned and git-ignored), mask its imputed spans, run the detector on the whole-building
-series and compare the alerts with end uses, HVAC, occupancy and dated events, as one building's
-case study. Then **T041**: the HKUST independent-building test. See
-[ROADMAP.md](ROADMAP.md#t040--detector-checks-on-a-sub-metered-building).
+**T041 — Generalisation test on independent buildings** (M5): evaluate the chosen forecaster
+on the HKUST campus meters (CC0, 1.43 GB, downloaded and verified on 2026-11-02) with the T011
+harness and T010 splits, reported separately from BDG2, with coverage and missing data per meter.
+See [ROADMAP.md](ROADMAP.md#t041--generalisation-test-on-independent-buildings).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -502,7 +512,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 3 / 4 |
 | M5b Scale-up and model quality | T042, T043, T044a, T044b, T044c | 5 / 5 |
-| M6 Anomaly detection | T016–T018, T018b, T040 | 4 / 5 |
+| M6 Anomaly detection | T016–T018, T018b, T040 | 5 / 5 |
 | M7 Explainability and uncertainty | T019, T019b, T020 | 3 / 3 |
 | M8 Business impact | T021a, T021, T022 | 3 / 3 |
 | M9 API and persistence | T023–T027 | 5 / 5 |
@@ -512,16 +522,10 @@ why the model detector's recall advantage on the sample reversed at full scale.
 
 ## Blockers
 
-**T040 and T041 cannot download their data.** Both datasets are on Dryad (LBNL Building 59,
-doi:10.7941/D1N33Q, CC0, 263 MB; HKUST, doi:10.5061/dryad.k3j9kd5h6, CC0). The dataset record is
-public, but every download route refuses an unauthenticated client: the API's dataset and file
-downloads answer **401** and the web download links **403** (checked 2026-11-01). Dryad's access
-control is not worked around. The command for it now exists (T045): `uv run python -m wattwise.data.dryad fetch lbnl59` (and
-`hkust`) verifies every file against Dryad's published SHA-256. The owner can unblock it either way:
-- set `WATTWISE_DRYAD_TOKEN` to a Dryad API token (never committed or printed), then run the
-  command, which downloads and verifies; or
-- download the files in a browser from the dataset pages into `data/raw/lbnl59/` and
-  `data/raw/hkust/`, then run the command, which verifies them.
+None. The Dryad download blocker is resolved: the owner provided a Dryad API token (kept
+only in the git-ignored `backend/.env`), and `python -m wattwise.data.dryad fetch` downloaded
+and verified both datasets against Dryad's SHA-256 (LBNL Building 59 on 2026-11-01, HKUST on
+2026-11-02; manifests in `data/manifests/`).
 
 The `workflow`-scope push blocker was resolved on 2026-10-23. At the owner's request, `shvhjSB`'s
 `gh` token was refreshed with the `workflow` scope (device-flow approval by the owner). The

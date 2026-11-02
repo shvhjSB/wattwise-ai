@@ -2138,6 +2138,29 @@ links to the entry that replaces it.
   ownership before cleanup. These checks do not establish public deployment, full-scale capacity,
   historical application-image rollback, an accuracy result or a recovery SLA.
 
+## D061 — The LBNL Building 59 case study: what is derived, inferred and masked
+- **Date:** 2026-11-02 · **Task:** T040 · **Status:** Accepted
+- **Series:** the sum of the five metered end uses, labelled as derived. The files have no
+  whole-building meter and no north-wing lighting column; it is not presented as the bill.
+- **Clock:** undocumented. Energy, weather, RTU and occupancy files are treated as UTC, from three
+  checks on the data (solar peak near 20:30, no daylight-saving gap or repeat, the lighting ramp
+  moving one hour between seasons). The Wi-Fi file looks local and is not used (its 2020 counts are
+  zero until April).
+- **Imputation:** not flagged by the authors. Runs of at least six 15-minute points on one sloped
+  line are masked as suspected interpolation, and an hour is used only if all four quarter-hours of
+  all five end uses remain. Constant runs are kept (genuinely flat loads). KNN and
+  matrix-factorisation fills are unidentifiable; the report shows the share left, by end use,
+  against the authors' raw missing rates.
+- **Dated events:** only sourced dates are used: the Bay Area shelter-in-place from 2020-03-17
+  (Berkeley Lab's notice) and the smoke Spare the Air alerts of 2020-08-18 to 2020-09-11 (Air
+  District releases; continuity inferred from "the 24th and 25th consecutive"). The earlier note of
+  "wildfire damper closures" had no source; closures are found in the RTU data instead, and their
+  link to smoke is a hypothesis. The article itself could not be read (sign-in redirect, CAPTCHA);
+  that was not worked around.
+- **Detector:** the default (rolling same-hour z-score, D030) with unchanged thresholds. Nothing
+  is tuned on this building. The end-use breakdown is exact arithmetic, not attribution of cause.
+- **Scope:** one building's case study, no labels: not a validation, and nothing about BDG2.
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -2872,3 +2872,47 @@ rolling z-score reproduces D031 exactly. **The labelled-meters model detector di
 - Ruff, format and strict mypy clean; 12 new tests pass (with the 18 existing acquisition tests).
 - Ran for real: `python -m wattwise.data.dryad fetch lbnl59` without a token lists the four files,
   their sizes, the dataset page and the target folder, and writes nothing.
+
+---
+
+## 2026-11-02 — T040 Detector checks on a sub-metered building (LBNL Building 59)
+
+**Data**
+- The owner provided a Dryad API token (in the git-ignored `backend/.env`; never printed). The
+  first download failed with HTTP 400: urllib forwarded the Authorization header to Dryad's S3
+  redirect. Fixed in `0b31b0a` (the redirect is followed without the token). LBNL then downloaded
+  and verified (4 files); HKUST downloaded and verified on 2026-11-02 (1,432,480,964 bytes, 404 s).
+- The dataset documents units (kW, 15-minute) and raw missing rates, but not the clock, not which
+  values were imputed, and no dated events. The article could not be read: Nature and Springer
+  redirect to a sign-in, PubMed Central answers with a CAPTCHA. Not worked around.
+
+**What was inferred from the data**
+- Clock: energy, weather, RTU and occupancy files behave like UTC (solar peak near 20:30; no
+  daylight-saving gap; the lighting ramp moves one hour between January and July). Wi-Fi looks
+  local, and its counts are zero until April 2020, so it is not used.
+- Imputation: only exact sloped-line runs are identifiable. They cover 21 % of `mels_S` against an
+  authors' raw missing rate of 33 %, and less elsewhere; the rest stays in the data (D061).
+- Undocumented changes between years: south HVAC fell from about 28 to 4 kW in December 2018,
+  north plug loads from about 11 to 4 kW in the first week of 2020, and value precision changed at
+  the same boundaries. No suspected interpolation remains in 2020 at all.
+
+**Results** ([report](reports/lbnl59-case-study.md))
+- Shelter-in-place (sourced, 2020-03-17): weekly mean load fell 50.5 → 27.1 kW over three weeks;
+  the default detector raised no event for it (its 14-day baseline followed the decline).
+- Dampers at minimum (found in the RTU data): 19 spans; most on hot or cold days, as ordinary
+  economiser control would give. Two fall in the sourced smoke-alert period, on cooler days, and
+  produced no event. The smoke link is a hypothesis.
+- 39 events; the ten largest are almost entirely HVAC by the exact end-use breakdown.
+
+**Corrections before commit**
+- A first draft of the report said "most" damper spans were on hot days; the table shows 11 of
+  19, with five cool-weather spans in 2018–19. Rewritten to say the data cannot separate smoke
+  closures from ordinary control.
+- A unit test assumed 06:00 UTC on 18 March was 18 March in Berkeley; it is the 17th. The test was
+  wrong, not the code.
+
+**Validation**
+- Ruff, format, strict mypy clean; 20 new tests (synthetic fixtures for masking, clocks, damper
+  spans, window overlap, end-use additivity, the whole run, strict JSON, the report marker).
+- The case study ran on the real data in about 30 s; the committed report is its output plus a
+  hand-written narrative above the marker.

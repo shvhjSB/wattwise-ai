@@ -8,8 +8,8 @@ energy, cost and carbon, and lets an operator review each alert. It is built on 
 [Building Data Genome Project 2](#data-and-licences) (1,148 meters, 2016–2017), and says plainly
 what it does not know.
 
-> **Status.** Roadmap tasks T001–T039 are done; two supplementary-data studies (T040, T041)
-> remain ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
+> **Status.** Roadmap tasks T001–T040 are done; one supplementary-data study (T041, HKUST)
+> remains ([PROJECT_STATUS.md](docs/PROJECT_STATUS.md)).
 > The application runs locally and as a Docker Compose demo. It is **not deployed** anywhere and
 > has **no authentication**. Every result quoted below links to the section of
 > [docs/EVALUATION.md](docs/EVALUATION.md) that records the command that produced it.
@@ -122,8 +122,10 @@ All on real BDG2 data at full scale; each links to its record.
 ## Limitations
 
 - **One dataset**, mostly university campuses, two years, North America and Europe. Results
-  elsewhere are unknown. The independent test (T041, HKUST) and the sub-metered case study
-  (T040, LBNL Building 59) have not been run.
+  elsewhere are unknown. The independent test (T041, HKUST) has not been run. A one-building
+  case study on LBNL Building 59 (T040) found that the default detector does not flag a
+  gradual regime change such as the COVID shutdown
+  ([report](docs/reports/lbnl59-case-study.md)).
 - **The detector misses much of what people label.** It is designed to stay within a budget of
   0.5 alerts per meter-week, and its persistence rules mostly ignore short events: one or two
   hours, which are 70% of the labelled segments.

@@ -67,8 +67,8 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T037 | Security hardening | M12 | T026 | Done |
 | T038 | Deployment recipe and guide | M12 | T036 | Done |
 | T039 | Final documentation | M12 | T034, T038 | Done |
-| T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017, T045 | Not started (data needed) |
-| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Not started (data needed) |
+| T040 | Detector checks on a sub-metered building (LBNL Building 59) | M6 | T007b, T017, T045 | Done |
+| T041 | Generalisation test on independent buildings (HKUST) | M5 | T007b, T014, T045 | Not started (data acquired) |
 | T045 | Pinned acquisition of the Dryad datasets (for T040 and T041) | M2 | T007 | Done |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
@@ -882,6 +882,13 @@ meters at 9 sites, under 2% of the 1,148 eligible meters (D017).
 - **Acceptance:**
   - Results are reported as one building's case study.
   - Nothing is claimed about causes in BDG2 buildings.
+- **Done (2026-11-02, D061):** `python -m wattwise.ml.lbnl59` runs the default detector on the
+  sum of the five metered end uses and writes [the case study](reports/lbnl59-case-study.md).
+  Imputed values are not flagged by the authors, so only *suspected* linear interpolation is
+  masked. The default detector did not flag the shelter-in-place drop (a three-week decline its
+  14-day baseline followed); damper closures were found in the RTU data, and none in the sourced
+  smoke-alert period produced an event. Undocumented level shifts between years dominate any
+  cross-year comparison.
 
 ### T041 — Generalisation test on independent buildings
 - **Objective:** measure how the chosen forecaster performs outside BDG2's population and years.

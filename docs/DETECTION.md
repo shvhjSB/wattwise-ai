@@ -157,6 +157,14 @@ written, with a note in place of the influences. A test covers this.
 - **Top influences:** the most common top influence on the expected value is the four-week
   same-hour mean (66 events), then day of year (13) and public holidays (8).
 
+## A one-building case study: LBNL Building 59 (T040, D061)
+
+The default detector on a real sub-metered office (Berkeley, 2018–2020), compared with end uses,
+dampers, temperature, occupancy and dated events: [docs/reports/lbnl59-case-study.md](reports/lbnl59-case-study.md).
+It did not flag the COVID shelter-in-place drop, which was spread over three weeks and followed by
+the 14-day rolling baseline: **gradual regime changes are not what this detector finds.** One
+building, no labels; nothing here is a result for BDG2 buildings or a cause.
+
 ## Results on the BDG2 sample with the default detector (T018)
 
 Detection window 2017-10-01 to 2018-01-02 (UTC), rolling z-score, about 13 s.

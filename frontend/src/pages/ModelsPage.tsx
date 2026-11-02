@@ -9,7 +9,7 @@ import {
 import { useApi } from '../api/useApi';
 import { formatCount, formatShare } from '../design/format';
 import { ProvenanceBadge } from '../design/Provenance';
-import { useSearch } from '../design/routes';
+import { href, useSearch } from '../design/routes';
 import { Pager, Resource } from '../design/Panel';
 import { EmptyState, PageHeader } from '../design/states';
 import { DriftPanel } from '../features/models/DriftPanel';
@@ -234,7 +234,7 @@ export function ModelsPage({ summary }: { summary: string }) {
               <p className="text-sm text-muted">
                 Missing share is missing values divided by stored rows; absent hours are not
                 counted. Gaps, flatlines, out-of-range values and every other check are on the{' '}
-                <a href="/data" className="text-accent underline underline-offset-2">
+                <a href={href('/data')} className="text-accent underline underline-offset-2">
                   Data health
                 </a>{' '}
                 page.

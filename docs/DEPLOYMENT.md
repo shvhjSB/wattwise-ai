@@ -3,7 +3,8 @@
 **Status:** a deployment recipe, not a deployed service. No cloud resources, registry publication,
 DNS, TLS endpoint or remote host has been provisioned. The owner selected a private Docker host
 for T038. The separate **public, read-only synthetic demo on Render** (T046) is described in
-[its own section](#public-demo-on-render-t046-d064). Local/CI verification uses only disposable synthetic data and is not evidence of
+[its own section](#public-demo-on-render-t046-d064); the card-free
+**static demo on GitHub Pages** (T050) in [another](#public-static-demo-on-github-pages-t050-d068). Local/CI verification uses only disposable synthetic data and is not evidence of
 real-building accuracy, production capacity or a hosted service.
 
 ## Boundary and prerequisites
@@ -346,6 +347,49 @@ every 5 minutes keeps it awake:
   the frontend, the synthetic data, the evaluation, a refused review (403), security headers, and
   that a restart does not reseed. It removes only its own `wwverify-*` resources.
 - Live: `curl https://<your-service>.onrender.com/api/v1/health` must show `"read_only":true`.
+
+## Public static demo on GitHub Pages (T050, D068)
+
+The public demo that needs **no card**: <https://shvhjsb.github.io/wattwise-ai/> once GitHub Pages
+is enabled. Render (T046), Koyeb and Hugging Face's Docker Spaces all ask for a card or a paid
+plan (checked 2026-11-02); GitHub Pages is free for this public repository.
+
+**What it is:** the synthetic demo as a static site with no server. After CI passes on `main`,
+`.github/workflows/pages.yml` seeds the synthetic demo into a throwaway PostgreSQL, records the
+API's answers for every preset view (`python -m wattwise.snapshot`: 92 answers, about 480 KB),
+builds the frontend in snapshot mode under `/wattwise-ai/`, opens every page in a browser
+(`frontend/scripts/static-smoke.mjs`), and only then publishes. A failed check publishes nothing
+and the previous site stays.
+
+**What works:** every page and chart, alert detail and evidence, the explorer, data health with
+all filters, drift by week or month, the model lab, and the What-if lab (computed in the browser).
+**What does not:** anything not recorded, such as free-text building search, alert date filters
+and a custom tariff on the Cost impact page, shows "not part of the static demo"; reviews and
+uploads are refused as on the read-only demo. Nothing sleeps and nothing expires.
+
+### Set it up (owner, once)
+
+1. On GitHub, open **shvhjSB/wattwise-ai → Settings → Pages**.
+2. Under **Build and deployment → Source**, choose **GitHub Actions**. Nothing else to fill in.
+3. Open **Actions → Pages → Run workflow** (branch `main`), or push any commit to `main`. When
+   it finishes, the site is at <https://shvhjsb.github.io/wattwise-ai/>.
+
+Every later push to `main` that passes CI republishes it.
+
+### Verify locally
+
+```bash
+# from backend/, with WATTWISE_DATABASE_URL pointing at an empty database
+uv run --env-file .env python -m wattwise.snapshot --output ../data/processed/snapshot
+# from frontend/
+WATTWISE_BASE=/wattwise-ai/ VITE_SNAPSHOT=1 npx vite build --outDir ../data/processed/static-dist
+cp -r ../data/processed/snapshot ../data/processed/static-dist/snapshot
+cp ../data/processed/static-dist/index.html ../data/processed/static-dist/404.html
+node scripts/static-smoke.mjs ../data/processed/static-dist
+```
+
+(On Git Bash for Windows, prefix the build with `MSYS_NO_PATHCONV=1`, or `/wattwise-ai/` is
+rewritten into a Windows path.)
 
 ## References
 

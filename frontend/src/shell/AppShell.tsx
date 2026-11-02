@@ -2,7 +2,7 @@ import type { MouseEvent, ReactNode } from 'react';
 
 import type { DataKind } from '../api/summary';
 import { DemoBanner } from '../design/Provenance';
-import { ROUTES } from '../design/routes';
+import { href, ROUTES } from '../design/routes';
 import { isThemeChoice, type ThemeChoice } from '../design/theme';
 
 const THEMES: { value: ThemeChoice; label: string }[] = [
@@ -54,7 +54,7 @@ export function AppShell({
                 return (
                   <li key={route.path}>
                     <a
-                      href={route.path}
+                      href={href(route.path)}
                       aria-current={current ? 'page' : undefined}
                       onClick={(event) => {
                         if (!isPlainClick(event)) return;

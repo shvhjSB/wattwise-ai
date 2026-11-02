@@ -9,8 +9,12 @@ export default defineConfig(({ mode }) => {
   // An empty value (as in .env.example) means "use the default backend address".
   const configuredTarget = env.WATTWISE_DEV_API_TARGET?.trim() ?? '';
   const devApiTarget = configuredTarget === '' ? 'http://127.0.0.1:8000' : configuredTarget;
+  // Empty or unset means the root.
+  const base = env.WATTWISE_BASE?.trim() ?? '';
 
   return {
+    // GitHub Pages serves the static demo under /wattwise-ai/ (T050); everywhere else, the root.
+    base: base === '' ? '/' : base,
     plugins: [react(), tailwindcss()],
     server: {
       port: 5173,

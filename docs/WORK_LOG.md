@@ -3076,3 +3076,27 @@ line, so it is visible exactly where the cut changes consumption.
 (meter choice, totals, a cut in New York hours removing a daytime spike, tariff, margin rule,
 404 and unavailable); 285 frontend unit tests; 18 browser scenarios against a real API,
 including one checking that the recorded total is unchanged by a scenario.
+
+---
+
+## 2026-11-02 — T050 Public static demo on GitHub Pages
+
+**Why:** the owner found that Render asks for a card for everything. Checked alternatives: Koyeb
+requires a card (its FAQ); Hugging Face's docs say Docker Spaces need a paid plan (only static
+Spaces are free); Neon has a free Postgres but no host to pair it with. The owner chose a static
+snapshot on GitHub Pages over running from their PC through a tunnel.
+
+**Built:** `wattwise.snapshot` (seed, record through the read-only API in process, write files
+and `index.json`); the frontend's snapshot mode (`src/api/snapshot.ts`, used by the client),
+base-path routing (`appPath`, `href`, Vite `base`), the static smoke test, and
+`.github/workflows/pages.yml` (Pages actions pinned by commit to releases from 2026-03 to
+2026-09).
+
+**Found on the way:** Git Bash rewrote `/wattwise-ai/` into a Windows path during the local build
+(`MSYS_NO_PATHCONV=1` avoids it; CI runs on Linux). One full frontend run had one failure in the
+alerts page test (578 ms alone); it passed in two further full runs and four alone, and is
+recorded here as a possible load-related flake rather than changed.
+
+**Validation:** locally, 92 answers (479 KB) recorded in 10 s; all 7 pages, alert detail, the
+read-only notice and navigation under the base passed in a browser from the static files; backend
+recorder test and frontend snapshot and routing tests; full suites before commit.

@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Public static demo on GitHub Pages (T050): `python -m wattwise.snapshot` records the
+  read-only API's answers for the synthetic demo, the frontend answers from them in snapshot
+  mode under `/wattwise-ai/`, and `.github/workflows/pages.yml` checks and publishes it.
 - What-if lab (T049): a page to try the potential-excess rule, a hypothetical cut in
   local hours and an entered tariff on a meter's stored readings and expectation;
   computed in the browser, never saved.

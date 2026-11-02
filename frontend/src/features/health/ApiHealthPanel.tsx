@@ -1,3 +1,4 @@
+import { SNAPSHOT } from '../../api/snapshot';
 import { ErrorState } from '../../design/states';
 import { useApiHealth } from './useApiHealth';
 
@@ -35,7 +36,9 @@ export function ApiHealthPanel() {
             {state.data.read_only ? (
               <>
                 <dt className="text-muted">Access</dt>
-                <dd>Read-only public demo</dd>
+                <dd>
+                  {SNAPSHOT ? 'Static snapshot of the read-only demo' : 'Read-only public demo'}
+                </dd>
               </>
             ) : null}
           </dl>

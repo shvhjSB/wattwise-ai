@@ -2270,6 +2270,23 @@ links to the entry that replaces it.
   are shown unchanged next to every scenario figure, and hours without a threshold are counted
   and said, not treated as zero excess silently.
 
+## D068 — The public demo as a static snapshot on GitHub Pages
+- **Date:** 2026-11-02 · **Task:** T050 · **Status:** Accepted (owner's choice)
+- **Why:** Render asks for a card for every service. Koyeb's FAQ requires a card; Hugging Face's
+  docs say Docker Spaces "require a paid plan to create". Running from the owner's PC through a
+  tunnel was offered and declined. GitHub Pages is free for this public repository.
+- **How:** the real API, in read-only mode, answers every preset view of the synthetic demo in CI
+  (`wattwise.snapshot`); the answers and an index are published with the frontend, which looks a
+  request up by its decoded path and sorted parameters. Unrecorded requests (free text, dates,
+  custom tariffs) get a plain message, writes are refused, and nothing is invented.
+- **Freshness:** the snapshot is rebuilt from the commit CI passed, on every push to `main`;
+  model version names change with each rebuild, the data does not.
+- **Base path:** the site lives under `/wattwise-ai/`; routing strips and adds the base, and
+  `404.html` (a copy of `index.html`) makes deep links work.
+- **Safety:** the workflow deploys only after CI passed for a push from this repository, never
+  for a fork's pull request; it runs with `pages: write` only in the deploy job.
+- **Kept:** the Render Blueprint (T046) for a server-backed demo later.
+
 ---
 
 ## Open decisions (tracked in tasks)

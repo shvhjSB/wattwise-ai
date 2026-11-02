@@ -74,6 +74,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T047 | Dataset health: store and show the data-quality audit | M10 | T008, T033 | Done |
 | T048 | Data drift in the model lab | M10 | T033, T019b | Done |
 | T049 | What-if (counterfactual) lab | M10 | T030, T032 | Done |
+| T050 | Public static demo on GitHub Pages (no card) | M12 | T046 | Done (owner enables Pages) |
 | T042 | Full-scale data, memory-efficient features and quality masking | M5b | T009b, T013 | Done |
 | T043 | Best model at full scale | M5b | T042, T014 | Done |
 | T044a | Downstream pipeline at full scale: evaluation model, intervals, detection, explanations, impact | M5b | T043, T019b, T020, T021 | Done |
@@ -913,6 +914,15 @@ The owner asked for the remaining gaps against the original specification and a 
   chosen margin; a hypothetical percentage cut in chosen local hours (the building's time zone);
   and costs only with a tariff the user enters, for kWh meters. Computed in the browser from the
   existing expectation endpoint; nothing is saved, so it also works on the read-only public demo.
+
+### T050 — Public static demo on GitHub Pages
+- **Why (2026-11-02):** Render asks for a card for every service, and so do Koyeb and (with a paid
+  plan) Hugging Face's Docker Spaces. The owner chose a GitHub Pages snapshot.
+- **Done (D068):** `python -m wattwise.snapshot` records the read-only API's answers for every
+  preset view of the synthetic demo; the frontend's snapshot mode answers from them and says
+  plainly when a view was not recorded; routing works under `/wattwise-ai/`;
+  `.github/workflows/pages.yml` rebuilds, checks every page in a browser and publishes after CI.
+  The owner enables Pages once (DEPLOYMENT.md).
 
 ## Added after T007b (supplementary data)
 

@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { ROUTES, routeFor, usePath } from './routes';
+import { appPath, href, ROUTES, routeFor, usePath } from './routes';
 
 beforeEach(() => {
   window.history.replaceState(null, '', '/');
@@ -84,5 +84,26 @@ describe('usePath', () => {
     });
 
     expect(result.current.path).toBe('/impact');
+  });
+});
+
+describe('routes under a base path (GitHub Pages, T050)', () => {
+  it('strips and adds the base', async () => {
+    vi.stubEnv('BASE_URL', '/wattwise-ai/');
+    vi.resetModules();
+    const routes = await import('./routes');
+
+    expect(routes.appPath('/wattwise-ai/alerts')).toBe('/alerts');
+    expect(routes.appPath('/wattwise-ai/')).toBe('/');
+    expect(routes.appPath('/wattwise-ai')).toBe('/');
+    expect(routes.appPath('/other')).toBe('/other');
+    expect(routes.href('/data')).toBe('/wattwise-ai/data');
+    vi.unstubAllEnvs();
+    vi.resetModules();
+  });
+
+  it('is a no-op at the root', () => {
+    expect(appPath('/alerts')).toBe('/alerts');
+    expect(href('/alerts')).toBe('/alerts');
   });
 });

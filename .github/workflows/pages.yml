@@ -1,0 +1,122 @@
+# The public, read-only static demo on GitHub Pages (T050, D068): https://shvhjsb.github.io/wattwise-ai/
+# Runs after CI passes on main. It seeds the synthetic demo into a throwaway PostgreSQL, records
+# the API's answers for the preset views (python -m wattwise.snapshot), builds the frontend in
+# snapshot mode, checks every page in a browser, then publishes. Synthetic data only.
+# One-time setup by the owner: Settings > Pages > Build and deployment > Source: GitHub Actions.
+name: Pages
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# One deployment at a time; a newer one waits rather than cancelling a running one.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the static demo
+    # Only after CI passed for a push to main in this repository (never a fork's pull request).
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18@sha256:979bccfde35445db618c65107d27d08c6c21339d8dc3ad4c830c6633947be0e4
+        env:
+          POSTGRES_USER: wattwise
+          POSTGRES_PASSWORD: wattwise-pages
+          POSTGRES_DB: wattwise_snapshot
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U wattwise -d wattwise_snapshot"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
+    env:
+      WATTWISE_DATABASE_URL: postgresql+psycopg://wattwise:wattwise-pages@localhost:5432/wattwise_snapshot
+    steps:
+      - name: Check out the commit CI passed
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          version: '0.12.24'
+          checksum: 'b4dfaef47d491a7296981f8374a4595f55dbf84e8937c8ecd2983574d8bb3da6'
+          working-directory: backend
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Install Python and locked dependencies (the recorder uses the API's test client)
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: Record the synthetic demo's API answers
+        working-directory: backend
+        run: uv run --locked python -m wattwise.snapshot --output "$RUNNER_TEMP/snapshot"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: frontend/.nvmrc
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-audit --no-fund
+
+      - name: Build the frontend in snapshot mode under /wattwise-ai/
+        working-directory: frontend
+        env:
+          WATTWISE_BASE: /wattwise-ai/
+          VITE_SNAPSHOT: '1'
+        run: |
+          npm run build
+          cp -r "$RUNNER_TEMP/snapshot" dist/snapshot
+          cp dist/index.html dist/404.html
+
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx --no-install playwright install --with-deps chromium
+
+      - name: Check every page as GitHub Pages will serve it
+        working-directory: frontend
+        run: node scripts/static-smoke.mjs dist
+
+      - name: Upload the site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: frontend/dist
+
+  deploy:
+    name: Publish to GitHub Pages
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1

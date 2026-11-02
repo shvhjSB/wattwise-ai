@@ -1,3 +1,5 @@
+import { NOT_RECORDED, READ_ONLY, SNAPSHOT, snapshotAnswer } from './snapshot';
+
 /**
  * Minimal typed HTTP client for the WattWise API.
  *
@@ -42,6 +44,7 @@ async function requestJson<T>(
   isExpected: (value: unknown) => value is T,
   options: { method?: 'GET' | 'POST'; body?: unknown; signal?: AbortSignal } = {},
 ): Promise<T> {
+  if (SNAPSHOT) return snapshotJson(path, isExpected, options);
   let response: Response;
   try {
     response = await fetch(apiUrl(path), {
@@ -92,6 +95,30 @@ async function requestJson<T>(
     );
   }
   return body;
+}
+
+/** The static demo's answer (T050): recorded, refused (writes) or not recorded. */
+async function snapshotJson<T>(
+  path: string,
+  isExpected: (value: unknown) => value is T,
+  options: { method?: 'GET' | 'POST'; signal?: AbortSignal },
+): Promise<T> {
+  let answer;
+  try {
+    answer = await snapshotAnswer(path, options.method ?? 'GET', options.signal);
+  } catch (cause) {
+    if (isAbortError(cause)) throw cause;
+    throw new ApiError('network', 'Could not load the static demo’s recorded data.', { cause });
+  }
+  if (answer.kind === 'refused') throw new ApiError('http', READ_ONLY, { status: 403 });
+  if (answer.kind === 'missing') throw new ApiError('http', NOT_RECORDED);
+  if (!isExpected(answer.body)) {
+    throw new ApiError(
+      'invalid-response',
+      'The static demo’s recorded answer did not match the expected format.',
+    );
+  }
+  return answer.body;
 }
 
 /**

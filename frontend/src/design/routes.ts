@@ -53,6 +53,23 @@ export const ROUTES: readonly RouteInfo[] = [
   },
 ];
 
+/** Where the app is served from, without a trailing slash: '' at the root, '/wattwise-ai' on
+ * GitHub Pages (T050). Routes are written without it. */
+const BASE = import.meta.env.BASE_URL.replace(/\/+$/, '');
+
+/** A browser path without the base, e.g. '/wattwise-ai/alerts' → '/alerts'. */
+export function appPath(pathname: string): string {
+  if (BASE && (pathname === BASE || pathname.startsWith(`${BASE}/`))) {
+    return pathname.slice(BASE.length) || '/';
+  }
+  return pathname;
+}
+
+/** The browser path of a route, e.g. '/alerts' → '/wattwise-ai/alerts'. */
+export function href(path: string): string {
+  return `${BASE}${path}`;
+}
+
 /** The route for a path; unknown paths have none (the shell shows "not found"). */
 export function routeFor(path: string): RouteInfo | undefined {
   const normalised = path.length > 1 ? path.replace(/\/+$/, '') : path;
@@ -64,11 +81,11 @@ export function routeFor(path: string): RouteInfo | undefined {
  * A small history-API router: the app has a handful of fixed pages and no route parameters yet.
  */
 export function usePath(): { path: string; navigate: (path: string) => void } {
-  const [path, setPath] = useState(() => window.location.pathname);
+  const [path, setPath] = useState(() => appPath(window.location.pathname));
 
   useEffect(() => {
     const onPop = () => {
-      setPath(window.location.pathname);
+      setPath(appPath(window.location.pathname));
     };
     window.addEventListener('popstate', onPop);
     return () => {
@@ -77,8 +94,8 @@ export function usePath(): { path: string; navigate: (path: string) => void } {
   }, []);
 
   const navigate = useCallback((next: string) => {
-    if (next === window.location.pathname) return;
-    window.history.pushState(null, '', next);
+    if (next === appPath(window.location.pathname)) return;
+    window.history.pushState(null, '', href(next));
     setPath(next);
   }, []);
 

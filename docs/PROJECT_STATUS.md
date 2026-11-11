@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-02 · **Current milestone:** M13 — ML Reliability, Public Deployment & Product Readiness (M1–M12 complete)
+**Last updated:** 2026-11-11 · **Current milestone:** M14 — The electricity check-up for small factories (M1–M12 complete; M13 closed by D074)
 
 ## Summary
 
@@ -459,10 +459,24 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T053 | Production data-source separation | 2026-11-02 |
 | T054 | Improve real-world anomaly detection (not promoted) | 2026-11-02 |
 | T062 | Bill analyser (owner request) | 2026-11-11 |
+| T063 | Product focus and roadmap redesign | 2026-11-11 |
 
 ## Current task
 
-None. **T062, the Bill analyser, is complete** (D073, owner request). A new page (`/bill`) takes
+None. **T063 is complete** (D074): the product focus is set in [PRODUCT.md](PRODUCT.md), and
+the rest of the roadmap is redesigned as M14.
+
+- **Focus:** a free, private electricity check-up for a small factory, from the data it already
+  has: the bill (built), the main meter's interval file, and machine meters where they exist.
+- **Honest finding:** a competitor with a free bill-penalty tracker exists, so the bill check
+  alone is not unique.
+- **The part worth testing:** whether the main meter alone can reveal the plant's large loads
+  without a meter on every machine. It is studied on real factory data with criteria fixed in
+  advance, and shipped only if it passes.
+- **Deferred as not needed for a browser-only product:** T055, T056, T058 and T059. T057 is
+  replaced by T066, and T060 is merged into T069.
+
+Earlier: **T062, the Bill analyser, is complete** (D073, owner request). A new page (`/bill`) takes
 the figures of a monthly electricity bill, typed in. It checks them against the bill's own total
 and shows:
 
@@ -594,14 +608,17 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T055 — Prediction interval reliability** (M13): the promoted model's 90 % intervals cover
-87.2 % of test readings. The task measures coverage and width by meter, site, season and
-consumption level, and checks zero or near-zero meters, missing predictions and drift.
-Alternatives are compared on validation data only. No promise of exact coverage under shift,
-and no "fix" that only widens intervals. See
-[ROADMAP.md](ROADMAP.md#t055--prediction-interval-reliability).
+**T064 — Factory data: HIPE acquisition and preparation** (M14): download the HIPE factory
+data set (ten machines and the main terminal, October to December 2017, CC BY 4.0) with
+checksums and provenance, and prepare each meter's active power at 5 s, 1 min, 15 min and 1 h
+with a quality report. See
+[ROADMAP.md](ROADMAP.md#t064--factory-data-hipe-acquisition-and-preparation).
 
 Owner decisions still open:
+- **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
+  with attribution, so the live site can show a real factory (T064, T066). Without approval it
+  stays local.
+- **Deferred tasks:** whether to reinstate any of T055, T056, T058 or T059 (D074).
 - **CC0 subset:** whether a CC0 real subset (HKUST or LBNL Building 59) joins the public demo
   (D070, D071).
 - **Alert budget:** whether to change the 0.5 alerts per meter-week budget (D072).
@@ -627,7 +644,8 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
-| M13 ML reliability, deployment, product readiness | T051–T062 | 5 / 12 |
+| M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 1 / 8 |
 
 ## Blockers
 

@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Product focus ([docs/PRODUCT.md](docs/PRODUCT.md), T063, D074) and milestone M14: a free,
+  private electricity check-up for small factories, with the competitors found, the claims
+  WattWise will and will not make, and a pre-registered test of machine-level insight from the
+  main meter.
 - Bill analyser (T062, D073): a page that takes a monthly electricity bill's figures, checks
   them against the bill's own total and shows where the money goes, the demand charge, use of the
   contract demand, a hypothetical time-of-day shift, power factor, late payment and the last

@@ -2411,6 +2411,39 @@ links to the entry that replaces it.
     interval readings, which WattWise analyses through its data contract.
 - **Tests** use a synthetic bill only, never a real customer's.
 
+## D074 — Product focus: a private electricity check-up for small factories, claims tested first
+- **Date:** 2026-11-11 · **Task:** T063 · **Status:** Accepted (owner request)
+- **Request:** the owner asked that the rest of the project be designed to be unique and to solve
+  a major, common, unsolved real problem, and finished fast.
+- **What was checked** ([PRODUCT.md](PRODUCT.md)):
+  - A direct competitor exists: VoltSpark offers free bill tracking with power-factor and
+    demand-overshoot detection, and sells per-machine IoT meters at ₹299 to ₹1,499 per meter per
+    month. So a bill checker alone is not unique.
+  - Free or open interval-data tools exist elsewhere.
+  - Whether Indian consumers can download their own interval data was not confirmed.
+- **Focus:** a free, private check-up from the data a small factory already has:
+  1. the bill check (built, T062);
+  2. a meter check in the browser;
+  3. a machine view where machines are metered;
+  4. as research, a big-load finder that asks whether the main meter alone can stand in for
+     per-machine meters.
+- **Rule for claims:**
+  - Only differences that a test or a source supports are stated: private by design, evidence
+    first, and the big-load finder only at a resolution where it passed a pre-registered test on
+    real factory data (HIPE, CC BY 4.0).
+  - WattWise never claims per-machine use from a bill, automatic reading of any bill, verified
+    savings, or uniqueness as such.
+- **Roadmap:**
+  - M14 (T063–T069, then T061).
+  - T055, T056, T058 and T059 are deferred, T057 is replaced by T066, and T060 is merged into
+    T069.
+  - A browser-only public product needs no server, sign-in or card.
+  - The owner can reinstate any of them.
+- **Rejected:**
+  - Calling the product unique without evidence.
+  - Encoding state tariff orders: users enter their own tariff's rules instead (T068).
+  - Promising machine-level results before T065's test.
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -84,14 +84,21 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T052 | Production architecture and hosting decision | M13 | T051 | Done |
 | T053 | Production data-source separation | M13 | T051 | Done |
 | T054 | Improve real-world anomaly detection | M13 | T051 | Done (not promoted) |
-| T055 | Prediction interval reliability | M13 | T051 | Not started |
-| T056 | Known data and model defects (incl. T051's confirmed defects) | M13 | T051 | Not started |
-| T057 | Real-data product experience | M13 | T053 | Not started |
-| T058 | Security and authentication | M13 | T052 | Not started |
-| T059 | End-to-end integration and deployment | M13 | T052, T058 | Not started |
-| T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Not started |
-| T061 | Final independent quality audit | M13 | T051–T060 | Not started |
+| T055 | Prediction interval reliability | M13 | T051 | Deferred (D074) |
+| T056 | Known data and model defects (incl. T051's confirmed defects) | M13 | T051 | Deferred (D074) |
+| T057 | Real-data product experience | M13 | T053 | Replaced by T066 (D074) |
+| T058 | Security and authentication | M13 | T052 | Deferred (D074) |
+| T059 | End-to-end integration and deployment | M13 | T052, T058 | Deferred (D074) |
+| T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Merged into T069 (D074) |
+| T061 | Final independent quality audit | M14 | T063–T069 | Not started |
 | T062 | Bill analyser (owner request) | M13 | — | Done |
+| T063 | Product focus and roadmap redesign | M14 | T062 | Done |
+| T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Not started |
+| T065 | Big-load finder study (pre-registered) | M14 | T064 | Not started |
+| T066 | Machine view on real factory data | M14 | T064 | Not started |
+| T067 | Meter check in the browser | M14 | T065 | Not started |
+| T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Not started |
+| T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Not started |
 
 ---
 
@@ -1165,3 +1172,91 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
 
 Residential appliance disaggregation is **not** part of M13; a separate M14 proposal would use
 residential datasets (REFIT, UK-DALE), and no room-level breakdown is ever inferred from bills.
+
+---
+
+## M14 — The electricity check-up for small factories (owner request, 2026-11-11)
+
+Goal: make WattWise a free, private electricity check-up for a small factory, from the data it
+already has, and claim only what is tested. The focus, the competitors found and the limits are
+in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
+
+**What changed in M13 (D074), reversible if the owner wants them back:**
+
+- **T055 and T056** are deferred. They concern the building model's intervals and defects seen
+  only on the local BDG2 data. They stay listed as open limitations for the final audit.
+- **T057** is replaced by T066: the real-data experience is now a real factory's.
+- **T058 and T059** are deferred. The bill check and the meter check run in the browser, so the
+  public site needs no server, no sign-in and no paid or card-based host (D070 stays the plan if
+  a server is ever needed).
+- **T060** is merged into T069. **T061** closes M14.
+
+### T063 — Product focus and roadmap redesign
+- **Done (2026-11-11):** [PRODUCT.md](PRODUCT.md), D074. A competitor with a free bill-penalty
+  tracker exists (VoltSpark), so a bill checker alone is not unique. The plan keeps the private,
+  evidence-first check-up and tests the unsolved part, machine-level insight without a meter on
+  every machine, on real factory data.
+
+### T064 — Factory data: HIPE acquisition and preparation
+- **Objective:** a real factory with a meter on each machine, as the evidence base.
+- **Scope:**
+  - Download the pinned HIPE 1.0.1 archives (one week first, then three months) into git-ignored
+    `data/raw/hipe/`, with SHA-256 and provenance in `data/manifests/hipe.json`.
+  - Record the licence (CC BY 4.0) and citation in DATASETS.md and LICENSES.md.
+  - Prepare the active power of the ten machines and the main terminal at 5 s, 1 min, 15 min and
+    1 h, streamed so that memory stays low, with a quality report.
+- **Acceptance:** checksums verified; a reproducible preparation; coverage and gaps reported; the
+  share of the main terminal that the ten machines explain is stated, because the unmetered
+  remainder limits T065.
+- **Owner decision:** whether a small hourly derived table may be committed, with attribution,
+  so the public demo can show it. CLAUDE.md forbids committing processed datasets; without
+  approval it stays local.
+
+### T065 — Big-load finder study (pre-registered)
+- **Question:** from the main terminal alone, how well can the plant's large loads and their
+  energy be recovered, at 5 s, 1 min and 15 min?
+- **Rules:**
+  - The protocol, baselines, metrics and pass criteria are committed before any scoring.
+  - Development weeks first, later weeks held out and scored once.
+  - The machine meters are used only to score, never as inputs.
+- **Acceptance:** per-load energy error and the share of plant energy attributed, at each
+  resolution; a clear statement of which resolution, if any, is good enough. A negative result
+  is published, and nothing that fails is shipped.
+
+### T066 — Machine view on real factory data (replaces T057)
+- **Scope:** the prepared hourly tables loaded as an observed dataset, each machine a meter. A
+  comparison view shows each machine's share of plant energy, running hours, use while the plant
+  is closed and its alerts from the default detector. Attribution is visible. It appears in the
+  public demo only with the owner's approval in T064. No BDG2-trained model is used publicly
+  (D070).
+- **Acceptance:** tests, a browser scenario, and the provenance label "Observed" with the source.
+
+### T067 — Meter check in the browser
+- **Scope:** a 15-, 30- or 60-minute meter file read in the browser, never uploaded:
+  - validation and data-quality notes;
+  - when and how often the peak demand happens;
+  - consumption in the hours the user marks as closed, priced with the user's own rate;
+  - the time-of-day split;
+  - unusual days, using the default detector's rule ported to TypeScript;
+  - the big-load finder, only at a resolution that passed T065.
+
+  It also documents how a plant can get interval data, stating only what was verified.
+- **Acceptance:** a parity test of the ported detector against the Python implementation; unit and
+  page tests; a browser scenario; it works on the static demo.
+
+### T068 — Bill check: a year of bills and the contract-demand what-if
+- **Scope:** up to twelve months of bill figures. The contract-demand what-if uses rules the user
+  enters from their own tariff: the minimum billing demand as a percentage of the contract
+  demand, and the excess-demand rate. None is assumed. It shows the months that would have
+  exceeded a lower contract.
+- **Acceptance:** unit tests including the excess-demand case; no tariff rule hardcoded; savings
+  worded as hypothetical.
+
+### T069 — Check-up report, landing page and documentation (includes T060)
+- **Scope:** a printable one-page report of steps 1 and 2; the landing page leads with the
+  check-up; README, model card and documentation rewritten around the product, its evidence and
+  its limits; an architecture diagram and a reproducibility guide.
+- **Acceptance:** genuine results only; every claim links to its evidence.
+
+T061, the final independent quality audit, closes M14. It lists T055, T056, T058 and T059 as open
+unless they were reinstated.

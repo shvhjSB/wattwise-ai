@@ -3286,3 +3286,30 @@ browser.
 then failed every file with "failed to find the runner", existing files included. Running from
 an explicitly upper-case `D:\wattwise-ai\frontend` fixed it; nothing in the repository was
 changed for it.
+
+---
+
+## 2026-11-11 — T063 Product focus and roadmap redesign
+
+T062 was pushed as `7f89609`; CI run 43019461104 passed all five jobs and Pages run 43020059389
+published it (its smoke test opened `/bill`).
+
+**Request:** the owner asked that the rest of the project be unique, solve a major and common
+unsolved problem, and be finished fast.
+
+**Checked (one round of searches and two pages read):**
+- VoltSpark (India): a free core with typed-in bills, power-factor and demand-overshoot
+  detection; IoT metering from ₹299 to ₹1,499 per meter per month. A bill checker alone is
+  therefore not unique.
+- Interval-data tools exist (meterdatalogic, Solar Proof, Energy Lens); no free tool that
+  re-computes Indian HT bills was found in one search.
+- Smart meters: 7.24 crore installed in India by 30 June 2026; consumer access to their own
+  interval data was not confirmed.
+- HIPE (KIT): ten machines and the main terminal of a production plant, 2017-10-01 to
+  2018-01-01, CC BY 4.0, 1.33 GB packed.
+
+**Decided (D074):** [PRODUCT.md](PRODUCT.md) and milestone M14 (T063–T069, then T061). T055,
+T056, T058 and T059 are deferred, T057 is replaced by T066 and T060 is merged into T069. Claims
+are limited to what a test or a source supports.
+
+**Not done:** no data downloaded and no code changed in this task.

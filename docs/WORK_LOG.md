@@ -3312,4 +3312,12 @@ unsolved problem, and be finished fast.
 T056, T058 and T059 are deferred, T057 is replaced by T066 and T060 is merged into T069. Claims
 are limited to what a test or a source supports.
 
-**Not done:** no data downloaded and no code changed in this task.
+**Not done:** no data downloaded and no application code changed in this task.
+
+**CI failure on the way:** T063 was pushed as `860adc2`. CI run 43022306174 failed in "Public demo
+image (Render)" with "the fresh database was not seeded", although the log showed
+`"seeded": true`. Cause: `deploy/render/verify.sh` runs with `pipefail` and piped into
+`grep -q`. That exits at the first match, so the writer dies of SIGPIPE and the pipe counts as
+failed: a race, reproduced locally (`seq 1 400000 | grep -q 1` exits 141 under `pipefail`). All
+seven checks now use `grep … >/dev/null`, which reads everything. No other script has the
+pattern.

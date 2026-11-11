@@ -3,6 +3,8 @@
 # a platform-style DATABASE_URL, PORT=10000, Render's free-instance limits (0.1 CPU, 512 MB),
 # a fresh database seeded at startup, then a restart that must not reseed. Only the resources
 # this script creates (named wwverify-*) are removed. Usage: bash deploy/render/verify.sh
+# Checks read the whole output (grep ... >/dev/null, never grep -q): under pipefail, grep -q
+# exits at the first match, the writer dies of SIGPIPE and a found text would count as a failure.
 set -euo pipefail
 
 image=wattwise-public:verify
@@ -49,23 +51,23 @@ docker run -d --name "$app" --network "$net" --cpus 0.1 --memory 512m -e PORT=10
 started=$(date +%s)
 wait_ready
 echo "first start (seeding) ready after $(( $(date +%s) - started )) s"
-docker logs "$app" 2>&1 | grep -q '"seeded": true' || fail "the fresh database was not seeded"
+docker logs "$app" 2>&1 | grep '"seeded": true' >/dev/null || fail "the fresh database was not seeded"
 
 health=$(curl -fs "${base}/api/v1/health")
 [[ "$health" == *'"read_only":true'* ]] || fail "health does not report read_only: ${health}"
-curl -fs "${base}/" | grep -q '<div id="root"' || fail "the frontend is not served at /"
-curl -fs "${base}/alerts" | grep -q '<div id="root"' || fail "app routes do not fall back"
-curl -fs "${base}/api/v1/dashboard/summary" | grep -q '"kind":"synthetic"' || fail "no synthetic data"
-curl -fs "${base}/api/v1/models/evaluation" | grep -q '"available":true' || fail "no evaluation"
+curl -fs "${base}/" | grep '<div id="root"' >/dev/null || fail "the frontend is not served at /"
+curl -fs "${base}/alerts" | grep '<div id="root"' >/dev/null || fail "app routes do not fall back"
+curl -fs "${base}/api/v1/dashboard/summary" | grep '"kind":"synthetic"' >/dev/null || fail "no synthetic data"
+curl -fs "${base}/api/v1/models/evaluation" | grep '"available":true' >/dev/null || fail "no evaluation"
 status=$(curl -s -o /dev/null -w '%{http_code}' -X POST -H 'Content-Type: application/json' \
   -d '{"label":"needs_investigation"}' "${base}/api/v1/alerts/1/feedback")
 [[ "$status" == 403 ]] || fail "a review was not refused (HTTP ${status})"
-curl -fsI "${base}/" | grep -qi '^x-frame-options: DENY' || fail "security headers missing"
+curl -fsI "${base}/" | grep -i '^x-frame-options: DENY' >/dev/null || fail "security headers missing"
 
 docker restart "$app" >/dev/null
 started=$(date +%s)
 wait_ready
 echo "restart ready after $(( $(date +%s) - started )) s"
-docker logs "$app" 2>&1 | grep -q '"seeded": false' || fail "a restart reseeded the database"
+docker logs "$app" 2>&1 | grep '"seeded": false' >/dev/null || fail "a restart reseeded the database"
 echo "memory: $(docker stats --no-stream --format '{{.MemUsage}}' "$app")"
 echo "PASS: public demo image"

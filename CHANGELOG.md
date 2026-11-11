@@ -460,6 +460,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   2.9.0.post0. (T013)
 
 ### Fixed
+- `deploy/render/verify.sh` could report "the fresh database was not seeded" although it was:
+  under `pipefail`, `grep -q` exits at the first match and the writer's SIGPIPE failed the check.
+  The checks now read the whole output. Seen on CI run 43022306174.
 - Full-scale runs held 20 million identifiers as strings and paged to disk: a baseline run took
   5.1 hours. Category identifiers give identical results in 10 minutes. (T042)
 - The T016 reading of Gator's whole-day low events as possible holidays was wrong. The raw data

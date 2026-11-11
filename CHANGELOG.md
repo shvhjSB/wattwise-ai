@@ -7,6 +7,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- T054 detector study (D072): `python -m wattwise.ml.detector_study` compares 18 model-free
+  rolling z-score settings on LEAD labels under a pre-registered protocol
+  ([protocol](docs/reports/t054-detector-protocol.md), [results](docs/reports/t054-detector-study.md));
+  `rolling_same_hour(statistic="median")` adds a median/MAD baseline for analysis. The default
+  detector is unchanged: no setting met the predeclared criteria.
 - Data sources (T053, D071): the Overview lists each stored dataset with its provenance, period
   and version (`loaded_at`, now in the dashboard summary), and says stored data is historical,
   not live.

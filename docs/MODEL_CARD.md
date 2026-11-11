@@ -93,7 +93,10 @@ A few meters still have very wide intervals; 24 of 1,148 meters have no stored e
 July–December 2016; [EVALUATION.md, T044c](EVALUATION.md#detector-check-against-lead-labels-at-full-scale-t044c-d043)):
 a model detector built on this recipe found 29.6% of labelled segments (the default rolling
 z-score: 18.9%) but only 9.3% of its events touched a label (rolling z-score: 22.7%). This is why
-the model gives context to alerts rather than raising them.
+the model gives context to alerts rather than raising them. A pre-registered study of 18 rolling
+z-score settings (T054, [results](reports/t054-detector-study.md)) found none that clearly beats
+the default within 0.5 alerts per meter-week: most missed short labels never stand out from the
+meter's normal same-hour variation.
 
 ## Limitations
 

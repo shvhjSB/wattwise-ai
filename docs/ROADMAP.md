@@ -83,7 +83,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T051 | Current-state verification and gap analysis | M13 | T050 | Done |
 | T052 | Production architecture and hosting decision | M13 | T051 | Done |
 | T053 | Production data-source separation | M13 | T051 | Done |
-| T054 | Improve real-world anomaly detection | M13 | T051 | Not started |
+| T054 | Improve real-world anomaly detection | M13 | T051 | Done (not promoted) |
 | T055 | Prediction interval reliability | M13 | T051 | Not started |
 | T056 | Known data and model defects (incl. T051's confirmed defects) | M13 | T051 | Not started |
 | T057 | Real-data product experience | M13 | T053 | Not started |
@@ -91,6 +91,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T059 | End-to-end integration and deployment | M13 | T052, T058 | Not started |
 | T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Not started |
 | T061 | Final independent quality audit | M13 | T051–T060 | Not started |
+| T062 | Bill analyser (owner request) | M13 | — | Not started |
 
 ---
 
@@ -1049,6 +1050,17 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   LEAD stays local. Promote only if the predeclared criteria are met.
 - **Acceptance:** segment recall, event precision, hour-level precision/recall, alerts per
   meter-week, delay, and results by duration and type, improvements and regressions both shown.
+- **Done (2026-11-02, D072):** a pre-registered study
+  ([protocol](reports/t054-detector-protocol.md) pushed as `f58fa6f` before scoring;
+  [results](reports/t054-detector-study.md)). It compared 18 model-free rolling z-score settings
+  on a chronological development and held-out split of the LEAD labels.
+  - The setting chosen on development found 28.2 % against 26.4 % of held-out segments, with
+    fewer alerts and higher event precision. That is below the predeclared +3 points, and the
+    bootstrap interval includes zero: **not promoted, the default is unchanged.**
+  - 98.5 % of the missed 1–2 h segments never reached |z| = 4. The robust median baseline finds
+    two to three times as many, at 4.6 to 10 times the alert budget.
+  - LEAD has no anomaly types, so results by direction are given instead.
+  - Delay was measured on development only.
 
 ### T055 — Prediction interval reliability
 - **Scope:** the 87.2 % coverage against 90 % nominal (stored: 0.8723): coverage by meter, site,
@@ -1115,6 +1127,31 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   measured metrics, remaining risks, the deployment URL if real, reproduction commands and
   recommended research. No production-readiness claim with unresolved security or reliability
   issues.
+
+### T062 — Bill analyser (owner request, 2026-11-11)
+- **Objective:** an operator enters the figures from a monthly electricity bill, for example an
+  Indian HT industrial bill. The analyser then shows:
+  - where the money goes;
+  - what the demand charge is based on;
+  - what moving consumption between time-of-day windows would change;
+  - the power factor;
+  - an avoidable late-payment surcharge;
+  - the 12-month consumption history.
+- **Rules:**
+  - Computed in the browser; nothing is sent or saved, because a bill holds personal details.
+    It therefore also works on the static public demo.
+  - **No per-machine claims:** a bill comes from one meter for the whole site. The page says
+    that sub-meters or interval data are needed for that.
+  - Rates come only from the bill's own figures. No tariff rule is assumed (for example a
+    minimum billing demand or a power-factor threshold).
+  - Savings are hypothetical, and month-to-month changes are questions, not anomalies.
+  - The entries are checked against the bill's own total, so a typing mistake is shown.
+- **Not in scope:** reading PDF bills automatically. Layouts differ between utilities, a misread
+  number would make every result wrong, and a reader needs sample bills, given with consent, to
+  build and test it.
+- **Acceptance:** unit tests of every calculation on a synthetic bill (never a real customer's);
+  the total check catches entry mistakes; page tests; a browser scenario; the page works in the
+  static demo.
 
 Residential appliance disaggregation is **not** part of M13; a separate M14 proposal would use
 residential datasets (REFIT, UK-DALE), and no room-level breakdown is ever inferred from bills.

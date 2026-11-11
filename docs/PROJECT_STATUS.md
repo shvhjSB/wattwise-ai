@@ -457,10 +457,20 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T051 | Current-state verification and gap analysis | 2026-11-02 |
 | T052 | Production architecture and hosting decision | 2026-11-02 |
 | T053 | Production data-source separation | 2026-11-02 |
+| T054 | Improve real-world anomaly detection (not promoted) | 2026-11-02 |
 
 ## Current task
 
-None. **T053 is complete** (D071): data sources are explicit and never swapped silently.
+None. **T054 is complete** (D072): a pre-registered study of 18 rolling z-score settings on LEAD
+human labels ([results](reports/t054-detector-study.md)).
+
+- **Result:** the setting chosen on development found 28.2 % of held-out segments against the
+  default's 26.4 %, with fewer alerts and higher event precision. The gain is below the
+  predeclared +3 points and not statistically clear, so **the default is unchanged**.
+- **The main finding:** 98.5 % of the missed short labels never stand out from the meter's
+  normal same-hour variation, so no setting of this detector finds them within the alert budget.
+
+Earlier: **T053 is complete** (D071): data sources are explicit and never swapped silently.
 
 - Asking for a dataset that is not stored now answers **404** on buildings and alerts. Before,
   it answered an empty page.
@@ -568,15 +578,17 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T054 — Improve real-world anomaly detection** (M13): find out why the default detector finds
-18.9 % of human-labelled LEAD segments, starting from 1–2 hour segments: 70 % of the labels,
-13.0 % found. Selection rules and acceptance criteria are written before any final evaluation:
-tune on a development part of the labels, score the held-out part once, keep the alert budget
-explicit, and promote only if the criteria are met. See
-[ROADMAP.md](ROADMAP.md#t054--improve-real-world-anomaly-detection).
+**T055 — Prediction interval reliability** (M13): the promoted model's 90 % intervals cover
+87.2 % of test readings. The task measures coverage and width by meter, site, season and
+consumption level, and checks zero or near-zero meters, missing predictions and drift.
+Alternatives are compared on validation data only. No promise of exact coverage under shift,
+and no "fix" that only widens intervals. See
+[ROADMAP.md](ROADMAP.md#t055--prediction-interval-reliability).
 
-Owner decision still open from T052/T053: whether a CC0 real subset (HKUST or LBNL Building 59)
-joins the public demo (D070, D071).
+Owner decisions still open:
+- **CC0 subset:** whether a CC0 real subset (HKUST or LBNL Building 59) joins the public demo
+  (D070, D071).
+- **Alert budget:** whether to change the 0.5 alerts per meter-week budget (D072).
 
 Open from M5b, not scheduled: the 5 November event cluster (check against the clock audit), a
 few meters whose intervals are still very wide, which artifact serves predictions (D039), and
@@ -599,7 +611,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
-| M13 ML reliability, deployment, product readiness | T051–T061 | 3 / 11 |
+| M13 ML reliability, deployment, product readiness | T051–T061 | 4 / 11 |
 
 ## Blockers
 

@@ -43,6 +43,17 @@ model's residuals with a rolling, season-adaptive scale. T019b tested exactly th
 (`model-adaptive`). It cut the out-of-season alert growth from ×1.9 to ×1.45, but stayed
 over budget and lost recall, so the rolling z-score remains the default (D033).
 
+**Tested against human labels (T054, D072):** 18 settings of the rolling z-score were compared on
+LEAD labels in a pre-registered study ([results](reports/t054-detector-study.md)). They crossed
+mean or median baselines, opening thresholds of 3, 4 and 5, and short-event rules. None met the
+predeclared criteria, so the default is unchanged.
+
+- Most missed 1–2 hour labels (98.5 % in development) never reach |z| = 4. They are within the
+  meter's normal same-hour variability, not dropped by the short-event rule.
+- The median/MAD baseline (`rolling_same_hour(..., statistic="median")`) finds two to three
+  times as many segments, at 4.6 to 10 times the alert budget. It is available for analysis and
+  is not the default.
+
 ## Scores (model detector)
 
 For each meter and hour, residual = observed − expected, and

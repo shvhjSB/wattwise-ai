@@ -3213,3 +3213,35 @@ Nothing in the frontend called history "live".
 
 **Not done:** no CC0 real subset loaded (owner's choice, D070); uploads are still not stored
 (T058 first).
+
+---
+
+## 2026-11-02 — T054 Improve real-world anomaly detection (not promoted)
+
+T053 was pushed as `ec1c92b`; CI run 41446315178 passed all five jobs and Pages run 41446877307
+published it (the live snapshot carries each dataset's `loaded_at`).
+
+**Pre-registration:** the protocol ([t054-detector-protocol.md](reports/t054-detector-protocol.md)),
+`wattwise.ml.detector_study` and its tests were committed and pushed as `f58fa6f` before any
+candidate was scored on LEAD.
+
+**Ran (local LEAD data, 173 meters):**
+- **Development** (July–September 2016, 1,316 segments, 18 candidates): 5 min 44 s; selected
+  `mean-on5-spike6` (15.1 % against the default's 14.4 %).
+- **Held-out** (October 2016 to 2 January 2017, 773 segments), once: 28.2 % against 26.4 %,
+  bootstrap 95 % interval of the gain −0.1 to +3.8 points. Two of five criteria failed, so the
+  candidate was not promoted.
+- **Diagnostics:** 864 of 877 missed 1–2 h segments never reached |z| = 4.
+- **Delay:** on the development window only.
+- Local outputs (git-ignored): `development.json` `83b2671a…`, `held_out.json` `9f21151a…`.
+
+**Code:** `rolling_same_hour(statistic="median")` (median and scaled MAD); the default mean path
+is unchanged, and the existing detector, benchmark, LEAD and LBNL tests pass. 11 new tests cover
+the robust statistic, the grid and its default, the chronological windows, the selection and
+acceptance rules, the bootstrap, the diagnosis and the scored-once guard.
+
+**Owner's question during the task:** can WattWise take a factory's electricity bill and say
+which machine uses the most? Answered: no. A bill comes from one meter for the whole plant, so
+per-machine use needs sub-meters, or at least interval data. The owner then asked for a Bill
+analyser (T062) and asked that the bill not be saved: it is not in the repository, the tests
+or any note.

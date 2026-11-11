@@ -1134,6 +1134,28 @@ masking in T044a); **this was not isolated, so the cause is a hypothesis.**
 - Only labels whose LEAD reading equals BDG2's raw reading are scored (D022).
 - A check, not a tuning step: the T018 defaults were not changed (D030 and D033 stand).
 
+## Improving the default against human labels (T054, D072)
+
+**Real data, human labels without measured agreement (LEAD 1.0).** The study was pre-registered
+([protocol](reports/t054-detector-protocol.md), commit `f58fa6f`, pushed before any scoring)
+([results](reports/t054-detector-study.md)).
+
+- **Design:** 18 model-free settings of the rolling z-score: mean or median baseline, opening
+  threshold 3, 4 or 5, and the short-event rule. Development window July–September 2016;
+  held-out October 2016 to 2 January 2017, strictly later and scored once.
+- **Selection:** the best segment recall within 0.5 events per meter-week.
+- **Held-out:** the setting chosen on development (open 5, short events kept from z 6) found
+  **28.2 % against 26.4 %** of labelled segments. It raised fewer events (0.345 against 0.391 per
+  meter-week) and had higher event precision (30.7 % against 24.1 %). The gain of 1.8 points is
+  below the predeclared 3 points, and its meter-bootstrap 95 % interval (−0.1 to +3.8 points)
+  includes zero. **Not promoted; the default stands.**
+- **Why recall is low:** in development, 864 of the 877 missed 1–2 hour segments never reached
+  |z| = 4. Robust median/MAD baselines find two to three times as many segments, but at 2.3 to
+  5.1 events per meter-week.
+- **Limits:** one annotator; two windows of one year at 173 meters. Delay was measured on
+  development only (median 0 h for 1–2 h segments, 6.5 h for segments of 24 h or more,
+  default).
+
 ## Alert prioritisation (T022, D044)
 
 `wattwise.ml.prioritisation` ranks alerts for review. **The score orders alerts; it is not a

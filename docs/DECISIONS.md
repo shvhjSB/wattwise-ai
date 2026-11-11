@@ -2358,6 +2358,34 @@ links to the entry that replaces it.
 - **Not done:** loading a CC0 real subset (HKUST or LBNL Building 59) for the public demo (D070)
   waits for the owner's choice.
 
+## D072 — The default detector stays: no setting met the pre-registered criteria
+- **Date:** 2026-11-02 · **Task:** T054 · **Status:** Accepted
+- **How it was tested:**
+  - The protocol ([t054-detector-protocol.md](reports/t054-detector-protocol.md)) was pushed as
+    `f58fa6f` before any candidate was scored.
+  - 18 model-free rolling z-score settings were compared on LEAD labels: a development window
+    (July–September 2016) for selection within 0.5 events per meter-week, and a strictly later
+    held-out window scored once.
+  - The code refuses a second held-out run.
+- **Result** ([t054-detector-study.md](reports/t054-detector-study.md)): on held-out, the chosen
+  setting (open 5, short events kept from z 6) reached segment recall 28.2 % against 26.4 %. It
+  had 0.345 against 0.391 events per meter-week and event precision 30.7 % against 24.1 %. The
+  gain (+1.8 points) is below the predeclared +3, and the bootstrap interval (−0.1 to +3.8)
+  includes zero, so it is **not promoted**. The injected benchmark that promotion also needed
+  was therefore not run.
+- **What the evidence says:**
+  - The low recall on short labels is not caused by the short-event rule: 98.5 % of the missed
+    1–2 h segments never reached |z| = 4.
+  - The robust median/MAD baseline finds two to three times as many segments, but at 4.6 to 10
+    times the budget, so it is kept as an analysis option only
+    (`rolling_same_hour(statistic="median")`).
+- **Rejected:** loosening the criteria or rescoring the held-out window after seeing the result
+  (as in D030).
+- **Open:**
+  - The alert budget remains the owner's product assumption. The development table shows what
+    a higher budget would buy, but any new budget needs a fresh held-out test.
+  - "Open 5, spike 6" is an unconfirmed lead; confirming it needs new labelled data.
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -6,6 +6,9 @@ export interface RouteInfo {
   label: string;
   task: string;
   summary: string;
+  /** False for a page that shows no stored data (the Bill analyser): the banner that labels the
+   * stored datasets as synthetic would otherwise mislabel figures the user typed in. */
+  storedData?: false;
 }
 
 export const ROUTES: readonly RouteInfo[] = [
@@ -38,6 +41,14 @@ export const ROUTES: readonly RouteInfo[] = [
     label: 'What-if lab',
     task: 'T049',
     summary: 'A meter’s recorded use against the model, with scenarios that never change history.',
+  },
+  {
+    path: '/bill',
+    label: 'Bill analyser',
+    task: 'T062',
+    storedData: false,
+    summary:
+      'A monthly electricity bill’s charges, demand, time of day and history, worked out from the figures you enter.',
   },
   {
     path: '/data',

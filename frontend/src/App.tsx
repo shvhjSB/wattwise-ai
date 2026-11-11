@@ -2,6 +2,7 @@ import { routeFor, usePath } from './design/routes';
 import { useTheme } from './design/theme';
 import { SummaryProvider } from './features/summary/SummaryProvider';
 import { useDataKinds, useSummary } from './features/summary/useSummary';
+import { BillPage } from './pages/BillPage';
 import { ExplorerPage } from './pages/ExplorerPage';
 import { AlertsPage } from './pages/AlertsPage';
 import { DataHealthPage } from './pages/DataHealthPage';
@@ -43,6 +44,8 @@ function Routes() {
         <ImpactPage summary={route.summary} />
       ) : route.path === '/whatif' ? (
         <WhatIfPage summary={route.summary} />
+      ) : route.path === '/bill' ? (
+        <BillPage summary={route.summary} />
       ) : route.path === '/data' ? (
         <DataHealthPage summary={route.summary} />
       ) : route.path === '/models' ? (

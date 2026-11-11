@@ -2,7 +2,7 @@ import type { MouseEvent, ReactNode } from 'react';
 
 import type { DataKind } from '../api/summary';
 import { DemoBanner } from '../design/Provenance';
-import { href, ROUTES } from '../design/routes';
+import { href, ROUTES, routeFor } from '../design/routes';
 import { isThemeChoice, type ThemeChoice } from '../design/theme';
 
 const THEMES: { value: ThemeChoice; label: string }[] = [
@@ -94,7 +94,7 @@ export function AppShell({
         </div>
       </header>
 
-      {dataKinds ? <DemoBanner kinds={dataKinds} /> : null}
+      {dataKinds && routeFor(path)?.storedData !== false ? <DemoBanner kinds={dataKinds} /> : null}
 
       <main
         id="main"

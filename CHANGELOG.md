@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Bill analyser (T062, D073): a page that takes a monthly electricity bill's figures, checks
+  them against the bill's own total and shows where the money goes, the demand charge, use of the
+  contract demand, a hypothetical time-of-day shift, power factor, late payment and the last
+  months' history; computed in the browser, nothing sent or saved; works on the static demo.
 - T054 detector study (D072): `python -m wattwise.ml.detector_study` compares 18 model-free
   rolling z-score settings on LEAD labels under a pre-registered protocol
   ([protocol](docs/reports/t054-detector-protocol.md), [results](docs/reports/t054-detector-study.md));

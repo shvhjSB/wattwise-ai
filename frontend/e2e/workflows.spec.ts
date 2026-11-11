@@ -134,3 +134,31 @@ test('what-if lab tries a scenario without changing the recording', async ({ pag
   await noPageOverflow(page);
   await page.screenshot({ path: info.outputPath('what-if.png'), fullPage: true });
 });
+
+test('bill analyser checks a synthetic bill without sending it anywhere', async ({
+  page,
+}, info) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Bill analyser', exact: true }).click();
+  await expect(page.getByRole('note', { name: 'How the bill analyser works' })).toBeVisible();
+  const apiCalls: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.includes('/api/')) apiCalls.push(path);
+  });
+  await page.getByRole('button', { name: 'Fill in a synthetic example', exact: true }).click();
+  const checks = page.getByRole('region', { name: 'Checks against the bill' });
+  await expect(
+    checks.getByText('The charges add up to the total payable: ₹507,280.00.'),
+  ).toBeVisible();
+  await page.getByLabel(/Fuel and other surcharges/).fill('3600');
+  await expect(checks.getByText(/a difference of ₹32,400\.00/)).toBeVisible();
+  const tod = page.getByRole('region', { name: 'Time of day' });
+  await tod.getByLabel('Move from').selectOption('1');
+  await tod.getByLabel('Move to').selectOption('2');
+  await expect(tod.getByRole('status')).toContainText('would save ₹1,225.00');
+  expect(apiCalls).toEqual([]);
+  expect(new URL(page.url()).search).toBe('');
+  await noPageOverflow(page);
+  await page.screenshot({ path: info.outputPath('bill.png'), fullPage: true });
+});

@@ -458,10 +458,26 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T052 | Production architecture and hosting decision | 2026-11-02 |
 | T053 | Production data-source separation | 2026-11-02 |
 | T054 | Improve real-world anomaly detection (not promoted) | 2026-11-02 |
+| T062 | Bill analyser (owner request) | 2026-11-11 |
 
 ## Current task
 
-None. **T054 is complete** (D072): a pre-registered study of 18 rolling z-score settings on LEAD
+None. **T062, the Bill analyser, is complete** (D073, owner request). A new page (`/bill`) takes
+the figures of a monthly electricity bill, typed in. It checks them against the bill's own total
+and shows:
+
+- where the money goes;
+- the demand charge and the cost of billed demand above the recorded peak;
+- use of the contract demand;
+- a hypothetical time-of-day shift;
+- power factor and any late-payment surcharge;
+- the last months' history.
+
+Everything is computed in the browser and nothing is sent or saved, so it also works on the
+public static demo. It never claims per-machine use: a bill comes from one meter. PDF bills are
+not read automatically (D073).
+
+Earlier: **T054 is complete** (D072): a pre-registered study of 18 rolling z-score settings on LEAD
 human labels ([results](reports/t054-detector-study.md)).
 
 - **Result:** the setting chosen on development found 28.2 % of held-out segments against the
@@ -611,7 +627,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M10 Frontend workflows | T028–T033, T047–T049 | 9 / 9 |
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
-| M13 ML reliability, deployment, product readiness | T051–T061 | 4 / 11 |
+| M13 ML reliability, deployment, product readiness | T051–T062 | 5 / 12 |
 
 ## Blockers
 

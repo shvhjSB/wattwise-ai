@@ -91,7 +91,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T059 | End-to-end integration and deployment | M13 | T052, T058 | Not started |
 | T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Not started |
 | T061 | Final independent quality audit | M13 | T051–T060 | Not started |
-| T062 | Bill analyser (owner request) | M13 | — | Not started |
+| T062 | Bill analyser (owner request) | M13 | — | Done |
 
 ---
 
@@ -1152,6 +1152,16 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
 - **Acceptance:** unit tests of every calculation on a synthetic bill (never a real customer's);
   the total check catches entry mistakes; page tests; a browser scenario; the page works in the
   static demo.
+- **Done (2026-11-11, D073):** the **Bill analyser** page (`/bill`).
+  - The bill's figures are typed in, with time-of-day windows and up to 12 earlier months.
+  - **Checks:** the charges against the total payable, energy charges against kWh × rate, the
+    printed power factor against kWh ÷ kVAh, and the time-of-day lines against the windows.
+  - **Results:** where the money goes (share and per kWh); the demand rate derived from the bill
+    and the cost of billed demand above the recorded peak; use of the contract demand; a
+    hypothetical time-of-day shift; power factor and any late-payment surcharge; and the
+    history's zero months and largest changes.
+  - A synthetic example, labelled Synthetic.
+  - Nothing is sent or saved.
 
 Residential appliance disaggregation is **not** part of M13; a separate M14 proposal would use
 residential datasets (REFIT, UK-DALE), and no room-level breakdown is ever inferred from bills.

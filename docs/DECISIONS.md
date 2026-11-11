@@ -2386,6 +2386,31 @@ links to the entry that replaces it.
     a higher budget would buy, but any new budget needs a fresh held-out test.
   - "Open 5, spike 6" is an unconfirmed lead; confirming it needs new labelled data.
 
+## D073 — The Bill analyser works from figures entered in the browser and keeps nothing
+- **Date:** 2026-11-11 · **Task:** T062 · **Status:** Accepted (owner request)
+- **Request:** the owner asked for insights from a factory's monthly electricity bill, and that
+  the bill they showed not be saved. It is not in the repository, the tests or any note.
+- **Choice:** the user types in the bill's figures, and the page works everything out in the
+  browser, like the What-if lab (D067). Nothing is sent, saved, or put in the URL or browser
+  storage; reloading clears it. It needs no server, so it also works on the static public demo.
+- **Why not read PDF bills:**
+  - Layouts differ between utilities.
+  - A misread figure would silently make every result wrong.
+  - Building and testing a reader needs sample bills given with consent, and none are kept.
+  - Instead, the entries are checked against the bill's own total, energy rate, power factor
+    and time-of-day lines, so a typing mistake shows.
+- **Rules:**
+  - Rates come only from the bill's own figures (for example the demand rate is the fixed
+    charge ÷ the billing demand).
+  - No tariff rule is assumed: a minimum billing demand, a power-factor threshold or a load-factor
+    definition differs by utility.
+  - Demand figures are stated as facts, not as a recommendation to change the contract.
+  - Moving consumption between time-of-day windows is hypothetical.
+  - Month-to-month changes are questions, not anomalies.
+  - **No per-machine statement:** a bill comes from one meter. Per-machine use needs sub-meters or
+    interval readings, which WattWise analyses through its data contract.
+- **Tests** use a synthetic bill only, never a real customer's.
+
 ---
 
 ## Open decisions (tracked in tasks)

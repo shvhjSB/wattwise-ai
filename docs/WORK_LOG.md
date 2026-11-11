@@ -3245,3 +3245,44 @@ which machine uses the most? Answered: no. A bill comes from one meter for the w
 per-machine use needs sub-meters, or at least interval data. The owner then asked for a Bill
 analyser (T062) and asked that the bill not be saved: it is not in the repository, the tests
 or any note.
+
+---
+
+## 2026-11-11 — T062 Bill analyser (owner request)
+
+T054 was pushed as `97d0ab9`; CI run 43016098928 passed all five jobs.
+
+**Request:** the owner asked for insights from a factory's monthly electricity bill, and that
+the bill they had shown not be saved. Decision D073: the bill's figures are typed in and worked
+out in the browser; no PDF reading; nothing is sent, saved, put in the URL or stored in the
+browser.
+
+**Built**
+- `frontend/src/features/bill/bill.ts`, pure and tested:
+  - checks of the charges against the total payable, energy charges against kWh × rate, the
+    printed power factor against kWh ÷ kVAh, and the time-of-day lines against the windows;
+  - the breakdown (share and per kWh);
+  - the demand rate derived from the bill, and the cost of billed demand above the recorded
+    peak;
+  - use of the contract demand and peak-to-average;
+  - a hypothetical time-of-day shift, capped at the source window;
+  - the history's zero months, largest changes and median;
+  - a list of entries that cannot be right.
+- A synthetic example (`example.ts`), constructed so that every check passes, and labelled
+  Synthetic on the page.
+- The **Bill analyser** page (`/bill`) and its navigation entry. The shell's "Demo data" banner
+  is left out there, because it describes the stored datasets and would mislabel figures a user
+  types in.
+- A browser scenario, and the page added to the static-site smoke test.
+
+**Validation**
+- Frontend: typecheck, lint, format and build pass; Vitest **331 of 331** (22 calculation
+  tests and 9 page tests are new).
+- Browser: **21 of 21** scenarios (the new one on desktop light, dark and mobile; it also
+  checks that no API request is made while the bill is analysed and that the URL stays clean).
+- Backend unchanged since T054 (1,017 of 1,017 then).
+
+**Problem on the way:** this session's working directory came up as `d:\` (lower-case). Vitest
+then failed every file with "failed to find the runner", existing files included. Running from
+an explicitly upper-case `D:\wattwise-ai\frontend` fixed it; nothing in the repository was
+changed for it.

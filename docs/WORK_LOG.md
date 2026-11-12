@@ -3580,3 +3580,36 @@ reaches the Bill analyser through the new link.
 - Browser: **27 of 27**.
 - Backend: unchanged since T067 (1,056 of 1,056); CI runs it again.
 - Links: 0 broken.
+
+---
+
+## 2026-11-12 — T061 Final quality audit
+
+T069 was pushed as `18edb6d`; CI run 43183702333 passed all five jobs.
+
+**Measured (fresh, on `18edb6d`)**
+- Backend: lock, ruff, format and strict mypy pass; **1,056 tests** passed in 7 min 22 s.
+- Frontend: typecheck, lint, format pass; Vitest **369**, then **370** with the test added below.
+  Browser suite **27 of 27**; build 419.77 kB (121.36 kB gzipped).
+- Links: 0 broken. CI: pip-audit clean, runtime npm 0, one dev-only `minimatch` advisory,
+  gitleaks clean. Live: `/` 200, deep links render through `404.html`, snapshot 92 answers.
+
+**Review.** A separate reviewer read the claims against the code and results: 11 findings. The
+security reviewer hit a rate limit before reporting, so the security review was a self-review
+of uploads, request limits, unsafe calls, the check-up's privacy and secrets.
+
+**Fixed**
+- **Bill page bug:** after the example was filled and the figures edited, the header and printed
+  report still said "Synthetic example". Now three states (example, edited, typed); test added.
+- **Claims narrowed:** the single-meter split (home, Machines, Meter pages, the machines API
+  caveat, README), "tested accuracy" (home, PRODUCT.md), the 26.4 % basis, "15, 30 or 60
+  minutes".
+- **Records:** README limitations no longer give the reason T054 disproved; EVALUATION.md gained
+  a superseded note and a correction (13.676 is the production refit); T054 and T065 gained
+  disclosures; REPRODUCE.md gained its missing command, format and database notes.
+
+**Not fixed, and said so:** evidence from scripts outside the repository, the file-based
+"scored once" guard, and the 4.0 % against 4.1 % difference.
+
+**Deliverable:** docs/reports/t061-final-audit.md, with the measured results, each finding's
+outcome, the self-review, 11 remaining risks and the reproduction commands.

@@ -18,7 +18,8 @@ SessionDep = Annotated[Session, Depends(get_session)]
 
 CAVEATS = [
     "Figures come from each meter's own readings; nothing is estimated for meters that do not "
-    "exist. A main meter cannot be split into machines (T065, D076).",
+    "exist. The method tested for splitting a main meter into machines did not work "
+    "(T065, D076).",
     "Events are found now by the default detector on these readings: anomalies to investigate, "
     "not confirmed waste. They are not stored alerts.",
     "Closed-hours figures depend on the opening days and hours given, not on any record of when "

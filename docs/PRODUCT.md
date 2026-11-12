@@ -44,9 +44,9 @@ This was one round of searching, not a market study. "None found" means exactly 
 
 1. **Private by design.** The bill check and the meter check run in the browser. There is no
    account, and nothing is uploaded or stored. Competing platforms keep the customer's data.
-2. **Evidence first.** Every method is published with its measured accuracy on real data,
-   including where it fails (for example T054: the default detector finds 26 % of human-labelled
-   anomalies on held-out data).
+2. **Evidence first.** Each method's tests are published, including where it fails and where
+   it is untested (for example T054: the default detector finds 26 % of human-labelled anomalies
+   on held-out data from campus buildings; it has not been tested on factory meters).
 3. **The unsolved part, tested rather than promised.** Step 4 asks whether one meter on the main
    incomer can stand in for a meter on every machine. The study measures it on a real factory
    with ground truth, at 10 seconds, 1 minute and 15 minutes, with criteria fixed in advance. If

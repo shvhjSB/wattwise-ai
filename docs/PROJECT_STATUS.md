@@ -1,6 +1,6 @@
 # Project status
 
-**Last updated:** 2026-11-11 · **Current milestone:** M14 — The electricity check-up for small factories (M1–M12 complete; M13 closed by D074)
+**Last updated:** 2026-11-12 · **Current milestone:** M14 — The electricity check-up for small factories (M1–M12 complete; M13 closed by D074)
 
 ## Summary
 
@@ -466,10 +466,20 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T067 | Meter check in the browser | 2026-11-12 |
 | T068 | Bill check: a year of demand and the contract-demand what-if | 2026-11-12 |
 | T069 | Check-up report, landing page and documentation | 2026-11-12 |
+| T061 | Final independent quality audit | 2026-11-12 |
 
 ## Current task
 
-None. **T069 is complete** (D080): the product is presented first.
+None. **T061 is complete** (D081), and with it **M14**: the final audit
+([report](reports/t061-final-audit.md)).
+
+- **Measured:** backend 1,056 tests, frontend 370, the browser suite, build, links and CI.
+- **Found and fixed:** a Bill page bug; the detector and single-meter claims narrowed to what was
+  tested; one correction and two disclosures in earlier reports.
+- **Not claimed:** production readiness. The server has no authentication; T055, T056, T058 and
+  T059 stay deferred.
+
+Earlier: **T069 is complete** (D080): the product is presented first.
 
 - **Home page:** opens with the free, private check-up.
 - **Reports:** the Bill analyser and the Meter check print a one-page report, which can be
@@ -672,11 +682,10 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T061 — Final independent quality audit** (closes M14): code quality, security,
-provenance, reproducibility, leakage, API, frontend, accessibility, deployment, documentation,
-performance and limitations. A final report gives the measured results, the remaining risks
-(including the deferred T055, T056, T058 and T059), the live URL and the reproduction commands.
-See [ROADMAP.md](ROADMAP.md#t061--final-independent-quality-audit).
+**None scheduled.** M14 is complete. The owner chooses what comes next: reinstating a
+deferred task (T055, T056, T058 or T059, D074), committing a HIPE table for the public Machines
+page, or stopping here. See the open decisions below and the remaining risks in
+[the T061 report](reports/t061-final-audit.md).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -696,7 +705,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | Milestone | Tasks | Done |
 |---|---|---|
 | M1 Foundation | T001–T004 | 4 / 4 |
-| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d | 6 / 6 |
+| M2 Data contracts and acquisition | T005–T007, T007b, T007c, T007d, T045 | 7 / 7 |
 | M3 Validation and preprocessing | T008, T009a, T009b, T009c, T010 | 5 / 5 |
 | M4 Baselines | T011–T012 | 2 / 2 |
 | M5 Improved model | T013–T015, T041 | 4 / 4 |
@@ -709,7 +718,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 7 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 8 / 8 |
 
 ## Blockers
 

@@ -69,7 +69,7 @@ def test_a_building_s_meters_are_compared_against_its_main_meter(
     assert body["not_compared"] == [WATER]  # water is not electricity
     assert body["first_reading"] == "2016-10-03T00:00:00Z"  # UTC, whatever the session zone
     caveats = " ".join(str(c) for c in body["caveats"])  # type: ignore[attr-defined]
-    assert "not confirmed waste" in caveats and "cannot be split" in caveats
+    assert "not confirmed waste" in caveats and "did not work" in caveats
 
 
 def test_the_main_meter_and_opening_hours_can_be_chosen(factory_client: TestClient) -> None:

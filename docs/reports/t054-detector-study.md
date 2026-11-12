@@ -156,3 +156,10 @@ Local outputs, git-ignored, in `data/processed/evaluation/detector_study/`:
 | `held_out.json` | `9f21151a164f325aeecda49e132dd8a4c7410c2acf7b16f915da7429626f53d3` |
 
 The development phase took 5 min 44 s on the development machine.
+
+## Disclosure (added in the T061 audit)
+
+The held-out window was not entirely unseen. The earlier full-scale check (T044c) had scored the
+default setting over July to December 2016, which includes it, as one aggregate figure (18.9 %).
+The settings were compared and chosen on the development window only, and the held-out window
+was scored once.

@@ -135,3 +135,9 @@ Local outputs, git-ignored, in `data/processed/evaluation/load_finder/`:
 
 The diagnosis used two scripts outside the repository that read only the development weeks;
 their findings are quoted above.
+
+## Disclosure (added in the T061 audit)
+
+The protocol says the held-out weeks were not read. T064's data summary had already covered the
+whole recording, including those weeks (for example, that the ten machines are 4.1 % of the main
+terminal's energy). It did not run the load finder or look at any event on them.

@@ -350,7 +350,8 @@ export function MachinesPage({ summary }: { summary: string }) {
         <EmptyState title="Choose a building">
           Compare each meter of a building with its main meter: how much each uses, when it runs,
           what it uses while the site is closed, and its unusual hours. This needs a meter on each
-          machine. A single main meter cannot be split into machines (tested in T065).
+          machine. The method tested for splitting a single main meter into machines did not work on
+          a real factory (T065).
         </EmptyState>
       ) : !validHours ? null : comparison.state.status === 'loading' ? (
         <LoadingState label="Comparing the meters…" />

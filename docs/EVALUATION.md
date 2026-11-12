@@ -734,8 +734,10 @@ validation (25.289 vs 17.910 naive, −41.2%): consumption history remains essen
 - **Cross-check from the saved artifact's own T011 report** (a different denominator: every row
   the model itself scored, not only rows where seasonal-naive also had a valid lag): MAE
   13.676, RMSE 76.608, bias −0.454, WAPE 8.8%, 2,283,087 scored rows, 154,899 without a
-  prediction. The two MAE figures (13.700 vs 13.676) differ only because they are computed over
-  slightly different row sets; both describe the same promoted model.
+  prediction. **Correction (T061):** this note first said the two MAE figures (13.700 and
+  13.676) differ only by row set and describe the same model. They do not. These cross-check
+  figures are the production refit's; the evaluation model (now promoted, D039) scores 13.720 on
+  these rows and 13.700 on the common rows above ([MODELS.md](MODELS.md)).
 
 **Per site (test, rows and MAE against seasonal-naive):**
 
@@ -1117,7 +1119,9 @@ The chance hour precision (the share of scored hours that are labelled) is 1.5%.
 - **Both are low in absolute terms.** The rolling z-score finds about one labelled segment in
   five, the full-scale model about three in ten. 70% of labelled segments last 1-2 hours,
   which the persistence rules mostly ignore. Whether operators want 1-2 hour alerts is a
-  product question.
+  product question. *(Superseded by T054: most missed short labels never stand out from the
+  meter's normal same-hour variation, so persistence is not the main reason;
+  [study](reports/t054-detector-study.md).)*
 - **The rolling z-score row is identical in all three runs** (it does not use the model).
 
 **Discrepancy to note.** The labelled-meters model detector, rerun now, gives 3.8% hour

@@ -163,7 +163,7 @@ const STEPS: { path: string; link: string; text: string }[] = [
   {
     path: '/meter',
     link: 'Check a meter file',
-    text: 'Load your main meter’s 15- or 30-minute readings: peak demand, use while closed, the base load and unusual periods.',
+    text: 'Load your main meter’s 15-, 30- or 60-minute readings: peak demand, use while closed, the base load and unusual periods.',
   },
   {
     path: '/machines',
@@ -183,8 +183,8 @@ function CheckupIntro({ navigate }: { navigate: (path: string) => void }) {
         <h3 className="text-lg font-semibold">A free, private electricity check-up</h3>
         <p className="text-sm text-muted">
           For a small factory, from the data it already has. The bill and meter checks run in your
-          browser: nothing you enter or load is sent anywhere or saved. Every method is published
-          with its tested accuracy, including what did not work.
+          browser: nothing you enter or load is sent anywhere or saved. Each method’s tests are
+          published, including what did not work and what has not been tested on factory data.
         </p>
       </div>
       <ol className="grid gap-3 sm:grid-cols-3">
@@ -206,9 +206,9 @@ function CheckupIntro({ navigate }: { navigate: (path: string) => void }) {
         ))}
       </ol>
       <p className="text-xs text-muted">
-        A bill or a single main meter cannot show which machine uses what: that needs a meter on
-        each machine. Splitting one meter into machines was tested on a real factory and did not
-        work.
+        A bill cannot show which machine uses what. The method tested for splitting a single main
+        meter into machines did not work on a real factory (T065), so that needs a meter on each
+        machine.
       </p>
     </section>
   );

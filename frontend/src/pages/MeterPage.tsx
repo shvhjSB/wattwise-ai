@@ -179,7 +179,7 @@ export function MeterPage({ summary }: { summary: string }) {
         </p>
         <p>
           This shows when and how the whole site uses electricity. It does not split the meter into
-          machines: tested on a real factory, that did not work (T065).
+          machines: the method tested for that did not work on a real factory (T065).
         </p>
       </div>
 
@@ -650,7 +650,9 @@ export function MeterPage({ summary }: { summary: string }) {
                 <p className="text-xs text-muted">
                   Each hour is compared with the same hour on the previous 14 days (at least 7
                   needed), using {num(result.completeHours, 0)} complete hours. These are anomalies
-                  to investigate, not confirmed waste: an unusual week can have a good reason.
+                  to investigate, not confirmed waste: an unusual week can have a good reason. The
+                  detector was tested on the hourly meters of campus buildings (T054), not on
+                  factories.
                 </p>
               </Section>
             </div>

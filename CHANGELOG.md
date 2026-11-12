@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Final audit (T061, D081): docs/reports/t061-final-audit.md with the measured results,
+  the reviewer's findings and what became of each, and the remaining risks. No
+  production-readiness claim.
 - The check-up first (T069, D080): a home-page introduction to the three checks, "Print this
   report" on the Bill analyser and Meter check, a product-first README with an evidence table,
   and docs/REPRODUCE.md.
@@ -482,6 +485,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
   2.9.0.post0. (T013)
 
 ### Fixed
+- The Bill analyser called edited figures a synthetic example in its header and printed
+  report; it now says they were edited from the example (T061).
+- Claims about the detector and about splitting one meter into machines now state what was
+  tested and what was not (T061, D081). Earlier reports gained a dated correction or
+  disclosure.
 - `deploy/render/verify.sh` could report "the fresh database was not seeded" although it was:
   under `pipefail`, `grep -q` exits at the first match and the writer's SIGPIPE failed the check.
   The checks now read the whole output. Seen on CI run 43022306174.

@@ -2584,6 +2584,23 @@ links to the entry that replaces it.
 - **Reproducibility:** [REPRODUCE.md](REPRODUCE.md) lists a command for every claim, separating
   those that need no downloaded data.
 
+## D081 — The audit narrows claims to what was tested and makes no production claim
+- **Date:** 2026-11-12 · **Task:** T061 · **Status:** Accepted
+- **Claims narrowed:** "cannot be split into machines" became "the method tested for splitting
+  a main meter did not work (T065)", and "every method is published with its tested accuracy"
+  became "each method's tests are published, including what has not been tested". The detector
+  figure now states its window, size and population.
+- **Records corrected, not rewritten:** earlier reports keep their text and gain a dated
+  correction or disclosure (EVALUATION.md, T054, T065), so the history stays readable.
+- **Bug fixed:** the Bill page and its printed header no longer call edited figures a synthetic
+  example, and never call them a real bill.
+- **Independence:** the claims review was done by a separate reviewer. The security review was
+  a self-review because the reviewer was rate-limited; the report says so.
+- **Not claimed:** production readiness. The server has no authentication; the public site is
+  static, and its bill and meter checks run in the browser.
+- **Not reconciled:** the machines' share of the main terminal is 4.0 % on the stored hourly
+  readings and 4.1 % in T064. The difference is recorded, not explained.
+
 ---
 
 ## Open decisions (tracked in tasks)

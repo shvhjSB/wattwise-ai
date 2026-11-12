@@ -120,12 +120,12 @@ afterEach(() => {
 });
 
 describe('Machines page', () => {
-  it('asks for a building, and says a main meter cannot be split', async () => {
+  it('asks for a building, and says the tested split of a main meter did not work', async () => {
     const fetchMock = stub(() => jsonResponse(comparison()));
     render(<App />);
 
     expect(await screen.findByText('Choose a building')).toBeInTheDocument();
-    expect(screen.getByText(/cannot be split into machines/)).toBeInTheDocument();
+    expect(screen.getByText(/did not work\s+on a real factory \(T065\)/)).toBeInTheDocument();
     expect(machineCalls(fetchMock)).toEqual([]);
   });
 

@@ -90,7 +90,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T058 | Security and authentication | M13 | T052 | Deferred (D074) |
 | T059 | End-to-end integration and deployment | M13 | T052, T058 | Deferred (D074) |
 | T060 | Recruiter-ready ML presentation | M13 | T054, T055 | Merged into T069 (D074) |
-| T061 | Final independent quality audit | M14 | T063–T069 | Not started |
+| T061 | Final independent quality audit | M14 | T063–T069 | Done |
 | T062 | Bill analyser (owner request) | M13 | — | Done |
 | T063 | Product focus and roadmap redesign | M14 | T062 | Done |
 | T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Done |
@@ -1134,6 +1134,16 @@ run. The evidence base is [reports/t051-gap-analysis.md](reports/t051-gap-analys
   measured metrics, remaining risks, the deployment URL if real, reproduction commands and
   recommended research. No production-readiness claim with unresolved security or reliability
   issues.
+- **Done (2026-11-12, D081):** [the audit report](reports/t061-final-audit.md).
+  - Measured fresh on `18edb6d`: backend 1,056 tests, frontend 370 (one added), the browser
+    suite, build, links, CI and the live site.
+  - A separate reviewer's 11 findings were each checked against the files. One was a real bug
+    (the Bill page still said "synthetic example" after the figures were edited); the claims
+    about the detector and the single-meter split were narrowed to what was tested; one
+    correction and two disclosures went into earlier reports.
+  - The security review was a self-review, because the reviewer agent hit a rate limit.
+  - No production-readiness claim: the server has no authentication, and T055, T056, T058 and
+    T059 remain deferred.
 
 ### T062 — Bill analyser (owner request, 2026-11-11)
 - **Objective:** an operator enters the figures from a monthly electricity bill, for example an
@@ -1273,7 +1283,8 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
     loaded as `hipe-factory` and answers in about 1 s. With Monday to Friday 06:00–18:00 as the
     opening hours (an assumption, not the plant's known hours):
     - ChipPress used 35 % of its energy outside them, and the main terminal 42 %.
-    - The ten machines are 4.0 % of the main terminal.
+    - The ten machines are 4.0 % of the main terminal on the stored hourly readings. T064
+      reported 4.1 %, computed separately; the difference was not investigated.
     - PickAndPlaceUnit's below-zero readings are flagged.
   - **Public demo:** the page shows its empty state; no comparison is recorded.
 

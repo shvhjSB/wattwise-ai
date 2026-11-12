@@ -1035,12 +1035,22 @@ function ContractSection({
 
 export function BillPage({ summary }: { summary: string }) {
   const [form, setFormState] = useState<Form>(emptyForm);
-  const [fromExample, setFromExample] = useState(false);
-  const [contract, setContract] = useState<ContractInputs>(EMPTY_CONTRACT);
+  // Where the figures came from. Editing the example makes it 'edited': any figure not replaced
+  // is still made up, so the page and the printed report must not call it a real bill.
+  const [source, setSource] = useState<'typed' | 'example' | 'edited'>('typed');
+  const [contract, setContractState] = useState<ContractInputs>(EMPTY_CONTRACT);
   const bill = useMemo(() => billOf(form), [form]);
   const found = problems(bill);
+  const markEdited = () => {
+    setSource((s) => (s === 'example' ? 'edited' : s));
+  };
   const setForm = (update: (f: Form) => Form) => {
     setFormState(update);
+    markEdited();
+  };
+  const setContract = (inputs: ContractInputs) => {
+    setContractState(inputs);
+    markEdited();
   };
 
   return (
@@ -1049,9 +1059,11 @@ export function BillPage({ summary }: { summary: string }) {
       <PrintHeader
         title="bill"
         source={
-          fromExample
+          source === 'example'
             ? 'Synthetic example: made-up figures, not a real bill.'
-            : 'Figures typed in from one monthly bill.'
+            : source === 'edited'
+              ? 'Started from the synthetic example and edited: any figure not replaced is made up.'
+              : 'Figures typed in from one monthly bill.'
         }
       />
       <div
@@ -1065,8 +1077,8 @@ export function BillPage({ summary }: { summary: string }) {
         </p>
         <p>
           A bill comes from one meter for the whole site, so it cannot show which machine uses the
-          most electricity. That needs meters on the machines, or the main meter’s 15- or 30-minute
-          readings, which WattWise can analyse as a meter series.
+          most electricity. That needs meters on the machines, or the main meter’s 15-, 30- or
+          60-minute readings, which WattWise can analyse as a meter series.
         </p>
       </div>
 
@@ -1075,8 +1087,8 @@ export function BillPage({ summary }: { summary: string }) {
           type="button"
           onClick={() => {
             setFormState(formOf(SYNTHETIC_BILL));
-            setFromExample(true);
-            setContract(EXAMPLE_CONTRACT);
+            setContractState(EXAMPLE_CONTRACT);
+            setSource('example');
           }}
           className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
         >
@@ -1086,17 +1098,22 @@ export function BillPage({ summary }: { summary: string }) {
           type="button"
           onClick={() => {
             setFormState(emptyForm());
-            setFromExample(false);
-            setContract(EMPTY_CONTRACT);
+            setContractState(EMPTY_CONTRACT);
+            setSource('typed');
           }}
           className="rounded-md border border-edge px-4 py-2 text-sm font-semibold"
         >
           Clear
         </button>
-        {fromExample ? (
+        {source === 'example' ? (
           <span className="flex items-center gap-2 text-sm">
             <ProvenanceBadge kind="synthetic" />
             Made-up figures, not a real bill.
+          </span>
+        ) : source === 'edited' ? (
+          <span className="flex items-center gap-2 text-sm">
+            <ProvenanceBadge kind="synthetic" />
+            Edited from the example: any figure not replaced is made up.
           </span>
         ) : null}
         {breakdown(bill) !== null ? <PrintButton /> : null}

@@ -212,6 +212,23 @@ describe('Bill analyser', () => {
     print.mockRestore();
   });
 
+  it('stops calling edited figures the synthetic example, but never a real bill', async () => {
+    stubShell();
+    const user = await fillExample();
+    expect(screen.getByText(/Synthetic example: made-up figures/)).toBeInTheDocument();
+
+    const fuel = screen.getByLabelText(/Fuel and other surcharges/);
+    await user.clear(fuel);
+    await user.type(fuel, '3600');
+
+    expect(screen.queryByText(/Synthetic example: made-up figures/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Started from the synthetic example and edited/)).toBeInTheDocument();
+    expect(screen.queryByText(/Figures typed in from one monthly bill/)).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear' }));
+    expect(screen.getByText(/Figures typed in from one monthly bill/)).toBeInTheDocument();
+  });
+
   it('lists entries that cannot be right', async () => {
     stubShell();
     const user = await fillExample();

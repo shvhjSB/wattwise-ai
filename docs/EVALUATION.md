@@ -1156,6 +1156,29 @@ masking in T044a); **this was not isolated, so the cause is a hypothesis.**
   development only (median 0 h for 1–2 h segments, 6.5 h for segments of 24 h or more,
   default).
 
+## Machine running periods from the main meter alone (T065, D076)
+
+**Real data:** HIPE (KIT, CC BY 4.0), one plant, ten metered machines. The study was
+pre-registered: the [protocol](reports/t065-load-finder-protocol.md) was pushed as `55c6b0b`
+before any scoring. Full results are in [the report](reports/t065-load-finder-study.md).
+
+- **Design:**
+  - Development 1 October to 12 November 2017; held-out to 1 January 2018, scored once.
+  - Each machine's running power comes from its development meter, as a nameplate stand-in.
+  - Steps in the main terminal are matched to machines, and a rise is paired with a fall.
+  - Tested at 10 s, 1 min and 15 min, against an hour-of-week schedule baseline.
+- **Held-out:** no machine passed at any resolution (F1 ≥ 0.5, beat the schedule by 0.1,
+  energy within 30 %).
+  - The best F1 was 0.25 (SolderingOven, 10 s), which met the other two criteria.
+  - For the small, scheduled machines, the schedule did better than the finder (VacuumPump1:
+    0.54 against 0.19).
+- **Why (development weeks only):** the big machines' steps are in the main terminal
+  (ChipPress: correlation 0.97, slope 0.96, no clock offset). But the machines are multi-stage:
+  only 6 % of ChipPress runs begin with a step near its 25 kW running power. The sub-kilowatt
+  machines are inside the background's step changes.
+- **Consequence:** WattWise offers no machine breakdown from a single meter (step 4 of
+  [PRODUCT.md](PRODUCT.md) is not shipped).
+
 ## Alert prioritisation (T022, D044)
 
 `wattwise.ml.prioritisation` ranks alerts for review. **The score orders alerts; it is not a

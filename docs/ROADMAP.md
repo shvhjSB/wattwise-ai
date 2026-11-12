@@ -94,7 +94,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T062 | Bill analyser (owner request) | M13 | — | Done |
 | T063 | Product focus and roadmap redesign | M14 | T062 | Done |
 | T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Done |
-| T065 | Big-load finder study (pre-registered) | M14 | T064 | Not started |
+| T065 | Big-load finder study (pre-registered) | M14 | T064 | Done (did not pass) |
 | T066 | Machine view on real factory data | M14 | T064 | Not started |
 | T067 | Meter check in the browser | M14 | T065 | Not started |
 | T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Not started |
@@ -1244,6 +1244,15 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
     intervals) and energy error over its running periods.
   - A clear statement of which machines and resolutions, if any, are good enough.
   - A negative result is published, and nothing that fails is shipped.
+
+- **Done (2026-11-12, D076):** pre-registered ([protocol](reports/t065-load-finder-protocol.md)
+  pushed as `55c6b0b` before any scoring; [results](reports/t065-load-finder-study.md)).
+  - **No machine passed at any resolution.** The best held-out F1 was 0.25 (pass mark 0.5).
+  - For the small, scheduled machines, the schedule beat the main meter.
+  - Diagnosis on the development weeks: the big machines' steps are visible (ChipPress
+    correlation 0.97), but the machines are multi-stage, so single-power matching misses most
+    runs. The sub-kilowatt machines are within the background noise.
+  - **Step 4 is not shipped.** A multi-stage method needs fresh data to be tested honestly.
 
 ### T066 — Machine view on real factory data (replaces T057)
 - **Scope:** the prepared hourly tables loaded as an observed dataset, each machine a meter. A

@@ -38,7 +38,7 @@ This was one round of searching, not a market study. "None found" means exactly 
 | 1. Bill check | The monthly bill, typed in | Where the money goes, the demand charge, time-of-day and power-factor effects, late fees, checked against the bill's own total | Built (T062) |
 | 2. Meter check | The main meter's interval file (15, 30 or 60 minutes) | When the peak demand happens, consumption while the plant is closed, unusual days | Planned (T067) |
 | 3. Machine view | A meter on each machine | Which machine uses what, and each machine's unusual hours | Planned (T066), shown on real factory data |
-| 4. Big-load finder | The main meter only, at fine resolution | The plant's large loads and their running hours, **as estimates** | **Research (T065): shipped only if it passes its test** |
+| 4. Big-load finder | The main meter only, at fine resolution | The plant's large loads and their running hours, **as estimates** | **Tested (T065): did not pass; not shipped** |
 
 ### What makes it different (each point must stay true)
 
@@ -74,7 +74,13 @@ This was one round of searching, not a market study. "None found" means exactly 
   rules vary by state, and a national data-sharing framework is still a draft (June 2026). A
   plant's own panel meter or a single logger is the fallback. T067 must document what was
   actually verified.
-- **Does the big-load finder work at smart-meter resolution?** Unknown until T065.
+- **Does the big-load finder work?** Tested in T065 on a real factory: **no**, with a
+  single-power edge-matching method, at 10 s, 1 min or 15 min. The best held-out F1 was
+  0.25 against a pass mark of 0.5 ([results](reports/t065-load-finder-study.md)).
+  - The big machines' steps do show in the main meter (correlation up to 0.97).
+  - But the machines are multi-stage, and the sub-kilowatt ones are buried in the
+    background.
+  - A multi-stage method is a hypothesis that needs fresh data to test.
 
 ## Evidence base for steps 3 and 4
 

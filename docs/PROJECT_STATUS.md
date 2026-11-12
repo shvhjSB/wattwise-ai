@@ -461,10 +461,23 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T062 | Bill analyser (owner request) | 2026-11-11 |
 | T063 | Product focus and roadmap redesign | 2026-11-11 |
 | T064 | Factory data: HIPE acquisition and preparation | 2026-11-12 |
+| T065 | Big-load finder study (did not pass) | 2026-11-12 |
 
 ## Current task
 
-None. **T064 is complete** (D075): the real factory data set (HIPE, ten machine meters and the
+None. **T065 is complete** (D076): the pre-registered test of whether one main meter can stand
+in for a meter on each machine **did not pass** ([results](reports/t065-load-finder-study.md)).
+
+- **The result:** on a real factory's held-out weeks, no machine reached the pass mark at any
+  resolution (best F1 0.25 against 0.5). For the small, scheduled machines, their past schedule
+  beat the main meter.
+- **Why:** the big machines' steps do show in the main meter (correlation 0.97), but these
+  industrial machines run in several stages, and the small ones are buried in the plant's other
+  load.
+- **Consequence:** WattWise will not offer a machine breakdown from a single meter.
+  Machine-level figures need meters on the machines.
+
+Earlier: **T064 is complete** (D075): the real factory data set (HIPE, ten machine meters and the
 plant's main terminal, three months, CC BY 4.0) is downloaded, verified and prepared locally.
 
 - **Data quality:** 99.97 to 99.98 % of 10-second bins are present (one machine 99.01 %).
@@ -620,11 +633,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T065 — Big-load finder study (pre-registered)** (M14): from the main terminal alone, how well
-can each metered machine's running periods and energy be found, at 10 s, 1 min and 15 min?
-The protocol and pass criteria are committed before any scoring, and later weeks are held out
-and scored once. A negative result is published. See
-[ROADMAP.md](ROADMAP.md#t065--big-load-finder-study-pre-registered).
+**T066 — Machine view on real factory data** (M14): the HIPE plant's ten machine meters as
+machines in WattWise. A comparison view shows each machine's share of the plant's energy,
+running hours, use while the plant is closed and alerts from the default detector, with
+attribution. Locally unless the owner approves showing it publicly. See
+[ROADMAP.md](ROADMAP.md#t066--machine-view-on-real-factory-data-replaces-t057).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -657,7 +670,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 2 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 3 / 8 |
 
 ## Blockers
 

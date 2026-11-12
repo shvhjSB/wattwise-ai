@@ -7,6 +7,11 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- T065 load finder study (D076): `python -m wattwise.ml.load_finder`, a pre-registered test of
+  finding machines' running periods from the main meter on HIPE
+  ([protocol](docs/reports/t065-load-finder-protocol.md),
+  [results](docs/reports/t065-load-finder-study.md)). It did not pass, so no machine
+  breakdown from a single meter is offered.
 - HIPE factory data (T064, D075): `python -m wattwise.data.hipe` fetches and verifies the
   archives (Zenodo size, MD5 and a pinned SHA-256; manifest committed, data git-ignored) and
   prepares each meter's power at 10 s, 1 min, 15 min and 1 h with a quality report.

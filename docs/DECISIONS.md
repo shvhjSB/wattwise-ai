@@ -2468,6 +2468,39 @@ links to the entry that replaces it.
     truth.
 - **Not decided:** committing a derived hourly table for the public demo (owner).
 
+## D076 — No machine breakdown from a single meter: the pre-registered test did not pass
+- **Date:** 2026-11-12 · **Task:** T065 · **Status:** Accepted
+- **How it was tested:**
+  - The [protocol](reports/t065-load-finder-protocol.md) was pushed as `55c6b0b` before the
+    finder ran on the data.
+  - HIPE, one plant: development 1 October to 12 November 2017; held-out to 1 January 2018,
+    scored once.
+  - The finder matches main-terminal steps to each machine's development running power, at
+    10 s, 1 min and 15 min.
+  - Baseline: an hour-of-week schedule that reads no main-terminal data.
+- **Result** ([report](reports/t065-load-finder-study.md)):
+  - No machine at any resolution met all three criteria (F1 ≥ 0.5, at least 0.1 above the
+    schedule, energy within 30 %).
+  - The best F1 was 0.25 (SolderingOven, 10 s), which met the other two.
+  - For the sub-kilowatt machines that keep to a schedule, the schedule did better than the
+    main meter.
+- **Diagnosis (development weeks only):**
+  - The big machines' steps are present in the main terminal (ChipPress correlation 0.97,
+    slope 0.96, no clock offset).
+  - But the machines are multi-stage (only 6 % of ChipPress runs begin near its 25 kW running
+    power).
+  - The small machines' steps are within the unmetered load's normal changes.
+- **Decision:**
+  - Step 4 of [PRODUCT.md](PRODUCT.md) is **not shipped**. WattWise does not offer a machine
+    breakdown from one meter.
+  - Machine-level figures need meters on the machines (step 3, T066).
+- **Rejected:**
+  - Re-scoring the held-out weeks with a method designed after seeing these results.
+  - Loosening the criteria.
+  - Presenting the 0.97 step correlation as a working finder: it is a diagnosis, not a result.
+- **Open:** a multi-stage method (step sequences, reactive power) on fresh data, such as HIPE's
+  successor data set if its licence allows.
+
 ---
 
 ## Open decisions (tracked in tasks)

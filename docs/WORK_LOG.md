@@ -3370,3 +3370,44 @@ sampling and the 10 s grid. T065 is restated around the metered machines' runnin
 because they are only 4.1 % of the plant's energy (D075).
 
 **Not done:** no HIPE data committed (owner decision pending).
+
+---
+
+## 2026-11-12 — T065 Big-load finder study (did not pass)
+
+T064 was pushed as `c21561f`; CI run 43160615363 passed all five jobs.
+
+**Pre-registration:** after looking at the development weeks only (machine power, run lengths,
+main-terminal noise), the protocol, `wattwise.ml.load_finder` and 11 tests were pushed as
+`55c6b0b`. The protocol amends one roadmap rule openly: development-week machine meters give
+each machine's power, as a nameplate stand-in. Held-out machine meters only score.
+
+**Ran (local HIPE data):**
+- **Development:** 24 s; tolerances chosen per machine and resolution. In-sample, nothing
+  passed.
+- **Held-out** (12 November to 1 January), once: nothing passed. The best F1 was 0.25
+  (SolderingOven, 10 s), which met the other two criteria. For the scheduled small machines,
+  the schedule beat the finder (VacuumPump1 0.54 against 0.19).
+- Local outputs: `development.json` `7fde307e…`, `held_out.json` `f07b4948…`.
+
+**Diagnosis (development weeks only, scratch scripts):**
+- No clock offset between the meters (best lag 0).
+- The main terminal steps with the big machines: ChipPress correlation 0.97, slope 0.96;
+  WashingMachine 0.94.
+- ChipPress's runs begin with a median 2.2 kW step, not its 25 kW running power (6 % of runs
+  start near it).
+
+The finder failed on the machine model, not because the signal is missing.
+
+**Problems on the way:**
+- The first `covered` compared time-zone-aware timestamps as Python objects; it now uses plain
+  UTC nanoseconds.
+- Two test expectations were wrong, not the finder:
+  - A 10-minute run inside a 15-minute bin is found, because step × bin length gives its energy.
+    The test now uses a 2-minute run.
+  - A 2-day window cannot hold an hour-of-week schedule. The tests now use whole weeks, as the
+    study does.
+- One report line was wrong before commit: it said SolderingOven at 10 s met one criterion. The
+  stored verdicts show it met two. Corrected.
+
+**Decided (D076):** step 4 is not shipped; no machine breakdown from a single meter.

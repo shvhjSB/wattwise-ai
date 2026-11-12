@@ -64,6 +64,7 @@ const meter = Object.keys(index.entries)
 const pages = [
   ['', 'Overview'],
   ['explorer', 'Buildings & meters'],
+  ['machines', 'Machines'],
   ['alerts', 'Alerts'],
   ['impact', 'Cost impact'],
   [`whatif?meter=${encodeURIComponent(meter ?? '')}&days=all`, 'What-if lab'],

@@ -20,6 +20,7 @@ from wattwise.api.routes import (
     drift,
     health,
     impact,
+    machines,
     models,
     quality,
     ready,
@@ -84,6 +85,7 @@ def create_app(settings: Settings | None = None, engine: Engine | None = None) -
     app.include_router(health.router, prefix=API_V1_PREFIX)
     app.include_router(ready.router, prefix=API_V1_PREFIX)
     app.include_router(catalog.router, prefix=API_V1_PREFIX)
+    app.include_router(machines.router, prefix=API_V1_PREFIX)
     app.include_router(dashboard.router, prefix=API_V1_PREFIX)
     app.include_router(alerts.router, prefix=API_V1_PREFIX)
     app.include_router(impact.router, prefix=API_V1_PREFIX)

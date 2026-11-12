@@ -317,6 +317,32 @@ def test_an_archive_without_the_main_terminal_is_not_prepared(tmp_path: Path) ->
         hipe.prepare(path, tmp_path / "out")
 
 
+def test_canonical_readings_are_hourly_kwh_and_thin_hours_are_missing(tmp_path: Path) -> None:
+    hourly = pd.DataFrame(
+        {
+            "meter_id": ["Oven", "Oven"],
+            "timestamp": pd.to_datetime(["2017-10-23T00:00Z", "2017-10-23T01:00Z"], utc=True),
+            "p_kw": [3.0, 5.0],
+            "q_kvar": [0.0, 0.0],
+            "s_kva": [3.0, 5.0],
+            "coverage": [0.95, 0.5],  # the second hour is too thin to be a reading
+        }
+    )
+    hourly.to_parquet(tmp_path / "power_1h.parquet", index=False)
+
+    buildings, readings = hipe.canonical(tmp_path)
+
+    assert readings["meter_id"].tolist() == ["hipe:Oven", "hipe:Oven"]
+    assert readings["value"].tolist()[0] == 3.0  # kW for one hour is kWh
+    assert pd.isna(readings["value"].tolist()[1])
+    assert set(readings["building_id"]) == {hipe.BUILDING_ID}
+    assert buildings["timezone"].tolist() == [hipe.SITE_TIMEZONE]
+    folder = hipe.write_canonical(tmp_path)
+    loaded = pd.read_parquet(folder / "readings.parquet")
+    assert len(loaded) == 2 and str(loaded["timestamp"].dt.tz) == "UTC"
+    assert (folder / "buildings.parquet").exists()
+
+
 # -- command line ---------------------------------------------------------------------------
 
 

@@ -777,6 +777,24 @@ uv run python -m wattwise.data.hipe prepare --archive full   # about 6 minutes
     them. ChipSaw differs too (5 against 51 kWh), but its counter moved too little to judge.
     The cause is unknown, so results for these three machines carry that uncertainty.
 
+### Loading it into WattWise (T066, local only)
+
+```bash
+uv run python -m wattwise.data.hipe canonical --archive full
+uv run --env-file .env python -m wattwise.db.load --source ../data/processed/hipe/full/canonical \
+    --dataset-id hipe-factory --kind observed \
+    --name "HIPE factory meters (real data: KIT, CC BY 4.0; Bischof et al. 2018)"
+```
+
+- **What is loaded:** each meter's hourly energy (mean kW over the hour times one hour), under
+  one building, `hipe-plant` (Europe/Berlin).
+- **Thin hours:** an hour is a reading only if at least 90 % of its 10-second bins are present;
+  otherwise it is a missing reading.
+- **Result on 2026-11-12:** 11 meters and 24,279 hourly readings, 13 of them missing.
+- **Readings below zero:** PickAndPlaceUnit reads slightly below zero in 1,967 hours (about
+  −0.01 kWh each, a standby offset), and HighTemperatureOven in 204 hours. They are loaded as
+  recorded, and the Machines page flags them.
+
 ### Licence and use
 
 - **Licence:** CC BY 4.0, so redistribution is allowed with attribution.

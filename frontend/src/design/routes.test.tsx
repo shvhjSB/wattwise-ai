@@ -21,6 +21,7 @@ describe('routes', () => {
     expect(ROUTES.map((route) => route.task)).toEqual([
       'T029',
       'T030',
+      'T066',
       'T031',
       'T032',
       'T049',

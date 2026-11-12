@@ -25,6 +25,13 @@ export const ROUTES: readonly RouteInfo[] = [
     summary: 'Each meter’s readings against the model’s expectation and interval.',
   },
   {
+    path: '/machines',
+    label: 'Machines',
+    task: 'T066',
+    summary:
+      'Each meter of a site against its main meter: energy, share, running hours, use while closed and unusual hours.',
+  },
+  {
     path: '/alerts',
     label: 'Alerts',
     task: 'T031',

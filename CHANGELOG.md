@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Machines page (T066, D077): `GET /api/v1/buildings/{id}/machines` compares each meter of a
+  site with its main meter (energy, share, running hours, use while closed, highest hour,
+  readings below zero, the default detector's events), computed on request without a model;
+  `python -m wattwise.data.hipe canonical` loads the HIPE plant locally.
 - T065 load finder study (D076): `python -m wattwise.ml.load_finder`, a pre-registered test of
   finding machines' running periods from the main meter on HIPE
   ([protocol](docs/reports/t065-load-finder-protocol.md),

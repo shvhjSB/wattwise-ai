@@ -368,7 +368,9 @@ computed in the browser).
 **What does not:** anything not recorded, such as free-text building search and alert date
 filters, shows "not part of the static demo"; reviews and uploads are refused as on the read-only
 demo. The Cost impact tariff form is disabled, because the synthetic sites have no tariff
-geography (the What-if lab's tariff works, in the browser). Nothing sleeps and nothing expires.
+geography (the What-if lab's tariff works, in the browser). The Machines page opens empty: no
+comparison is recorded, and the synthetic sample's buildings have one meter each. Nothing sleeps
+and nothing expires.
 Deep links such as `/wattwise-ai/alerts` load the app through `404.html`, so GitHub Pages answers
 them with HTTP status 404 even though the page renders (T051).
 

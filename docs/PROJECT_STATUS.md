@@ -462,10 +462,21 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T063 | Product focus and roadmap redesign | 2026-11-11 |
 | T064 | Factory data: HIPE acquisition and preparation | 2026-11-12 |
 | T065 | Big-load finder study (did not pass) | 2026-11-12 |
+| T066 | Machine view on real factory data | 2026-11-12 |
 
 ## Current task
 
-None. **T065 is complete** (D076): the pre-registered test of whether one main meter can stand
+None. **T066 is complete** (D077): the **Machines** page compares each meter of a site with its
+main meter.
+
+- **What it shows:** energy, share of the main meter, running hours, use while the site is
+  closed (with the opening hours you set), the highest hour, unusual events from the default
+  detector, and meters that read below zero.
+- **Real data, locally:** checked on the HIPE plant. With assumed opening hours of Monday to
+  Friday 06:00–18:00, the chip press used 35 % of its energy outside them.
+- **Public site:** shows the page empty until you approve committing HIPE data.
+
+Earlier: **T065 is complete** (D076): the pre-registered test of whether one main meter can stand
 in for a meter on each machine **did not pass** ([results](reports/t065-load-finder-study.md)).
 
 - **The result:** on a real factory's held-out weeks, no machine reached the pass mark at any
@@ -633,11 +644,16 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T066 — Machine view on real factory data** (M14): the HIPE plant's ten machine meters as
-machines in WattWise. A comparison view shows each machine's share of the plant's energy,
-running hours, use while the plant is closed and alerts from the default detector, with
-attribution. Locally unless the owner approves showing it publicly. See
-[ROADMAP.md](ROADMAP.md#t066--machine-view-on-real-factory-data-replaces-t057).
+**T067 — Meter check in the browser** (M14): a 15-, 30- or 60-minute meter file read in the
+browser and never uploaded:
+
+- data-quality notes;
+- when the peak demand happens;
+- use in the hours the user marks as closed;
+- the time-of-day split;
+- unusual days, from the default detector ported to TypeScript and checked against Python.
+
+See [ROADMAP.md](ROADMAP.md#t067--meter-check-in-the-browser).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -670,7 +686,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 3 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 4 / 8 |
 
 ## Blockers
 

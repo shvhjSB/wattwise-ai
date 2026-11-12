@@ -55,6 +55,8 @@ from wattwise.data.acquisition import (
     ensure,
     verify,
 )
+from wattwise.data.contracts import BUILDINGS, READINGS
+from wattwise.data.validation import to_canonical
 
 ZENODO_RECORD: Final = "14054902"
 DOI: Final = "10.5281/zenodo.14054902"
@@ -512,6 +514,54 @@ def to_markdown(summary: dict[str, Any]) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Canonical tables, for loading into WattWise (T066)
+# ---------------------------------------------------------------------------
+
+BUILDING_ID: Final = "hipe-plant"
+SITE_ID: Final = "hipe"
+#: An hour becomes a reading only if this share of its 10-second bins is present; otherwise it
+#: is a missing reading, never a filled one.
+HOUR_COVERAGE: Final = 0.9
+
+
+def canonical(prepared: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """(buildings, readings) in the canonical form, from `power_1h.parquet`: one building, and
+    each meter's hourly energy in kWh (mean kW over the hour times one hour), labelled with the
+    meter's HIPE name."""
+    hourly = pd.read_parquet(prepared / "power_1h.parquet")
+    value = hourly["p_kw"].astype(float).where(hourly["coverage"] >= HOUR_COVERAGE)
+    readings = pd.DataFrame(
+        {
+            "timestamp": hourly["timestamp"].dt.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "meter_id": "hipe:" + hourly["meter_id"].astype(str),
+            "building_id": BUILDING_ID,
+            "meter_type": "electricity",
+            "unit": "kWh",
+            "value": value,
+        }
+    )
+    buildings = pd.DataFrame(
+        {
+            "building_id": [BUILDING_ID],
+            "site_id": [SITE_ID],
+            "timezone": [SITE_TIMEZONE],
+            "primary_use": ["Manufacturing (power electronics)"],
+        }
+    )
+    return buildings, readings
+
+
+def write_canonical(prepared: Path) -> Path:
+    """Write the canonical tables next to the prepared data, for `wattwise.db.load`."""
+    buildings, readings = canonical(prepared)
+    folder = prepared / "canonical"
+    folder.mkdir(parents=True, exist_ok=True)
+    to_canonical(buildings, BUILDINGS).to_parquet(folder / "buildings.parquet", index=False)
+    to_canonical(readings, READINGS).to_parquet(folder / "readings.parquet", index=False)
+    return folder
+
+
+# ---------------------------------------------------------------------------
 # Command line
 # ---------------------------------------------------------------------------
 
@@ -521,7 +571,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         prog="python -m wattwise.data.hipe",
         description="Fetch, verify and prepare the HIPE factory data set (CC BY 4.0).",
     )
-    parser.add_argument("command", choices=["list", "fetch", "verify", "prepare"])
+    parser.add_argument("command", choices=["list", "fetch", "verify", "prepare", "canonical"])
     parser.add_argument("--full", action="store_true", help="fetch the three-month archive too")
     parser.add_argument("--archive", choices=sorted(ARCHIVES_BY_KEY), default="week")
     parser.add_argument("--raw", type=Path, default=DEFAULT_RAW)
@@ -544,6 +594,17 @@ def main(argv: Sequence[str] | None = None) -> int:
             for key, local in found.items():
                 print(f"{key}: {'verified' if local else 'absent or not matching'}")
             return 0 if all(found.values()) else 1
+        if args.command == "canonical":
+            prepared = args.output / args.archive
+            if not (prepared / "power_1h.parquet").exists():
+                print(
+                    f"error: {prepared} has no prepared data. Run: uv run python -m "
+                    f"wattwise.data.hipe prepare --archive {args.archive}",
+                    file=sys.stderr,
+                )
+                return 1
+            print(write_canonical(prepared))
+            return 0
         path = args.raw / ARCHIVES_BY_KEY[args.archive].remote.local_path
         if not path.exists():
             print(

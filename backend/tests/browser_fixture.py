@@ -15,8 +15,12 @@ from sqlalchemy import Engine, create_engine, text
 from sqlalchemy.engine import make_url
 
 from tests.conftest import SYNTHETIC_SAMPLE
+from tests.factory_data import FACTORY_INFO, factory_tables
 from wattwise.api.main import create_app
 from wattwise.core.config import Settings
+from wattwise.data.contracts import BUILDINGS, READINGS
+from wattwise.data.validation import to_canonical
+from wattwise.db.load import load_dataset
 from wattwise.demo import initialize_demo
 
 SCHEMA_NAME = re.compile(r"^e2e_[0-9a-f]{12}$")
@@ -63,6 +67,15 @@ def prepare(state: Path) -> None:
     engine = engine_for(state)
     try:
         result = initialize_demo(engine, SYNTHETIC_SAMPLE, state.parent)
+        # A small synthetic factory with several meters, for the Machines page (T066).
+        buildings, readings = factory_tables()
+        with engine.begin() as connection:
+            load_dataset(
+                connection,
+                FACTORY_INFO,
+                to_canonical(buildings, BUILDINGS),
+                to_canonical(readings, READINGS),
+            )
     finally:
         engine.dispose()
     print(f"Synthetic browser fixture prepared: {result.readings} rows, {result.alerts} alerts.")

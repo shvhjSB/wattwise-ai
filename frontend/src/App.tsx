@@ -8,6 +8,7 @@ import { AlertsPage } from './pages/AlertsPage';
 import { DataHealthPage } from './pages/DataHealthPage';
 import { WhatIfPage } from './pages/WhatIfPage';
 import { ImpactPage } from './pages/ImpactPage';
+import { MachinesPage } from './pages/MachinesPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { ModelsPage } from './pages/ModelsPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
@@ -38,6 +39,8 @@ function Routes() {
         <OverviewPage summary={summary} />
       ) : route.path === '/explorer' ? (
         <ExplorerPage summary={route.summary} />
+      ) : route.path === '/machines' ? (
+        <MachinesPage summary={route.summary} />
       ) : route.path === '/alerts' ? (
         <AlertsPage summary={route.summary} />
       ) : route.path === '/impact' ? (

@@ -95,7 +95,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T063 | Product focus and roadmap redesign | M14 | T062 | Done |
 | T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Done |
 | T065 | Big-load finder study (pre-registered) | M14 | T064 | Done (did not pass) |
-| T066 | Machine view on real factory data | M14 | T064 | Not started |
+| T066 | Machine view on real factory data | M14 | T064 | Done |
 | T067 | Meter check in the browser | M14 | T065 | Not started |
 | T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Not started |
 | T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Not started |
@@ -1261,6 +1261,21 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
   public demo only with the owner's approval in T064. No BDG2-trained model is used publicly
   (D070).
 - **Acceptance:** tests, a browser scenario, and the provenance label "Observed" with the source.
+
+- **Done (2026-11-12, D077):** `GET /api/v1/buildings/{id}/machines` and the **Machines**
+  page.
+  - **What it shows:** each electricity meter of a building against its main meter (chosen, or
+    the largest): energy, share, running hours, use outside the opening hours the user sets (in
+    local time), highest hour, readings below zero, and the default detector's events.
+  - Everything is computed on request from stored readings, with no model.
+  - It warns when the chosen main meter does not contain the others.
+  - **Real data (local, the owner has not approved committing HIPE data):** the HIPE plant is
+    loaded as `hipe-factory` and answers in about 1 s. With Monday to Friday 06:00–18:00 as the
+    opening hours (an assumption, not the plant's known hours):
+    - ChipPress used 35 % of its energy outside them, and the main terminal 42 %.
+    - The ten machines are 4.0 % of the main terminal.
+    - PickAndPlaceUnit's below-zero readings are flagged.
+  - **Public demo:** the page shows its empty state; no comparison is recorded.
 
 ### T067 — Meter check in the browser
 - **Scope:** a 15-, 30- or 60-minute meter file read in the browser, never uploaded:

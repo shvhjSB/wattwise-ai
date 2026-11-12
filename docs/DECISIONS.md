@@ -2501,6 +2501,27 @@ links to the entry that replaces it.
 - **Open:** a multi-stage method (step sequences, reactive power) on fresh data, such as HIPE's
   successor data set if its licence allows.
 
+## D077 — The machine view compares real meters only, computed on request
+- **Date:** 2026-11-12 · **Task:** T066 · **Status:** Accepted
+- **What:** `GET /api/v1/buildings/{id}/machines` and the Machines page. Each electricity meter
+  of a building is set against its main meter (the user's choice, or the largest): energy,
+  share, running hours, energy outside the opening hours the user gives (local time), highest
+  hour, readings below zero, and events from the default detector run now.
+- **Why computed on request, without a model:**
+  - The building model is not validated for a factory.
+  - The stored alerts come from a pipeline tied to that model.
+  - The model-free default detector (D030) works on any meter.
+  - The events are labelled as found now, not stored alerts.
+- **Rules:**
+  - Figures exist only for meters that exist. A main meter is never split (D076).
+  - "Used while closed" depends on the opening hours given, which the page asks the user to set.
+  - Readings below zero are kept as recorded, and counted and flagged per meter.
+  - A chosen main meter that does not contain the others is flagged, not hidden.
+- **Real data:** HIPE is loaded locally only. The owner has not approved committing a derived
+  table (T064), so the public demo shows the page empty.
+- **Tests:** a synthetic test factory with hand-worked figures
+  (`backend/tests/factory_data.py`), also loaded into the browser fixture.
+
 ---
 
 ## Open decisions (tracked in tasks)

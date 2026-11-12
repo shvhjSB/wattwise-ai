@@ -132,6 +132,7 @@ commands for migrations and pinned model/report checks. See [DEPLOYMENT.md](../d
 | GET | `/api/v1/health` | Liveness only: the process is up. It does **not** check dependencies. |
 | GET | `/api/v1/buildings` | Buildings, a page at a time (`limit` 1-200, `offset`), filtered by `site_id`, `dataset_id` or `q` (a case-insensitive match on id or primary use). A `dataset_id` that is not stored is a 404, never an empty page (T053). |
 | GET | `/api/v1/buildings/{building_id}` | One building; 404 if unknown. |
+| GET | `/api/v1/buildings/{building_id}/machines` | Each electricity meter of the building against its main meter (`main_meter_id`, default the largest): energy, share, running hours, energy outside `open_days` / `open_from` / `open_to` in local time, highest hour, readings below zero, and the default detector's events computed now. `available: false` with a reason under two meters; 404 for an unknown building; 422 for bad input. Nothing is stored and no model is used (T066). |
 | GET | `/api/v1/meters` | Meters, a page at a time, filtered by `building_id` or `meter_type`. |
 | GET | `/api/v1/meters/{meter_id}` | One meter; 404 if unknown. |
 | GET | `/api/v1/meters/{meter_id}/expectation` | A meter's readings with the model's expectation and 90% interval (and the model, window and measured coverage), for the evaluation windows only; `available: false` with a reason elsewhere. Readings of hours with no expectation have `expected: null`. |

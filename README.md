@@ -41,6 +41,7 @@ or that an influence is a cause. Synthetic data is labelled synthetic everywhere
 |---|---|
 | **Overview** | Measured energy, open alerts, potential excess (marked as an estimate), data quality and coverage, kept separate for observed and synthetic data |
 | **Buildings & meters** | A meter's readings against the model's expectation and 90% interval, the difference, and alert windows; an hour-by-hour readout and a data table |
+| **Machines** | Each meter of a site against its main meter: energy, share, running hours, use while closed (with the opening hours you set), highest hour and the default detector's unusual events; flags meters that read below zero. Needs a meter on each machine: a main meter is never split (T065) |
 | **Alerts** | A priority-ordered queue with filters, each alert's evidence and explanation, and reviewer feedback (stored, never used to retrain) |
 | **Cost impact** | Potential energy per kind of data, an explicit tariff scenario, and carbon from sourced factors |
 | **What-if lab** | A meter's recorded use against the model's expectation, with the potential-excess rule, a hypothetical cut in chosen local hours and an optional entered tariff; nothing is saved and history is never changed |

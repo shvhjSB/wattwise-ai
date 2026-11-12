@@ -3411,3 +3411,52 @@ The finder failed on the machine model, not because the signal is missing.
   stored verdicts show it met two. Corrected.
 
 **Decided (D076):** step 4 is not shipped; no machine breakdown from a single meter.
+
+---
+
+## 2026-11-12 — T066 Machine view on real factory data
+
+T065 was pushed as `55c6b0b` (protocol) and `30a48ca` (results); CI runs 43165631661 and
+43166817819 passed all five jobs.
+
+**Built**
+- `wattwise.ml.machines`: each meter's energy, running hours, energy outside the opening hours
+  (local time), highest hour, readings below zero, and the default detector's events; then the
+  comparison against a main meter (chosen or the largest), with the unmetered remainder.
+- `GET /api/v1/buildings/{id}/machines`: 404 for an unknown building, 422 for bad input,
+  `available: false` under two meters with readings.
+- `python -m wattwise.data.hipe canonical`: hourly kWh, with hours under 90 % coverage missing.
+- The **Machines** page:
+  - building, opening days and hours, and the main meter, all in the URL;
+  - a table with the main meter, each meter and the unmetered remainder;
+  - definitions and caveats;
+  - flags for meters below zero, and a warning when the main meter does not contain the
+    others.
+- A synthetic test factory with hand-worked figures (`backend/tests/factory_data.py`), used by
+  the backend tests and loaded into the browser fixture as `test-factory`.
+
+**Real data (local):** HIPE loaded as `hipe-factory`: 11 meters, 24,279 hourly readings, 13
+missing. The endpoint answered in about 1 s. With assumed opening hours Monday to Friday
+06:00–18:00:
+- the main terminal used 42.2 % of its energy outside them, and ChipPress 35.2 %;
+- the ten machines are 4.0 % of the main terminal.
+
+PickAndPlaceUnit shows −8 kWh "while closed", because its meter reads about −0.01 kWh in 1,967
+hours. That led to the per-meter count of readings below zero and the flag on the page.
+
+**Problems on the way**
+- Vitest and Playwright found three test mistakes, none in the product code:
+  - The guard and the test needed type narrowing the compiler could follow.
+  - The browser test looked for "Synthetic" where the badge's accessible text is "Data
+    provenance: Synthetic".
+  - A scenario title broke its string quoting.
+- **A usability problem, found in a browser screenshot:** with a small meter chosen as the main
+  meter, the page showed 755.6 % and a negative remainder without comment. It now warns, and a
+  page test and the browser scenario check the warning.
+
+**Validation:**
+- Backend: ruff, format and strict mypy clean; **1,054 of 1,054 tests** (14 new).
+- Frontend: typecheck, lint, format and build pass; Vitest **338 of 338** (7 new).
+- Browser: **24 of 24** scenarios (the new one on desktop light, dark and mobile).
+
+No HIPE data was committed (owner decision pending).

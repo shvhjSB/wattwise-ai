@@ -162,3 +162,25 @@ test('bill analyser checks a synthetic bill without sending it anywhere', async 
   await noPageOverflow(page);
   await page.screenshot({ path: info.outputPath('bill.png'), fullPage: true });
 });
+
+test('machines page compares each meter of a site with its main meter', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Machines', exact: true }).click();
+  await expect(page.getByText('Choose a building', { exact: true })).toBeVisible();
+  await page.getByPlaceholder('Building ID').fill('test-factory');
+  await page.getByRole('button', { name: 'Compare', exact: true }).click();
+  const section = page.getByRole('region', { name: 'Machine comparison' });
+  await expect(section.getByText('Data provenance: Synthetic', { exact: true })).toBeVisible();
+  const press = section.getByRole('row', { name: /test-factory:press/ });
+  await expect(press).toContainText('3,280 kWh');
+  await expect(press).toContainText('13.2%');
+  await expect(press).toContainText('80 kWh');
+  await expect(section.getByRole('row', { name: /Not metered separately/ })).toContainText('81.3%');
+  await page.getByLabel('Sat').check();
+  await expect(page).toHaveURL(/days=0%2C1%2C2%2C3%2C4%2C5/);
+  await section.getByLabel('Main meter').selectOption('test-factory:press');
+  await expect(section.getByText('(chosen)', { exact: true })).toBeVisible();
+  await expect(section.getByRole('alert')).toContainText('Check the main meter.');
+  await noPageOverflow(page);
+  await page.screenshot({ path: info.outputPath('machines.png'), fullPage: true });
+});

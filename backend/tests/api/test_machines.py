@@ -107,4 +107,5 @@ def test_a_building_with_one_meter_says_why_there_is_no_comparison(
 
     assert body["available"] is False and body["main"] is None and body["machines"] == []
     assert "at least two electricity meters" in str(body["message"])
+    assert str(body["message"]).endswith("this building has 1.")  # its one meter, counted
     assert factory_client.get(f"{API}/buildings/nowhere/machines").status_code == 404

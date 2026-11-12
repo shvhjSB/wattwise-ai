@@ -86,15 +86,11 @@ def machine_comparison(
             status_code=422,
             detail="main_meter_id is not one of this building's electricity meters in kWh",
         )
-    rows = (
-        session.execute(
-            select(Reading.meter_id, Reading.timestamp, Reading.value).where(
-                Reading.meter_id.in_(compared)
-            )
-        ).all()
-        if len(compared) >= 2
-        else []
-    )
+    rows = session.execute(
+        select(Reading.meter_id, Reading.timestamp, Reading.value).where(
+            Reading.meter_id.in_(compared)
+        )
+    ).all()
     readings = pd.DataFrame(rows, columns=["meter_id", "timestamp", "value"])
     readings["timestamp"] = pd.to_datetime(readings["timestamp"], utc=True)
     readings["value"] = pd.to_numeric(readings["value"], errors="coerce").astype(float)

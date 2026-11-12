@@ -3468,3 +3468,10 @@ The scenario now checks what each database holds. Against the Compose demo, the 
 API must answer a single-meter building with "no comparison" and its reason; against the
 standalone fixture, it checks the full comparison. Locally the fixture run passes 24 of 24;
 Docker is not running here, so the Compose path is checked by CI.
+
+**A real bug, found by that CI run:** the fix above (`aedc869`) still failed in CI run
+43174375134, at the reason text. For a building with fewer than two meters, the route skipped
+reading its data, so it reported "this building has 0" for a building with one meter. The API
+test had checked only the first half of the message, and the page test used a stubbed message.
+The route now reads the meters it counts, and the API test checks the full sentence ("this
+building has 1.").

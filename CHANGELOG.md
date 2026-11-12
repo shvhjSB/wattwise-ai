@@ -7,6 +7,10 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Meter check (T067, D078): a page that reads a main meter's interval file in the browser
+  (never uploaded) and shows a data check, energy and peak demand, demand by hour, use while
+  closed with the base load, time-of-day windows and unusual periods; the default detector is
+  ported to TypeScript and pinned to Python by a shared parity fixture.
 - Machines page (T066, D077): `GET /api/v1/buildings/{id}/machines` compares each meter of a
   site with its main meter (energy, share, running hours, use while closed, highest hour,
   readings below zero, the default detector's events), computed on request without a model;

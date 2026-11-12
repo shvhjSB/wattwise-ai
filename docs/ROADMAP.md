@@ -96,7 +96,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Done |
 | T065 | Big-load finder study (pre-registered) | M14 | T064 | Done (did not pass) |
 | T066 | Machine view on real factory data | M14 | T064 | Done |
-| T067 | Meter check in the browser | M14 | T065 | Not started |
+| T067 | Meter check in the browser | M14 | T065 | Done |
 | T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Not started |
 | T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Not started |
 
@@ -1289,6 +1289,20 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
   It also documents how a plant can get interval data, stating only what was verified.
 - **Acceptance:** a parity test of the ported detector against the Python implementation; unit and
   page tests; a browser scenario; it works on the static demo.
+
+- **Done (2026-11-12, D078):** the **Meter check** page.
+  - **Reading the file:** a CSV with a time column and an energy (kWh) or power (kW) column, read
+    in the browser and never uploaded. The user chooses the date order and the time zone, and
+    clock changes are handled.
+  - **What it shows:** a data check (interval, gaps, repeats, values below zero, unreadable
+    lines with their line numbers), energy and peak demand, average demand by local hour, use
+    while closed with the base load (priced only at a rate the user enters), time-of-day windows,
+    and unusual periods.
+  - **Unusual periods:** the default detector is ported to TypeScript. A Python-generated
+    fixture proves it finds the same three events as Python. It runs on complete local hours
+    only, never filled.
+  - **No big-load finder:** none passed T065.
+  - It works on the static demo, with a labelled synthetic example.
 
 ### T068 — Bill check: a year of bills and the contract-demand what-if
 - **Scope:** up to twelve months of bill figures. The contract-demand what-if uses rules the user

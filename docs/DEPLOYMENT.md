@@ -363,8 +363,8 @@ builds the frontend in snapshot mode under `/wattwise-ai/`, opens every page in 
 and the previous site stays.
 
 **What works:** every page and chart, alert detail and evidence, the explorer, data health with
-all filters, drift by week or month, the model lab, the What-if lab and the Bill analyser (both
-computed in the browser).
+all filters, drift by week or month, the model lab, the What-if lab, the Bill analyser and the
+Meter check (all three computed in the browser).
 **What does not:** anything not recorded, such as free-text building search and alert date
 filters, shows "not part of the static demo"; reviews and uploads are refused as on the read-only
 demo. The Cost impact tariff form is disabled, because the synthetic sites have no tariff

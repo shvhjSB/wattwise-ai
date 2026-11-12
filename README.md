@@ -46,6 +46,7 @@ or that an influence is a cause. Synthetic data is labelled synthetic everywhere
 | **Cost impact** | Potential energy per kind of data, an explicit tariff scenario, and carbon from sourced factors |
 | **What-if lab** | A meter's recorded use against the model's expectation, with the potential-excess rule, a hypothetical cut in chosen local hours and an optional entered tariff; nothing is saved and history is never changed |
 | **Bill analyser** | The figures of a monthly electricity bill, entered by hand, checked against the bill's own total and turned into where the money goes, the demand charge, time-of-day shifts (hypothetical), power factor and the last months' history; computed in the browser, nothing is sent or saved. A bill comes from one meter, so it cannot show which machine uses what |
+| **Meter check** | A main meter's 15-, 30- or 60-minute file, read in the browser and never uploaded: data check (gaps, repeats, values below zero), energy and peak demand, average demand by hour, use while closed with the base load, time-of-day windows, and unusual periods from the default detector ported to TypeScript (checked against Python) |
 | **Data health** | Each dataset's stored data-quality audit: coverage, gaps, missing values, flatlines, zero runs, out-of-range values, duplicate handling, and recent uploads |
 | **Model lab** | The served model, its recorded test results against a baseline, data drift over the evaluation window, dataset health and recent analyses |
 

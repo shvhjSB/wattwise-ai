@@ -463,10 +463,20 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T064 | Factory data: HIPE acquisition and preparation | 2026-11-12 |
 | T065 | Big-load finder study (did not pass) | 2026-11-12 |
 | T066 | Machine view on real factory data | 2026-11-12 |
+| T067 | Meter check in the browser | 2026-11-12 |
 
 ## Current task
 
-None. **T066 is complete** (D077): the **Machines** page compares each meter of a site with its
+None. **T067 is complete** (D078): the **Meter check** page reads a main meter's interval file
+in the browser and never uploads it.
+
+- **What it shows:** gaps and bad lines, energy and peak demand, demand by hour, use while
+  closed and the base load, time-of-day windows, and unusual periods.
+- **Unusual periods:** the default detector, ported to TypeScript and proven to find the same
+  events as the Python original.
+- **Where it runs:** on the free public site, with a labelled synthetic example.
+
+Earlier: **T066 is complete** (D077): the **Machines** page compares each meter of a site with its
 main meter.
 
 - **What it shows:** energy, share of the main meter, running hours, use while the site is
@@ -644,16 +654,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T067 — Meter check in the browser** (M14): a 15-, 30- or 60-minute meter file read in the
-browser and never uploaded:
-
-- data-quality notes;
-- when the peak demand happens;
-- use in the hours the user marks as closed;
-- the time-of-day split;
-- unusual days, from the default detector ported to TypeScript and checked against Python.
-
-See [ROADMAP.md](ROADMAP.md#t067--meter-check-in-the-browser).
+**T068 — Bill check: a year of bills and the contract-demand what-if** (M14): up to twelve
+months of bill figures. The what-if for a lower contract demand uses rules the user enters from
+their own tariff (minimum billing demand, excess-demand rate): none is assumed. It shows the
+months that would have exceeded the lower contract. See
+[ROADMAP.md](ROADMAP.md#t068--bill-check-a-year-of-bills-and-the-contract-demand-what-if).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -686,7 +691,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 4 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 5 / 8 |
 
 ## Blockers
 

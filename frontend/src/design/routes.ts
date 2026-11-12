@@ -58,6 +58,14 @@ export const ROUTES: readonly RouteInfo[] = [
       'A monthly electricity bill’s charges, demand, time of day and history, worked out from the figures you enter.',
   },
   {
+    path: '/meter',
+    label: 'Meter check',
+    task: 'T067',
+    storedData: false,
+    summary:
+      'A meter file’s demand, use while closed, time of day and unusual periods, read in your browser and never uploaded.',
+  },
+  {
     path: '/data',
     label: 'Data health',
     task: 'T047',

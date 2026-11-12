@@ -43,6 +43,11 @@ model's residuals with a rolling, season-adaptive scale. T019b tested exactly th
 (`model-adaptive`). It cut the out-of-season alert growth from ×1.9 to ×1.45, but stayed
 over budget and lost recall, so the rolling z-score remains the default (D033).
 
+**The same rule in the browser (T067, D078).** The Meter check runs the default detector in
+TypeScript (`frontend/src/features/meter/detector.ts`). A shared fixture keeps it equal to
+this one: `backend/tests/ml/test_detector_parity.py` generates the fixture from the Python
+detector, and `detector.test.ts` requires the port to find the same events.
+
 **Tested against human labels (T054, D072):** 18 settings of the rolling z-score were compared on
 LEAD labels in a pre-registered study ([results](reports/t054-detector-study.md)). They crossed
 mean or median baselines, opening thresholds of 3, 4 and 5, and short-event rules. None met the

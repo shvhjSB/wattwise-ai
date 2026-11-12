@@ -3475,3 +3475,46 @@ reading its data, so it reported "this building has 0" for a building with one m
 test had checked only the first half of the message, and the page test used a stubbed message.
 The route now reads the meters it counts, and the API test checks the full sentence ("this
 building has 1.").
+
+---
+
+## 2026-11-12 — T067 Meter check in the browser
+
+T066 was pushed as `ff11397`, `aedc869` and `77a1240`; CI run 43175075499 passed all five jobs.
+
+**Built**
+- **`detector.ts`:** the default detector (rolling same-hour z-score and its hysteresis
+  events), ported line by line, with the Python order of floating-point operations.
+- **`test_detector_parity.py`:** builds a synthetic hourly series (a surge, a spike, a drop,
+  missing values, a gap), runs the Python detector and pins the result in
+  `frontend/src/features/meter/detector-parity.json`. `detector.test.ts` requires the port to
+  find the same events.
+  - Python finds three events; the port matched all three on its first run.
+- **`meter.ts`:**
+  - CSV reading: comma, semicolon or tab, quotes, a byte-order mark, decimal commas.
+  - Time parsing in the chosen date order and time zone. A skipped local hour cannot be read;
+    in a repeated hour the first occurrence is used.
+  - Interval detection.
+  - The check: gaps, repeats, values below zero, energy, peak and near-peak demand, demand by
+    local hour, use while closed and the base load, time-of-day windows, and events on
+    complete local hours.
+  - A synthetic example: four weeks of 15-minute readings in Asia/Kolkata, with one Sunday
+    left on overnight.
+- **The Meter check page:** after the Bill analyser in the menu, without the stored-data banner.
+  It is also in the static-site smoke test.
+
+**Problems on the way**
+- **Grouping by hour:** grouping 15-minute readings into UTC hours would split every Indian
+  hour (+05:30), and an anomaly from 00:00 to 08:00 would land half an hour off. Readings are
+  now grouped by local hour. A test pins the left-on Sunday at 00:00 local for 8 hours.
+- **A test with too few readings:** one test's readings had a median step of 30 minutes, so the
+  code rightly took the interval as 30; the test now uses a clear 15-minute series.
+- **A byte-order mark:** a literal one in a regular expression kept coming back after
+  formatting. It is now stripped by character code.
+
+**Validation**
+- Backend: ruff, format and strict mypy clean (174 files); **1,056 of 1,056 tests** (2 new
+  parity tests).
+- Frontend: typecheck, lint, format and build pass; Vitest **358 of 358** (20 new).
+- Browser: **27 of 27** scenarios. The new one runs against both the fixture and the Compose
+  demo, because the page needs no server.

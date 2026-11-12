@@ -198,3 +198,34 @@ test('machines page compares each meter of a site with its main meter', async ({
   await noPageOverflow(page);
   await page.screenshot({ path: info.outputPath('machines.png'), fullPage: true });
 });
+
+test('meter check reads a file in the browser and finds the left-on Sunday', async ({
+  page,
+}, info) => {
+  await page.goto('/');
+  await page.getByRole('link', { name: 'Meter check', exact: true }).click();
+  await expect(page.getByText('Choose a meter file', { exact: true })).toBeVisible();
+  const apiCalls: string[] = [];
+  page.on('request', (request) => {
+    const path = new URL(request.url()).pathname;
+    if (path.includes('/api/')) apiCalls.push(path);
+  });
+  await page.getByRole('button', { name: 'Use a synthetic example', exact: true }).click();
+  const unusual = page.getByRole('region', { name: 'Unusual periods' });
+  await expect(unusual.getByRole('row', { name: /2018-01-21 00:00/ })).toContainText('higher');
+  await expect(
+    page.getByRole('region', { name: 'Use while closed' }).getByText(/31\.6% of all use/),
+  ).toBeVisible();
+  await page.getByLabel('Meter file').setInputFiles({
+    name: 'meter.csv',
+    mimeType: 'text/csv',
+    buffer: Buffer.from('time,kWh\n2018-02-01 00:00,5\n2018-02-01 00:15,6\n2018-02-01 00:30,7\n'),
+  });
+  await expect(
+    page.getByRole('region', { name: 'Data check' }).getByText('15 minutes', { exact: true }),
+  ).toBeVisible();
+  expect(apiCalls).toEqual([]);
+  expect(new URL(page.url()).search).toBe('');
+  await noPageOverflow(page);
+  await page.screenshot({ path: info.outputPath('meter.png'), fullPage: true });
+});

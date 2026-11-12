@@ -9,6 +9,7 @@ import { DataHealthPage } from './pages/DataHealthPage';
 import { WhatIfPage } from './pages/WhatIfPage';
 import { ImpactPage } from './pages/ImpactPage';
 import { MachinesPage } from './pages/MachinesPage';
+import { MeterPage } from './pages/MeterPage';
 import { OverviewPage } from './pages/OverviewPage';
 import { ModelsPage } from './pages/ModelsPage';
 import { NotFoundPage, PlannedPage } from './pages/PlannedPage';
@@ -49,6 +50,8 @@ function Routes() {
         <WhatIfPage summary={route.summary} />
       ) : route.path === '/bill' ? (
         <BillPage summary={route.summary} />
+      ) : route.path === '/meter' ? (
+        <MeterPage summary={route.summary} />
       ) : route.path === '/data' ? (
         <DataHealthPage summary={route.summary} />
       ) : route.path === '/models' ? (

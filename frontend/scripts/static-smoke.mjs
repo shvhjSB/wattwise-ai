@@ -69,6 +69,7 @@ const pages = [
   ['impact', 'Cost impact'],
   [`whatif?meter=${encodeURIComponent(meter ?? '')}&days=all`, 'What-if lab'],
   ['bill', 'Bill analyser'],
+  ['meter', 'Meter check'],
   ['data', 'Data health'],
   ['models', 'Model lab'],
 ];

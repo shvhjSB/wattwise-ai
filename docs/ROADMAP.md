@@ -97,7 +97,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T065 | Big-load finder study (pre-registered) | M14 | T064 | Done (did not pass) |
 | T066 | Machine view on real factory data | M14 | T064 | Done |
 | T067 | Meter check in the browser | M14 | T065 | Done |
-| T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Not started |
+| T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Done |
 | T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Not started |
 
 ---
@@ -1311,6 +1311,16 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
   exceeded a lower contract.
 - **Acceptance:** unit tests including the excess-demand case; no tariff rule hardcoded; savings
   worded as hypothetical.
+
+- **Done (2026-11-12, D079):** in the Bill analyser.
+  - Each of the 12 history months takes its highest demand (kVA).
+  - A **Contract demand what-if** applies rules the user enters, stated on the page: the
+    minimum billing share, the excess multiplier, and the demand rate (by default the bill's
+    own).
+  - It shows the year's demand charges now and with a contract to try, the months that would
+    have been above it, and the contract that would have cost least under those rules.
+  - It is worded as hypothetical and not a recommendation.
+  - Every figure was checked independently in Python; tests include the excess-demand case.
 
 ### T069 — Check-up report, landing page and documentation (includes T060)
 - **Scope:** a printable one-page report of steps 1 and 2; the landing page leads with the

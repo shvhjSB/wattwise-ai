@@ -35,7 +35,7 @@ This was one round of searching, not a market study. "None found" means exactly 
 
 | Step | Data needed | What it gives | Status |
 |---|---|---|---|
-| 1. Bill check | The monthly bill, typed in | Where the money goes, the demand charge, time-of-day and power-factor effects, late fees, checked against the bill's own total | Built (T062) |
+| 1. Bill check | The monthly bill, typed in | Where the money goes, the demand charge, time-of-day and power-factor effects, late fees, checked against the bill's own total; a year of demand and a contract-demand what-if under the user's own tariff rules | Built (T062, T068) |
 | 2. Meter check | The main meter's interval file (15, 30 or 60 minutes) | When the peak demand happens, consumption while the plant is closed, unusual days | Built (T067): read in the browser, never uploaded |
 | 3. Machine view | A meter on each machine | Which machine uses what, and each machine's unusual hours | Built (T066): the Machines page; checked on real factory data locally |
 | 4. Big-load finder | The main meter only, at fine resolution | The plant's large loads and their running hours, **as estimates** | **Tested (T065): did not pass; not shipped** |

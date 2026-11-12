@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- Contract-demand what-if (T068, D079): the Bill analyser takes each history month's highest
+  demand and shows a year of demand charges now and with a contract to try, the months over
+  it and the least-cost contract, under rules the user enters (none assumed).
 - Meter check (T067, D078): a page that reads a main meter's interval file in the browser
   (never uploaded) and shows a data check, energy and peak demand, demand by hour, use while
   closed with the base load, time-of-day windows and unusual periods; the default detector is

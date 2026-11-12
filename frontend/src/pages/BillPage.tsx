@@ -21,6 +21,12 @@ import {
   utilisation,
   validCurrency,
 } from '../features/bill/bill';
+import {
+  cheapestContract,
+  compareYear,
+  type DemandRule,
+  validRule,
+} from '../features/bill/contract';
 import { SYNTHETIC_BILL } from '../features/bill/example';
 
 const control = 'rounded-md border border-edge bg-raised px-3 py-2 text-sm';
@@ -43,7 +49,7 @@ interface Form {
   fields: Record<FieldKey, string>;
   charges: Record<ChargeKind, string>;
   tod: { label: string; kwh: string; percent: string }[];
-  history: { month: string; kwh: string }[];
+  history: { month: string; kwh: string; demand: string }[];
 }
 
 function emptyForm(): Form {
@@ -65,7 +71,7 @@ function emptyForm(): Form {
       string
     >,
     tod: Array.from({ length: TOD_ROWS }, () => ({ label: '', kwh: '', percent: '' })),
-    history: Array.from({ length: HISTORY_ROWS }, () => ({ month: '', kwh: '' })),
+    history: Array.from({ length: HISTORY_ROWS }, () => ({ month: '', kwh: '', demand: '' })),
   };
 }
 
@@ -97,7 +103,7 @@ function formOf(bill: Bill): Form {
     }),
     history: form.history.map((row, i) => {
       const h = bill.history[i];
-      return h ? { month: h.month, kwh: text(h.kwh) } : row;
+      return h ? { month: h.month, kwh: text(h.kwh), demand: text(h.demandKva ?? null) } : row;
     }),
   };
 }
@@ -129,8 +135,8 @@ function billOf(form: Form): Bill {
       .filter((w) => w.label.trim() !== '' || w.kwh.trim() !== '' || w.percent.trim() !== '')
       .map((w) => ({ label: w.label.trim(), kwh: parse(w.kwh), percent: parse(w.percent) })),
     history: form.history
-      .filter((h) => h.month.trim() !== '' || h.kwh.trim() !== '')
-      .map((h) => ({ month: h.month.trim(), kwh: parse(h.kwh) })),
+      .filter((h) => h.month.trim() !== '' || h.kwh.trim() !== '' || h.demand.trim() !== '')
+      .map((h) => ({ month: h.month.trim(), kwh: parse(h.kwh), demandKva: parse(h.demand) })),
   };
 }
 
@@ -343,7 +349,8 @@ function Entry({ form, setForm }: { form: Form; setForm: (update: (f: Form) => F
 
       <Fieldset legend="Consumption in earlier months">
         <p className="text-xs text-muted">
-          From the bill’s history table, in any order. Months are written as YYYY-MM.
+          From the bill’s history table, in any order. Months are written as YYYY-MM. The highest
+          demand (kVA) is for the contract-demand what-if, if the bills show it.
         </p>
         <div className="grid gap-2 sm:grid-cols-2">
           {form.history.map((row, i) => {
@@ -355,7 +362,7 @@ function Entry({ form, setForm }: { form: Form; setForm: (update: (f: Form) => F
               }));
             };
             return (
-              <div key={n} className="grid grid-cols-2 gap-2">
+              <div key={n} className="grid grid-cols-3 gap-2">
                 <label className="text-xs">
                   Month {n}
                   <input
@@ -375,6 +382,18 @@ function Entry({ form, setForm }: { form: Form; setForm: (update: (f: Form) => F
                     value={row.kwh}
                     onChange={(event) => {
                       set({ kwh: event.target.value });
+                    }}
+                    className={`${control} mt-1 w-full`}
+                  />
+                </label>
+                <label className="text-xs">
+                  Month {n} kVA
+                  <input
+                    type="number"
+                    step="any"
+                    value={row.demand}
+                    onChange={(event) => {
+                      set({ demand: event.target.value });
                     }}
                     className={`${control} mt-1 w-full`}
                   />
@@ -831,12 +850,192 @@ function HistorySection({ bill }: { bill: Bill }) {
 }
 
 // ---------------------------------------------------------------------------------------------
+// The contract-demand what-if (T068)
+// ---------------------------------------------------------------------------------------------
+
+interface ContractInputs {
+  share: string;
+  multiplier: string;
+  rate: string;
+  proposed: string;
+}
+
+const EMPTY_CONTRACT: ContractInputs = { share: '', multiplier: '', rate: '', proposed: '' };
+/** Example rules for the synthetic bill only: made up, not any utility's. */
+const EXAMPLE_CONTRACT: ContractInputs = {
+  share: '75',
+  multiplier: '1.5',
+  rate: '',
+  proposed: '300',
+};
+
+function ContractSection({
+  bill,
+  inputs,
+  onChange,
+}: {
+  bill: Bill;
+  inputs: ContractInputs;
+  onChange: (next: ContractInputs) => void;
+}) {
+  const c = bill.currency;
+  const derivedRate = demand(bill).ratePerKva;
+  const rateText = inputs.rate.trim();
+  const rate = rateText === '' ? derivedRate : parse(rateText);
+  const rule: DemandRule | null =
+    rate === null
+      ? null
+      : {
+          minimumShare: (parse(inputs.share) ?? NaN) / 100,
+          excessMultiplier: parse(inputs.multiplier) ?? NaN,
+          ratePerKva: rate,
+        };
+  const current = bill.contractDemandKva;
+  const proposed = parse(inputs.proposed);
+  const months = bill.history.flatMap((h) =>
+    /^\d{4}-(0[1-9]|1[0-2])$/.test(h.month) && h.demandKva != null && h.demandKva >= 0
+      ? [{ month: h.month, demandKva: h.demandKva }]
+      : [],
+  );
+  const missing: string[] = [];
+  if (!months.length) missing.push('the highest demand (kVA) of earlier months');
+  if (current === null || current <= 0) missing.push('the contract demand');
+  if (rule === null || !validRule(rule)) {
+    missing.push(
+      'the rules: a minimum billing share (0 to 100 %), an excess multiplier (1 or more) and a demand rate',
+    );
+  }
+  if (proposed === null || proposed <= 0) missing.push('a contract demand to try');
+  const field = (key: keyof ContractInputs, label: string, unit: string, hint?: string) => (
+    <label className="block">
+      <span className="font-medium">{label}</span> <span className="text-muted">({unit})</span>
+      <input
+        type="number"
+        step="any"
+        min={0}
+        value={inputs[key]}
+        placeholder={key === 'rate' && derivedRate !== null ? String(derivedRate) : undefined}
+        onChange={(event) => {
+          onChange({ ...inputs, [key]: event.target.value });
+        }}
+        className={`${control} mt-1 block w-full`}
+      />
+      {hint ? <span className="mt-1 block text-xs text-muted">{hint}</span> : null}
+    </label>
+  );
+  const ready = missing.length === 0 && rule !== null && current !== null && proposed !== null;
+  const year = ready ? compareYear(months, current, proposed, rule) : null;
+  const best = ready ? cheapestContract(months, rule, current) : null;
+  return (
+    <section
+      aria-label="Contract demand what-if"
+      className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm lg:col-span-2"
+    >
+      <h3 className="text-base font-semibold">Contract demand what-if (hypothetical)</h3>
+      <p className="text-xs text-muted">
+        Enter your tariff&rsquo;s own rules: nothing here is assumed. They are applied as: a month
+        at or below the contract demand is billed on the larger of its highest demand and the
+        minimum share of the contract; demand above the contract is charged at the excess multiplier
+        times the demand rate. Check that this matches your tariff.
+      </p>
+      <div className="grid gap-3 sm:grid-cols-4">
+        {field('share', 'Minimum billing demand', '% of contract')}
+        {field('multiplier', 'Excess demand charged at', 'times the demand rate')}
+        {field(
+          'rate',
+          'Demand rate',
+          `${validCurrency(c) ? c : 'currency'} per kVA per month`,
+          derivedRate === null ? undefined : 'Blank: the rate from this bill.',
+        )}
+        {field('proposed', 'Contract demand to try', 'kVA')}
+      </div>
+      {year === null || best === null ? (
+        <p className="text-muted">To work this out, enter {missing.join('; ')}.</p>
+      ) : (
+        <>
+          <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1">
+            <dt className="text-muted">
+              Demand charges, these months, now ({number(current ?? 0)} kVA)
+            </dt>
+            <dd className="tabular-nums">{money(year.currentTotal, c)}</dd>
+            <dt className="text-muted">With {number(proposed ?? 0)} kVA</dt>
+            <dd className="tabular-nums">{money(year.proposedTotal, c)}</dd>
+            <dt className="text-muted">Difference</dt>
+            <dd className="tabular-nums">
+              {year.saving >= 0 ? 'would have saved ' : 'would have cost '}
+              {money(Math.abs(year.saving), c)}
+            </dd>
+            <dt className="text-muted">Months above {number(proposed ?? 0)} kVA</dt>
+            <dd>{year.monthsOverProposed.length ? year.monthsOverProposed.join(', ') : 'none'}</dd>
+            <dt className="text-muted">Least cost under these rules</dt>
+            <dd className="tabular-nums">
+              {number(best.contractKva)} kVA ({money(best.total, c)}); the highest recorded demand
+              was {number(year.highestKva)} kVA
+            </dd>
+          </dl>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[28rem] text-left">
+              <caption className="sr-only">Demand charges month by month</caption>
+              <thead className="text-muted">
+                <tr>
+                  <th scope="col" className="py-1 pr-4 font-medium">
+                    Month
+                  </th>
+                  <th scope="col" className="py-1 pr-4 text-right font-medium">
+                    Highest demand
+                  </th>
+                  <th scope="col" className="py-1 pr-4 text-right font-medium">
+                    Now
+                  </th>
+                  <th scope="col" className="py-1 text-right font-medium">
+                    With {number(proposed ?? 0)} kVA
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {year.rows.map((r) => (
+                  <tr key={r.month} className="border-t border-line">
+                    <th scope="row" className="py-1 pr-4 font-normal tabular-nums">
+                      {r.month}
+                    </th>
+                    <td className="py-1 pr-4 text-right tabular-nums">
+                      {number(r.recordedKva)} kVA
+                    </td>
+                    <td className="py-1 pr-4 text-right tabular-nums">
+                      {money(r.current.charge, c)}
+                    </td>
+                    <td className="py-1 text-right tabular-nums">
+                      {money(r.proposed.charge, c)}
+                      {r.proposed.excessKva > 0 ? (
+                        <span className="block text-xs text-synthetic">
+                          {number(r.proposed.excessKva)} kVA above the contract
+                        </span>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+      <p className="text-xs text-muted">
+        Hypothetical: it repeats these months&rsquo; recorded demand under the rules entered. Next
+        year&rsquo;s peaks may be higher, and a contract demand is changed through your
+        utility&rsquo;s own procedure, notice periods and limits. This is not a recommendation.
+      </p>
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
 // The page
 // ---------------------------------------------------------------------------------------------
 
 export function BillPage({ summary }: { summary: string }) {
   const [form, setFormState] = useState<Form>(emptyForm);
   const [fromExample, setFromExample] = useState(false);
+  const [contract, setContract] = useState<ContractInputs>(EMPTY_CONTRACT);
   const bill = useMemo(() => billOf(form), [form]);
   const found = problems(bill);
   const setForm = (update: (f: Form) => Form) => {
@@ -868,6 +1067,7 @@ export function BillPage({ summary }: { summary: string }) {
           onClick={() => {
             setFormState(formOf(SYNTHETIC_BILL));
             setFromExample(true);
+            setContract(EXAMPLE_CONTRACT);
           }}
           className="rounded-md bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
         >
@@ -878,6 +1078,7 @@ export function BillPage({ summary }: { summary: string }) {
           onClick={() => {
             setFormState(emptyForm());
             setFromExample(false);
+            setContract(EMPTY_CONTRACT);
           }}
           className="rounded-md border border-edge px-4 py-2 text-sm font-semibold"
         >
@@ -914,6 +1115,7 @@ export function BillPage({ summary }: { summary: string }) {
         <TimeOfDaySection bill={bill} />
         <PowerAndPayment bill={bill} />
         <HistorySection bill={bill} />
+        <ContractSection bill={bill} inputs={contract} onChange={setContract} />
       </div>
     </>
   );

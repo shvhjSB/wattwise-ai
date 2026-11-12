@@ -161,6 +161,11 @@ test('bill analyser checks a synthetic bill without sending it anywhere', async 
   await tod.getByLabel('Move from').selectOption('1');
   await tod.getByLabel('Move to').selectOption('2');
   await expect(tod.getByRole('status')).toContainText('would save ₹1,225.00');
+  await expect(
+    page
+      .getByRole('region', { name: 'Contract demand what-if' })
+      .getByText('would have saved ₹236,250.00'),
+  ).toBeVisible();
   expect(apiCalls).toEqual([]);
   expect(new URL(page.url()).search).toBe('');
   await noPageOverflow(page);

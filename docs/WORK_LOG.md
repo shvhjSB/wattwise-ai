@@ -3518,3 +3518,36 @@ T066 was pushed as `ff11397`, `aedc869` and `77a1240`; CI run 43175075499 passed
 - Frontend: typecheck, lint, format and build pass; Vitest **358 of 358** (20 new).
 - Browser: **27 of 27** scenarios. The new one runs against both the fixture and the Compose
   demo, because the page needs no server.
+
+---
+
+## 2026-11-12 — T068 Bill check: a year of demand and the contract-demand what-if
+
+T067 was pushed as `2340a76`; CI run 43178882366 passed all five jobs.
+
+**Built**
+- `frontend/src/features/bill/contract.ts`: a month's demand charge under the rule
+  (minimum share of the contract; excess at a multiple of the demand rate); a year compared for
+  two contracts; the least-cost whole-kVA contract, with ties going to the larger one; rule
+  validation. 6 tests.
+- The Bill analyser:
+  - Each history month takes its highest demand (kVA), and a negative one is refused.
+  - A **Contract demand what-if** section: the rule stated as applied; inputs for the share,
+    the multiplier, the rate (by default the bill's own) and a contract to try.
+  - Results: totals, the difference, the months over, the least-cost contract and a monthly
+    table.
+  - The synthetic example fills in made-up demands and example rules (75 %, 1.5 times).
+
+**Checked independently (Python):**
+- The test year: ₹12,63,500 now (400 kVA), ₹10,60,500 at 320 kVA, ₹10,20,250 at 280 kVA, which
+  is the cheapest.
+- The example year: ₹12,63,500 now, ₹10,27,250 at 300 kVA (₹2,36,250 less), least at 267 kVA
+  (₹10,09,225; 266 kVA ties).
+
+**Problem on the way:** one page test found "2026-03" twice (the summary and the table); the
+assertion now targets the summary line.
+
+**Validation**
+- Frontend: typecheck, lint, format and build pass; Vitest **366 of 366** (8 new).
+- Browser: **27 of 27**; the bill scenario now checks the what-if.
+- Backend: unchanged since T067 (1,056 of 1,056); CI runs it again.

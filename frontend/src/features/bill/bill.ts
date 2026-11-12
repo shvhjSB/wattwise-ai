@@ -64,6 +64,8 @@ export interface HistoryMonth {
   /** `YYYY-MM`. */
   month: string;
   kwh: number | null;
+  /** The month's recorded maximum demand (kVA), for the contract-demand what-if (T068). */
+  demandKva?: number | null;
 }
 
 export interface Bill {
@@ -157,6 +159,9 @@ export function problems(bill: Bill): string[] {
     months.add(entry.month);
     if (entry.kwh !== null && entry.kwh < 0) {
       found.push(`History: ${entry.month || 'a month'} cannot have negative consumption.`);
+    }
+    if (entry.demandKva != null && entry.demandKva < 0) {
+      found.push(`History: ${entry.month || 'a month'} cannot have a negative highest demand.`);
     }
   }
   return found;

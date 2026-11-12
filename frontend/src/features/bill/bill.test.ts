@@ -244,6 +244,7 @@ describe('problems', () => {
           { month: '2026-13', kwh: 10 },
           { month: '2026-01', kwh: -5 },
           { month: '2026-01', kwh: 5 },
+          { month: '2026-02', kwh: 5, demandKva: -1 },
         ],
       }),
     );
@@ -258,6 +259,7 @@ describe('problems', () => {
       'History: "2026-13" is not a month written as YYYY-MM.',
       'History: 2026-01 cannot have negative consumption.',
       'History: 2026-01 is entered twice.',
+      'History: 2026-02 cannot have a negative highest demand.',
     ]);
   });
 

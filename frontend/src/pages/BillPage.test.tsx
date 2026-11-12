@@ -165,6 +165,36 @@ describe('Bill analyser', () => {
     expect(region('Power factor and payment').getByText('₹2,500.00')).toBeInTheDocument();
   });
 
+  it('works out the contract-demand what-if under the rules entered', async () => {
+    stubShell();
+    await fillExample();
+
+    const what = region('Contract demand what-if');
+    // Rate from the bill: 105,000 / 300 kVA = 350. Figures checked independently in Python.
+    expect(what.getByText('₹1,263,500.00')).toBeInTheDocument(); // now, 400 kVA
+    expect(what.getByText('₹1,027,250.00')).toBeInTheDocument(); // with 300 kVA
+    expect(what.getByText('would have saved ₹236,250.00')).toBeInTheDocument();
+    expect(what.getByText('2026-03', { selector: 'dd' })).toBeInTheDocument(); // the only month above 300 kVA
+    expect(
+      what.getByText(/^267 kVA \(₹1,009,225\.00\); the highest recorded demand was 310 kVA/),
+    ).toBeInTheDocument();
+    const march = what.getByRole('row', { name: /^2026-03/ });
+    expect(march).toHaveTextContent('10 kVA above the contract');
+    expect(what.getByText(/This is not a recommendation/)).toBeInTheDocument();
+  });
+
+  it('asks for the tariff rules instead of assuming any', async () => {
+    stubShell();
+    const user = await fillExample();
+
+    const share = screen.getByLabelText(/Minimum billing demand/);
+    await user.clear(share);
+
+    expect(
+      region('Contract demand what-if').getByText(/To work this out, enter the rules/),
+    ).toBeInTheDocument();
+  });
+
   it('lists entries that cannot be right', async () => {
     stubShell();
     const user = await fillExample();

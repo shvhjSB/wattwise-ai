@@ -2546,6 +2546,24 @@ links to the entry that replaces it.
 - **Interval data access:** the page says that access differs by utility, and claims no
   utility's process (not verified, [PRODUCT.md](PRODUCT.md)).
 
+## D079 — The contract-demand what-if applies only rules the user enters
+- **Date:** 2026-11-12 · **Task:** T068 · **Status:** Accepted
+- **What:** a year of recorded maximum demand (kVA) from the bill's history, and the demand
+  charges it would have cost with the current contract and with one to try.
+- **The rule, stated on the page as applied:**
+  - A month at or below the contract is billed on the larger of its demand and the minimum
+    share of the contract.
+  - Demand above the contract is charged at the excess multiplier times the demand rate.
+  - The user enters the share, the multiplier and the rate (the rate defaults to the bill's own:
+    fixed charges divided by billing demand).
+  - No utility's tariff is built in, because these rules differ (some charge excess as a
+    surcharge on top, some bill demand in other ways). If the stated rule does not match the
+    user's tariff, the what-if does not apply to them, and the page says to check.
+- **Also shown:** the whole-kVA contract that would have cost least over those months, with
+  ties going to the larger contract for headroom.
+- **Wording:** hypothetical, not a recommendation. Next year's peaks may be higher, and a change
+  of contract follows the utility's own procedure and limits.
+
 ---
 
 ## Open decisions (tracked in tasks)

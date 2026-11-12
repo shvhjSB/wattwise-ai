@@ -465,10 +465,19 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T066 | Machine view on real factory data | 2026-11-12 |
 | T067 | Meter check in the browser | 2026-11-12 |
 | T068 | Bill check: a year of demand and the contract-demand what-if | 2026-11-12 |
+| T069 | Check-up report, landing page and documentation | 2026-11-12 |
 
 ## Current task
 
-None. **T068 is complete** (D079): the Bill analyser takes a year of highest demand.
+None. **T069 is complete** (D080): the product is presented first.
+
+- **Home page:** opens with the free, private check-up.
+- **Reports:** the Bill analyser and the Meter check print a one-page report, which can be
+  saved as a PDF.
+- **README:** leads with what the product does, what it will not claim and an evidence table;
+  [REPRODUCE.md](REPRODUCE.md) has the commands for every claim.
+
+Earlier: **T068 is complete** (D079): the Bill analyser takes a year of highest demand.
 
 - **Contract demand what-if:** under rules you enter from your own tariff (nothing assumed),
   it shows a year of demand charges now and with a lower contract, the months that would have
@@ -663,10 +672,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T069 — Check-up report, landing page and documentation** (M14, includes T060): a printable
-one-page report of the bill and meter checks, a landing page that leads with the check-up, and
-README, model card and documentation rewritten around the product, its evidence and its limits.
-See [ROADMAP.md](ROADMAP.md#t069--check-up-report-landing-page-and-documentation-includes-t060).
+**T061 — Final independent quality audit** (closes M14): code quality, security,
+provenance, reproducibility, leakage, API, frontend, accessibility, deployment, documentation,
+performance and limitations. A final report gives the measured results, the remaining risks
+(including the deferred T055, T056, T058 and T059), the live URL and the reproduction commands.
+See [ROADMAP.md](ROADMAP.md#t061--final-independent-quality-audit).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -699,7 +709,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 6 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 7 / 8 |
 
 ## Blockers
 

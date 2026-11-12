@@ -209,3 +209,25 @@ describe('Data sources', () => {
     expect(screen.queryByRole('region', { name: 'Data sources' })).not.toBeInTheDocument();
   });
 });
+
+describe('Electricity check-up introduction', () => {
+  it('leads with the three checks and says what stays private', async () => {
+    stub(() => jsonResponse(summaryOf(kindSummary('synthetic'))));
+    const user = userEvent.setup();
+    render(<App />);
+
+    const intro = await screen.findByRole('region', { name: 'Electricity check-up' });
+    expect(intro).toHaveTextContent('nothing you enter or load is sent anywhere or saved');
+    expect(intro).toHaveTextContent('did not work');
+    const links = within(intro).getAllByRole('link');
+    expect(links.map((l) => l.textContent)).toEqual([
+      '1. Check a bill',
+      '2. Check a meter file',
+      '3. Compare machines',
+    ]);
+
+    await user.click(within(intro).getByRole('link', { name: '1. Check a bill' }));
+    expect(window.location.pathname).toBe('/bill');
+    expect(await screen.findByRole('heading', { name: 'Bill analyser' })).toBeInTheDocument();
+  });
+});

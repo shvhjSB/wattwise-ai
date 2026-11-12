@@ -37,7 +37,7 @@ function Routes() {
           }}
         />
       ) : route.path === '/' ? (
-        <OverviewPage summary={summary} />
+        <OverviewPage summary={summary} navigate={navigate} />
       ) : route.path === '/explorer' ? (
         <ExplorerPage summary={route.summary} />
       ) : route.path === '/machines' ? (

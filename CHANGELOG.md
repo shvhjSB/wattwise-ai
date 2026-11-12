@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- The check-up first (T069, D080): a home-page introduction to the three checks, "Print this
+  report" on the Bill analyser and Meter check, a product-first README with an evidence table,
+  and docs/REPRODUCE.md.
 - Contract-demand what-if (T068, D079): the Bill analyser takes each history month's highest
   demand and shows a year of demand charges now and with a contract to try, the months over
   it and the least-cost contract, under rules the user enters (none assumed).

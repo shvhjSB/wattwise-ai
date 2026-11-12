@@ -3,6 +3,7 @@ import { KpiCard } from '../design/KpiCard';
 import { formatCount, formatDate, formatEnergy, formatShare } from '../design/format';
 import { ProvenanceBadge } from '../design/Provenance';
 import { EmptyState, ErrorState, LoadingState, PageHeader } from '../design/states';
+import { href } from '../design/routes';
 import { ApiHealthPanel } from '../features/health/ApiHealthPanel';
 import { useSummary } from '../features/summary/useSummary';
 
@@ -153,7 +154,74 @@ function DataSources({ datasets }: { datasets: readonly DatasetSummary[] }) {
   );
 }
 
-export function OverviewPage({ summary }: { summary: ReturnType<typeof useSummary> }) {
+const STEPS: { path: string; link: string; text: string }[] = [
+  {
+    path: '/bill',
+    link: 'Check a bill',
+    text: 'Type in a monthly bill: where the money goes, the demand charge, time-of-day and late fees, checked against the bill’s own total, and a contract-demand what-if.',
+  },
+  {
+    path: '/meter',
+    link: 'Check a meter file',
+    text: 'Load your main meter’s 15- or 30-minute readings: peak demand, use while closed, the base load and unusual periods.',
+  },
+  {
+    path: '/machines',
+    link: 'Compare machines',
+    text: 'With a meter on each machine: which one uses what, what runs while you are closed, and its unusual hours.',
+  },
+];
+
+/** The check-up, first (T069): what a small factory can do here, privately and for free. */
+function CheckupIntro({ navigate }: { navigate: (path: string) => void }) {
+  return (
+    <section
+      aria-label="Electricity check-up"
+      className="space-y-4 rounded-xl border border-line bg-raised p-5"
+    >
+      <div className="space-y-1">
+        <h3 className="text-lg font-semibold">A free, private electricity check-up</h3>
+        <p className="text-sm text-muted">
+          For a small factory, from the data it already has. The bill and meter checks run in your
+          browser: nothing you enter or load is sent anywhere or saved. Every method is published
+          with its tested accuracy, including what did not work.
+        </p>
+      </div>
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {STEPS.map((step, i) => (
+          <li key={step.path} className="space-y-1 rounded-lg border border-line p-4 text-sm">
+            <a
+              href={href(step.path)}
+              onClick={(event) => {
+                if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey) return;
+                event.preventDefault();
+                navigate(step.path);
+              }}
+              className="font-semibold text-accent underline-offset-2 hover:underline"
+            >
+              {String(i + 1)}. {step.link}
+            </a>
+            <p className="text-muted">{step.text}</p>
+          </li>
+        ))}
+      </ol>
+      <p className="text-xs text-muted">
+        A bill or a single main meter cannot show which machine uses what: that needs a meter on
+        each machine. Splitting one meter into machines was tested on a real factory and did not
+        work.
+      </p>
+    </section>
+  );
+}
+
+export function OverviewPage({
+  summary,
+  navigate,
+}: {
+  summary: ReturnType<typeof useSummary>;
+  /** The router's own navigation (a second `usePath` would not move the router). */
+  navigate: (path: string) => void;
+}) {
   const { state, retry } = summary;
   return (
     <>
@@ -161,6 +229,8 @@ export function OverviewPage({ summary }: { summary: ReturnType<typeof useSummar
         title="Overview"
         summary="Measured and expected energy, potential excess, open alerts and data coverage. Figures are shown per kind of data and never added across synthetic and observed."
       />
+
+      <CheckupIntro navigate={navigate} />
 
       {state.status === 'loading' && <LoadingState label="Loading the overview…" />}
 

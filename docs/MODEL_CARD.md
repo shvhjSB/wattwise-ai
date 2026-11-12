@@ -5,6 +5,10 @@ is the "expected" line in the explorer, the basis of the 90% interval and of eve
 potential-excess estimate. It is **not** what raises alerts: the default alert source is a
 rolling same-hour z-score (D030, D042).
 
+**Where it is not used:** the electricity check-up (the Bill analyser, the Meter check and the
+Machines page) uses no model. The model was trained on BDG2 buildings and is not validated for
+factories, so it is kept to the building analytics (D070, D077).
+
 Every figure here comes from the promoted artifact's own metadata or from
 [EVALUATION.md](EVALUATION.md), with the section named. Results on synthetic data are not
 real-world performance and are not reported here.

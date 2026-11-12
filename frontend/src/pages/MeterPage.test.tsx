@@ -132,6 +132,20 @@ describe('Meter check', () => {
     expect(screen.queryByRole('region', { name: 'Data check' })).not.toBeInTheDocument();
   });
 
+  it('prints a report once there are results', async () => {
+    stubShell();
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(await screen.findByRole('button', { name: 'Use a synthetic example' }));
+    await user.click(screen.getByRole('button', { name: 'Print this report' }));
+
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/WattWise electricity check-up: meter/)).toBeInTheDocument();
+    expect(screen.getByText(/Synthetic example: made-up readings/)).toBeInTheDocument();
+    print.mockRestore();
+  });
+
   it('never sends the readings anywhere or keeps them', async () => {
     const fetchMock = stubShell();
     const user = userEvent.setup();

@@ -143,7 +143,8 @@ test('bill analyser checks a synthetic bill without sending it anywhere', async 
   page,
 }, info) => {
   await page.goto('/');
-  await page.getByRole('link', { name: 'Bill analyser', exact: true }).click();
+  // From the home page's check-up introduction, which uses the router's own navigation.
+  await page.getByRole('link', { name: '1. Check a bill', exact: true }).click();
   await expect(page.getByRole('note', { name: 'How the bill analyser works' })).toBeVisible();
   const apiCalls: string[] = [];
   page.on('request', (request) => {

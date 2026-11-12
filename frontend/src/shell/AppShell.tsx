@@ -40,7 +40,7 @@ export function AppShell({
         Skip to content
       </a>
 
-      <header className="border-b border-line bg-raised">
+      <header className="border-b border-line bg-raised print:hidden">
         <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-x-6 gap-y-3 px-6 py-4">
           <div className="mr-auto">
             <h1 className="text-lg font-semibold tracking-tight">WattWise AI</h1>

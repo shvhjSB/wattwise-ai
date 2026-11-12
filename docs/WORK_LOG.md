@@ -3551,3 +3551,32 @@ assertion now targets the summary line.
 - Frontend: typecheck, lint, format and build pass; Vitest **366 of 366** (8 new).
 - Browser: **27 of 27**; the bill scenario now checks the what-if.
 - Backend: unchanged since T067 (1,056 of 1,056); CI runs it again.
+
+---
+
+## 2026-11-12 — T069 Check-up report, landing page and documentation
+
+T068 was pushed as `0060ef8`; CI run 43181713069 passed all five jobs.
+
+**Built**
+- **The home page** opens with "A free, private electricity check-up": three steps linking to
+  the Bill analyser, the Meter check and Machines, the privacy statement, and the tested limit
+  (no machine breakdown from one meter).
+- **`PrintButton` and `PrintHeader`:** "Print this report" on the Bill analyser and the Meter
+  check, once there are results. The print-only header names the source and repeats the honesty
+  rules. The shell's header and the input forms are `print:hidden`, and results avoid page
+  breaks inside a section.
+- **README:** a product-first top (the steps, the claims it will not make, the evidence table)
+  and an updated architecture diagram. The building analytics follow, unchanged.
+- **docs/REPRODUCE.md**, and a model-card note on where the model is not used.
+
+**A real bug, caught by a test:** the introduction's links first called their own `usePath`. That
+hook keeps its own state, so the URL changed while the page stayed the same. The Overview now
+receives the router's `navigate`, as the shell's navigation does, and the bill browser scenario
+reaches the Bill analyser through the new link.
+
+**Validation**
+- Frontend: typecheck, lint, format and build pass; Vitest **369 of 369** (3 new).
+- Browser: **27 of 27**.
+- Backend: unchanged since T067 (1,056 of 1,056); CI runs it again.
+- Links: 0 broken.

@@ -195,6 +195,23 @@ describe('Bill analyser', () => {
     ).toBeInTheDocument();
   });
 
+  it('prints a report once there are results', async () => {
+    stubShell();
+    const print = vi.spyOn(window, 'print').mockImplementation(() => undefined);
+    render(<App />);
+    await screen.findByRole('note', { name: 'How the bill analyser works' });
+    expect(screen.queryByRole('button', { name: 'Print this report' })).not.toBeInTheDocument();
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: 'Fill in a synthetic example' }));
+    await user.click(screen.getByRole('button', { name: 'Print this report' }));
+
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/WattWise electricity check-up: bill/)).toBeInTheDocument();
+    expect(screen.getByText(/nothing was sent or stored/)).toBeInTheDocument();
+    print.mockRestore();
+  });
+
   it('lists entries that cannot be right', async () => {
     stubShell();
     const user = await fillExample();

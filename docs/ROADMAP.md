@@ -98,7 +98,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T066 | Machine view on real factory data | M14 | T064 | Done |
 | T067 | Meter check in the browser | M14 | T065 | Done |
 | T068 | Bill check: a year of bills and the contract-demand what-if | M14 | T062 | Done |
-| T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Not started |
+| T069 | Check-up report, landing page and documentation | M14 | T066–T068 | Done |
 
 ---
 
@@ -1327,6 +1327,17 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
   check-up; README, model card and documentation rewritten around the product, its evidence and
   its limits; an architecture diagram and a reproducibility guide.
 - **Acceptance:** genuine results only; every claim links to its evidence.
+
+- **Done (2026-11-12, D080):**
+  - The home page opens with the check-up: three steps, the privacy statement and the tested
+    limit.
+  - **Print this report** on the Bill analyser and the Meter check. A print-only header names
+    the source, says nothing was sent or stored and states the hypothetical wording; forms and
+    navigation are hidden on paper.
+  - The README leads with the product, what it will not claim, and an evidence table linked to
+    each report, with an architecture diagram that shows the browser-only checks.
+  - [REPRODUCE.md](REPRODUCE.md) gives the commands for every claim.
+  - The model card says where the model is not used.
 
 T061, the final independent quality audit, closes M14. It lists T055, T056, T058 and T059 as open
 unless they were reinstated.

@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 
 import { formatShare } from '../design/format';
 import { ProvenanceBadge } from '../design/Provenance';
+import { PrintButton, PrintHeader } from '../design/PrintReport';
 import { EmptyState, PageHeader } from '../design/states';
 import {
   check,
@@ -63,7 +64,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section
       aria-label={title}
-      className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm"
+      className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm print:break-inside-avoid"
     >
       <h3 className="text-base font-semibold">{title}</h3>
       {children}
@@ -153,6 +154,14 @@ export function MeterPage({ summary }: { summary: string }) {
   return (
     <>
       <PageHeader title="Meter check" summary={summary} />
+      <PrintHeader
+        title="meter"
+        source={
+          fromExample
+            ? 'Synthetic example: made-up readings, not a real site.'
+            : `Readings from ${source || 'a meter file'}, in ${zone}.`
+        }
+      />
       <div
         role="note"
         aria-label="How the meter check works"
@@ -174,7 +183,7 @@ export function MeterPage({ summary }: { summary: string }) {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
         <label className="text-sm">
           <span className="mr-2 font-medium">Meter file</span>
           <input
@@ -225,6 +234,7 @@ export function MeterPage({ summary }: { summary: string }) {
             Made-up readings, not a real site.
           </span>
         ) : null}
+        {result !== null && typeof result !== 'string' ? <PrintButton /> : null}
       </div>
 
       {table === null ? (
@@ -234,7 +244,7 @@ export function MeterPage({ summary }: { summary: string }) {
         </EmptyState>
       ) : (
         <>
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-4 lg:grid-cols-2 print:hidden">
             <fieldset className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm">
               <legend className="px-1 font-semibold">How to read {source}</legend>
               <div className="grid gap-3 sm:grid-cols-2">

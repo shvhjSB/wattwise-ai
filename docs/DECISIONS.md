@@ -2564,6 +2564,26 @@ links to the entry that replaces it.
 - **Wording:** hypothetical, not a recommendation. Next year's peaks may be higher, and a change
   of contract follows the utility's own procedure and limits.
 
+## D080 — The product is presented first, with its evidence and limits beside it
+- **Date:** 2026-11-12 · **Task:** T069 · **Status:** Accepted
+- **Home page:**
+  - It opens with the check-up: the three steps, that the bill and meter checks stay in the
+    browser, and that splitting one meter into machines was tested and did not work.
+  - The stored-data overview follows, still labelled by its provenance.
+- **Reports:**
+  - "Print this report" uses the browser's own print or save-as-PDF, so no file is generated or
+    stored anywhere.
+  - The printed header names the source (typed-in figures, a file, or the synthetic example),
+    says nothing was sent or stored, and repeats that savings are hypothetical and anomalies are
+    not confirmed waste.
+- **README:**
+  - It leads with what the product does, what it will not claim (including the competitor found
+    in D074), and an evidence table.
+  - Every row links to the report or decision behind it. Negative results (T054, T065) are
+    listed as prominently as positive ones.
+- **Reproducibility:** [REPRODUCE.md](REPRODUCE.md) lists a command for every claim, separating
+  those that need no downloaded data.
+
 ---
 
 ## Open decisions (tracked in tasks)

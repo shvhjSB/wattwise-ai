@@ -2,6 +2,7 @@ import { type ReactNode, useMemo, useState } from 'react';
 
 import { formatShare } from '../design/format';
 import { ProvenanceBadge } from '../design/Provenance';
+import { PrintButton, PrintHeader } from '../design/PrintReport';
 import { PageHeader } from '../design/states';
 import {
   type AmountCheck,
@@ -220,7 +221,7 @@ function Entry({ form, setForm }: { form: Form; setForm: (update: (f: Form) => F
     },
   });
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2 print:hidden">
       <Fieldset legend="Bill basics">
         <label className="block text-sm">
           <span className="block font-medium">
@@ -415,7 +416,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section
       aria-label={title}
-      className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm"
+      className="min-w-0 space-y-3 rounded-xl border border-line bg-raised p-5 text-sm print:break-inside-avoid"
     >
       <h3 className="text-base font-semibold">{title}</h3>
       {children}
@@ -1045,6 +1046,14 @@ export function BillPage({ summary }: { summary: string }) {
   return (
     <>
       <PageHeader title="Bill analyser" summary={summary} />
+      <PrintHeader
+        title="bill"
+        source={
+          fromExample
+            ? 'Synthetic example: made-up figures, not a real bill.'
+            : 'Figures typed in from one monthly bill.'
+        }
+      />
       <div
         role="note"
         aria-label="How the bill analyser works"
@@ -1061,7 +1070,7 @@ export function BillPage({ summary }: { summary: string }) {
         </p>
       </div>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3 print:hidden">
         <button
           type="button"
           onClick={() => {
@@ -1090,6 +1099,7 @@ export function BillPage({ summary }: { summary: string }) {
             Made-up figures, not a real bill.
           </span>
         ) : null}
+        {breakdown(bill) !== null ? <PrintButton /> : null}
       </div>
 
       <Entry form={form} setForm={setForm} />

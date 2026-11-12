@@ -1234,7 +1234,9 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
 - **Rules:**
   - The protocol, baselines, metrics and pass criteria are committed before any scoring.
   - Development weeks first, later weeks held out and scored once.
-  - The machine meters are used only to score, never as inputs.
+  - The machine meters are used only to score in the held-out weeks. In the development weeks
+    they give each machine's power, as a nameplate stand-in (amended in the protocol before any
+    scoring).
   - HighTemperatureOven and PickAndPlaceUnit (and ChipSaw, whose counter moved too little to
     judge) carry the counter disagreement found in T064, and are reported separately.
 - **Acceptance:**

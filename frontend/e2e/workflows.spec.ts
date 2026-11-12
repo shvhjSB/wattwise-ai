@@ -1,5 +1,9 @@
 import { expect, test, type Page } from '@playwright/test';
 
+/** The Compose demo (an external base URL) holds only the synthetic sample; the standalone
+ * fixture also has a synthetic multi-meter factory (backend/tests/factory_data.py). */
+const composeDemo = Boolean(process.env.WATTWISE_E2E_BASE_URL?.trim());
+
 let browserErrors: string[];
 test.beforeEach(({ page }) => {
   browserErrors = [];
@@ -167,6 +171,16 @@ test('machines page compares each meter of a site with its main meter', async ({
   await page.goto('/');
   await page.getByRole('link', { name: 'Machines', exact: true }).click();
   await expect(page.getByText('Choose a building', { exact: true })).toBeVisible();
+  if (composeDemo) {
+    // The Compose demo holds only the synthetic sample, one meter per building: the real API
+    // must say why there is nothing to compare.
+    await page.getByPlaceholder('Building ID').fill('syn-office-a');
+    await page.getByRole('button', { name: 'Compare', exact: true }).click();
+    await expect(page.getByText('No comparison for this building', { exact: true })).toBeVisible();
+    await expect(page.getByText(/this building has 1./)).toBeVisible();
+    await noPageOverflow(page);
+    return;
+  }
   await page.getByPlaceholder('Building ID').fill('test-factory');
   await page.getByRole('button', { name: 'Compare', exact: true }).click();
   const section = page.getByRole('region', { name: 'Machine comparison' });

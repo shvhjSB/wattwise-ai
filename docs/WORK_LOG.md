@@ -3460,3 +3460,11 @@ hours. That led to the per-meter count of readings below zero and the flag on th
 - Browser: **24 of 24** scenarios (the new one on desktop light, dark and mobile).
 
 No HIPE data was committed (owner decision pending).
+
+**CI failure after push:** T066 was pushed as `ff11397`. CI run 43173536101 failed in
+"Containers and browser workflows": that job runs the same browser spec against the Docker
+Compose demo, which holds only the synthetic sample, so `test-factory` does not exist there.
+The scenario now checks what each database holds. Against the Compose demo, the real container
+API must answer a single-meter building with "no comparison" and its reason; against the
+standalone fixture, it checks the full comparison. Locally the fixture run passes 24 of 24;
+Docker is not running here, so the Compose path is checked by CI.

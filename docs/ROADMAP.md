@@ -93,7 +93,7 @@ Requirement sources: [specs/CLAUDE_CODE_PROMPT.md](specs/CLAUDE_CODE_PROMPT.md),
 | T061 | Final independent quality audit | M14 | T063–T069 | Not started |
 | T062 | Bill analyser (owner request) | M13 | — | Done |
 | T063 | Product focus and roadmap redesign | M14 | T062 | Done |
-| T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Not started |
+| T064 | Factory data: HIPE acquisition and preparation | M14 | T063 | Done |
 | T065 | Big-load finder study (pre-registered) | M14 | T064 | Not started |
 | T066 | Machine view on real factory data | M14 | T064 | Not started |
 | T067 | Meter check in the browser | M14 | T065 | Not started |
@@ -1203,7 +1203,7 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
   - Download the pinned HIPE 1.0.1 archives (one week first, then three months) into git-ignored
     `data/raw/hipe/`, with SHA-256 and provenance in `data/manifests/hipe.json`.
   - Record the licence (CC BY 4.0) and citation in DATASETS.md and LICENSES.md.
-  - Prepare the active power of the ten machines and the main terminal at 5 s, 1 min, 15 min and
+  - Prepare the active power of the ten machines and the main terminal at 10 s, 1 min, 15 min and
     1 h, streamed so that memory stays low, with a quality report.
 - **Acceptance:** checksums verified; a reproducible preparation; coverage and gaps reported; the
   share of the main terminal that the ten machines explain is stated, because the unmetered
@@ -1211,17 +1211,37 @@ in [PRODUCT.md](PRODUCT.md) (D074). One task per run.
 - **Owner decision:** whether a small hourly derived table may be committed, with attribution,
   so the public demo can show it. CLAUDE.md forbids committing processed datasets; without
   approval it stays local.
+- **Done (2026-11-12, D075):** `python -m wattwise.data.hipe` ([DATASETS.md](DATASETS.md#factory-data-hipe-t064)).
+  - Both archives verified against Zenodo's size and MD5 and a pinned SHA-256; manifest
+    committed, data git-ignored.
+  - Prepared at 10 s, 1 min, 15 min and 1 h in about 7 minutes. The finest regular grid is
+    10 s, because the meters sample about every 5.5 s.
+  - Coverage 99.97 to 99.98 % of bins (VacuumOven 99.01 %, one 21-hour gap).
+  - **The ten machines are 4.1 % of the main terminal's energy**, so T065 was restated around
+    the machines' running periods.
+  - The main terminal's 16-bit counter rolls over once; counted correctly, it agrees with the
+    integrated power to 0.04 %. Two small machines' counters disagree with their power, cause
+    unknown.
 
 ### T065 — Big-load finder study (pre-registered)
-- **Question:** from the main terminal alone, how well can the plant's large loads and their
-  energy be recovered, at 5 s, 1 min and 15 min?
+- **Question (restated after T064):** from the main terminal alone, how well can each metered
+  machine's **running periods** and energy be found, at 10 s, 1 min and 15 min?
+  - **Why restated:** T064 found that the ten metered machines are only 4.1 % of the plant's
+    energy. So "the share of plant energy attributed" cannot be scored: 96 % of the load has no
+    meter, and so no ground truth.
+  - The machines do draw visible peaks (up to 28 kW against a mean plant load of 14 kW). The
+    honest test is whether those events can be found under that unmetered background.
 - **Rules:**
   - The protocol, baselines, metrics and pass criteria are committed before any scoring.
   - Development weeks first, later weeks held out and scored once.
   - The machine meters are used only to score, never as inputs.
-- **Acceptance:** per-load energy error and the share of plant energy attributed, at each
-  resolution; a clear statement of which resolution, if any, is good enough. A negative result
-  is published, and nothing that fails is shipped.
+  - HighTemperatureOven and PickAndPlaceUnit (and ChipSaw, whose counter moved too little to
+    judge) carry the counter disagreement found in T064, and are reported separately.
+- **Acceptance:**
+  - For each machine and resolution: on/off agreement (precision, recall and F1 on running
+    intervals) and energy error over its running periods.
+  - A clear statement of which machines and resolutions, if any, are good enough.
+  - A negative result is published, and nothing that fails is shipped.
 
 ### T066 — Machine view on real factory data (replaces T057)
 - **Scope:** the prepared hourly tables loaded as an observed dataset, each machine a meter. A

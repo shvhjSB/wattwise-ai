@@ -2444,6 +2444,30 @@ links to the entry that replaces it.
   - Encoding state tariff orders: users enter their own tariff's rules instead (T068).
   - Promising machine-level results before T065's test.
 
+## D075 — HIPE prepared on a 10-second grid, nothing filled, nothing committed
+- **Date:** 2026-11-12 · **Task:** T064 · **Status:** Accepted
+- **Source:** HIPE version 1.0.1 (Zenodo 10.5281/zenodo.14054902, CC BY 4.0).
+  - Zenodo's size and MD5 are checked, and a SHA-256 computed from a matching download is
+    pinned.
+  - The manifest is committed; raw and prepared data are git-ignored.
+- **Grid:** the meters sample about every 5.5 seconds, not on a clock.
+  - A 5-second grid would leave about 9 % of bins empty, so the finest grid is **10 seconds**.
+  - Coarser grids average the 10-second bins and record the share present. No bin is
+    interpolated or filled.
+- **Counters:** the meters' own whole-kWh counters are 16-bit.
+  - A drop from the top of the range to near zero is counted as a rollover; any other drop is a
+    reset that adds nothing.
+  - Where the counters and the integrated power differ by more than a factor of 1.5 on at least
+    20 kWh, the machine is marked, and its results carry that uncertainty.
+  - The integrated power is used as the measurement, because the main terminal's agrees with
+    its counter to 0.04 %.
+- **Consequence for T065:** the ten metered machines are 4.1 % of the plant's energy.
+  - The big-load study is restated as finding each metered machine's running periods and
+    energy under the unmetered load.
+  - Attributing the whole plant's load cannot be scored, because only 4.1 % of it has ground
+    truth.
+- **Not decided:** committing a derived hourly table for the public demo (owner).
+
 ---
 
 ## Open decisions (tracked in tasks)

@@ -460,10 +460,22 @@ The application foundation runs end to end locally, and CI checks it automatical
 | T054 | Improve real-world anomaly detection (not promoted) | 2026-11-02 |
 | T062 | Bill analyser (owner request) | 2026-11-11 |
 | T063 | Product focus and roadmap redesign | 2026-11-11 |
+| T064 | Factory data: HIPE acquisition and preparation | 2026-11-12 |
 
 ## Current task
 
-None. **T063 is complete** (D074): the product focus is set in [PRODUCT.md](PRODUCT.md), and
+None. **T064 is complete** (D075): the real factory data set (HIPE, ten machine meters and the
+plant's main terminal, three months, CC BY 4.0) is downloaded, verified and prepared locally.
+
+- **Data quality:** 99.97 to 99.98 % of 10-second bins are present (one machine 99.01 %).
+- **Counters:** the main terminal's counter agrees with its measured power to 0.04 %, once its
+  16-bit rollover is counted.
+- **The key finding:** the ten metered machines are **only 4.1 %** of the plant's electricity;
+  96 % has no meter of its own. So the big-load study (T065) was restated to what can be
+  measured: whether each machine's running periods can be found in the main meter's signal.
+- **Not committed:** no HIPE data. Showing it on the public site needs your approval.
+
+Earlier: **T063 is complete** (D074): the product focus is set in [PRODUCT.md](PRODUCT.md), and
 the rest of the roadmap is redesigned as M14.
 
 - **Focus:** a free, private electricity check-up for a small factory, from the data it already
@@ -608,11 +620,11 @@ tests and screenshot review now close T033's earlier visual-verification gap.
 
 ## Next task
 
-**T064 — Factory data: HIPE acquisition and preparation** (M14): download the HIPE factory
-data set (ten machines and the main terminal, October to December 2017, CC BY 4.0) with
-checksums and provenance, and prepare each meter's active power at 5 s, 1 min, 15 min and 1 h
-with a quality report. See
-[ROADMAP.md](ROADMAP.md#t064--factory-data-hipe-acquisition-and-preparation).
+**T065 — Big-load finder study (pre-registered)** (M14): from the main terminal alone, how well
+can each metered machine's running periods and energy be found, at 10 s, 1 min and 15 min?
+The protocol and pass criteria are committed before any scoring, and later weeks are held out
+and scored once. A negative result is published. See
+[ROADMAP.md](ROADMAP.md#t065--big-load-finder-study-pre-registered).
 
 Owner decisions still open:
 - **HIPE in the public demo:** whether a small hourly table derived from HIPE may be committed,
@@ -645,7 +657,7 @@ why the model detector's recall advantage on the sample reversed at full scale.
 | M11 Integration | T034–T035 | 2 / 2 |
 | M12 Operations and docs | T036–T039, T046, T050 | 6 / 6 |
 | M13 ML reliability, deployment, product readiness | T051–T054, T062 | 5 / 5 (T055–T060 deferred, replaced or merged, D074) |
-| M14 Electricity check-up for small factories | T063–T069, T061 | 1 / 8 |
+| M14 Electricity check-up for small factories | T063–T069, T061 | 2 / 8 |
 
 ## Blockers
 

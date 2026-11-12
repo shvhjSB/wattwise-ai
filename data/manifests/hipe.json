@@ -1,0 +1,31 @@
+{
+  "dataset": "High-resolution Industrial Production Energy (HIPE)",
+  "doi": "10.5281/zenodo.14054902",
+  "version": "1.0.1",
+  "licence": "CC BY 4.0",
+  "citation": "Bischof, S., Trittenbach, H., Vollmer, M., Werle, D., Blank, T., Böhm, K. (2018). HIPE - an Energy-Status-Data Set from Industrial Production. Proceedings of ACM e-Energy (e-Energy '18), 599-603. https://doi.org/10.1145/3208903.3210278. Data: version 1.0.1, https://doi.org/10.5281/zenodo.14054902, licensed under CC BY 4.0.",
+  "checksums": "Zenodo publishes size and MD5; SHA-256 was computed from a download that matched both.",
+  "documentation": "docs/DATASETS.md",
+  "files": {
+    "hipe_cleaned_v1.0.1_geq_2017-10-01_lt_2018-01-01.zip": {
+      "url": "https://zenodo.org/api/records/14054902/files/hipe_cleaned_v1.0.1_geq_2017-10-01_lt_2018-01-01.zip/content",
+      "local_path": "data/raw/hipe/hipe_cleaned_v1.0.1_geq_2017-10-01_lt_2018-01-01.zip",
+      "period": "2017-10-01 to 2018-01-01 (local time)",
+      "bytes": 1329538336,
+      "sha256": "37ef3e733ff3de2fb13525421d9524b1e9d81c88ac0e0c22497634a964384716",
+      "zenodo_md5": "9de58f4a2b2df3efb0ba29af84b55155",
+      "obtained_at": "2026-11-11T13:11:12Z",
+      "last_verified_at": "2026-11-11T13:11:12Z"
+    },
+    "hipe_cleaned_v1.0.1_geq_2017-10-23_lt_2017-10-30.zip": {
+      "url": "https://zenodo.org/api/records/14054902/files/hipe_cleaned_v1.0.1_geq_2017-10-23_lt_2017-10-30.zip/content",
+      "local_path": "data/raw/hipe/hipe_cleaned_v1.0.1_geq_2017-10-23_lt_2017-10-30.zip",
+      "period": "2017-10-23 to 2017-10-30 (local time)",
+      "bytes": 109297827,
+      "sha256": "a04344f7edf0593d9c35db68e606babfd77d28522ec0dc37ee081516836bbe2b",
+      "zenodo_md5": "535683e5c98f534e5b6d6f286dbe6993",
+      "obtained_at": "2026-11-11T13:11:12Z",
+      "last_verified_at": "2026-11-11T13:11:12Z"
+    }
+  }
+}

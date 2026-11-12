@@ -49,9 +49,14 @@ This was one round of searching, not a market study. "None found" means exactly 
    anomalies on held-out data).
 3. **The unsolved part, tested rather than promised.** Step 4 asks whether one meter on the main
    incomer can stand in for a meter on every machine. The study measures it on a real factory
-   with ground truth, at 5 seconds, 1 minute and 15 minutes, with criteria fixed in advance. If
-   it works at some resolution, one logger replaces ten meters. If it does not, WattWise says so
-   and step 3 remains the only way.
+   with ground truth, at 10 seconds, 1 minute and 15 minutes, with criteria fixed in advance. If
+   it works at some resolution, one logger could replace several meters. If it does not,
+   WattWise says so and step 3 remains the only way.
+
+   Ground truth exists only for the metered machines, and T064 found they are 4.1 % of that
+   plant's energy. The test can therefore show whether individual machines' running periods are
+   found under a large unmetered load. It cannot show that a whole plant's load can be broken
+   down.
 
 ### What WattWise will not claim
 
@@ -77,7 +82,8 @@ This was one round of searching, not a market study. "None found" means exactly 
 
 - **Meters:** ten machines and the main terminal of a power-electronics production plant.
 - **Period:** 2017-10-01 to 2018-01-01, with a one-week subset (2017-10-23 to 2017-10-30).
-- **Resolution:** reported as 5-second measurements.
+- **Resolution:** a sample about every 5.5 seconds (5 seconds for the two-phase meters), not
+  on a clock, so the finest regular grid is 10 seconds (measured in T064).
 - **Size:** 1.33 GB packed and 30.59 GB unpacked.
 - **Licence:** CC BY 4.0.
 - **Citation:** Bischof et al., "HIPE – an Energy-Status-Data Set from Industrial Production",

@@ -7,6 +7,9 @@ aims to follow [Semantic Versioning](https://semver.org/) once it has a first re
 ## [Unreleased]
 
 ### Added
+- HIPE factory data (T064, D075): `python -m wattwise.data.hipe` fetches and verifies the
+  archives (Zenodo size, MD5 and a pinned SHA-256; manifest committed, data git-ignored) and
+  prepares each meter's power at 10 s, 1 min, 15 min and 1 h with a quality report.
 - Product focus ([docs/PRODUCT.md](docs/PRODUCT.md), T063, D074) and milestone M14: a free,
   private electricity check-up for small factories, with the competitors found, the claims
   WattWise will and will not make, and a pre-registered test of machine-level insight from the

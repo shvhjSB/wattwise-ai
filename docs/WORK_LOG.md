@@ -3321,3 +3321,52 @@ image (Render)" with "the fresh database was not seeded", although the log showe
 failed: a race, reproduced locally (`seq 1 400000 | grep -q 1` exits 141 under `pipefail`). All
 seven checks now use `grep … >/dev/null`, which reads everything. No other script has the
 pattern.
+
+---
+
+## 2026-11-12 — T064 Factory data: HIPE acquisition and preparation
+
+T063 was pushed as `860adc2`, and the verifier fix as `374510d`; CI run 43023109842 passed all
+five jobs and Pages run 43023752204 published it.
+
+**Acquired:** HIPE version 1.0.1 from Zenodo record 14054902 (CC BY 4.0).
+
+| Archive | Bytes | Zenodo MD5 | SHA-256 |
+|---|---|---|---|
+| One week | 109,297,827 | `535683e5…` matched | `a04344f7…` |
+| Three months | 1,329,538,336 | `9de58f4a…` matched | `37ef3e73…` |
+
+Version 1.0.0 (record 14054775) was not used.
+
+**Built:** `wattwise.data.hipe`.
+- `fetch` and `verify` check size, SHA-256 and Zenodo's MD5, and record provenance.
+- `prepare` streams each meter's CSV one meter at a time (only six columns are parsed) and
+  writes 10 s, 1 min, 15 min and 1 h tables, `summary.json` and `quality.md`.
+- 12 tests on a tiny archive in HIPE's format: pinning, provenance, refusal of an MD5 mismatch,
+  file names, UTC and daylight-saving handling, duplicates, gridding without filling,
+  coverage, counter rollovers and resets, plant statistics, preparation and the command line.
+- `pyarrow` has no type information, so it gets the same mypy override as scikit-learn.
+
+**Ran (local data):**
+- One week: 36 s.
+- Three months: 425 s, 1.45 to 1.61 million samples per meter.
+- Findings:
+  - The finest regular grid is 10 s: the meters sample every 5.5 s (4.9 s for two-phase
+    meters), and a 5 s grid would be 9 % empty.
+  - Coverage 99.97 to 99.98 % (VacuumOven 99.01 %, one 21-hour gap).
+  - **The ten machines are 4.1 % of the main terminal's 30,537 kWh**; the unmetered load
+    averages 13.4 kW.
+  - The main terminal's counter rolled over at 65,535 on 2017-10-14. Counted correctly it gives
+    30,852 kWh, against 30,839 kWh of integrated power.
+  - Two machines' counters disagree with their power by more than a factor of 1.5
+    (HighTemperatureOven, PickAndPlaceUnit), cause unknown.
+
+**Problem on the way:** the first three-month run reported the main terminal's counter as
+−34,684 kWh. It had subtracted the counter's last value from its first across the rollover. The
+counters are now summed step by step with rollovers counted, and the run was repeated.
+
+**Changed in the plan:** the docs said the data was 5-second; corrected to the measured 5.5 s
+sampling and the 10 s grid. T065 is restated around the metered machines' running periods,
+because they are only 4.1 % of the plant's energy (D075).
+
+**Not done:** no HIPE data committed (owner decision pending).

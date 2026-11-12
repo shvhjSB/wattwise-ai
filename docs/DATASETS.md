@@ -12,6 +12,7 @@ git-ignored. Only the small synthetic sample and provenance manifests are commit
 | LEAD 1.0 human anomaly labels | Checking the detectors against human labels (T018b, T044c) | **No.** Local evaluation only, never redistributed (D022); manifest [`data/manifests/lead.json`](../data/manifests/lead.json) | `uv run python -m wattwise.data.lead fetch`, then `prepare` ([below](#real-anomaly-labels-lead-10)) |
 | ERA5 radiation and cloud cover, via Open-Meteo | Weather enrichment features (T007d) | **No.** Fetched by an explicit command into `data/raw/era5` | `uv run python -m wattwise.data.era5 fetch`, `verify`, `prepare` ([below](#weather-enrichment)) |
 | Carbon factors and electricity prices | Sourced references for impact (T021a) | **Yes:** two small cited tables in [`data/reference/`](../data/reference/), each row with its source, licence and file hash | Committed ([below](#carbon-factors-and-electricity-prices-acquired-and-integrated-t021a)) |
+| HIPE factory meters (KIT) | A real factory with a meter on ten machines and on the main terminal, for the machine view and the big-load finder study (T064–T066) | **No.** Downloaded into git-ignored `data/raw/hipe`, verified against Zenodo's size and MD5 and a pinned SHA-256; manifest [`data/manifests/hipe.json`](../data/manifests/hipe.json) | `uv run python -m wattwise.data.hipe fetch --full`, then `prepare` ([below](#factory-data-hipe-t064)) |
 | LBNL Building 59, HKUST campus meters | A sub-metered case study (T040) and an independent test (T041), both done | **No.** Downloaded into git-ignored `data/raw/lbnl59` and `data/raw/hkust`, verified against Dryad's SHA-256 | `uv run python -m wattwise.data.dryad fetch lbnl59` (or `hkust`): needs a Dryad token or a browser download ([below](#sub-metered-and-independent-buildings)) |
 
 Licences for all of these, and for the software WattWise ships, are summarised in
@@ -703,6 +704,85 @@ the committed CSVs from the same files.
 3. **Carbon method:** decided in T021a (D037). Average US eGRID factors, which match the UK and
    Irish sources, and the UK publisher's reporting-year convention. Ontario remains without a
    sourced factor or price, so its impact is reported in kWh only.
+
+## Factory data: HIPE (T064)
+
+**Real data.** High-resolution Industrial Production Energy (HIPE), version 1.0.1, from the
+Karlsruhe Institute of Technology:
+
+- **Meters:** one meter on each of ten machines, and one on the main terminal of a
+  power-electronics production plant.
+- **Period:** 1 October 2017 to 1 January 2018 (local time, Europe/Berlin).
+- **Source:** Zenodo record [10.5281/zenodo.14054902](https://doi.org/10.5281/zenodo.14054902).
+- **Licence:** **CC BY 4.0**.
+- **Cite as:** Bischof, S., Trittenbach, H., Vollmer, M., Werle, D., Blank, T., Böhm, K. (2018).
+  HIPE - an Energy-Status-Data Set from Industrial Production. *Proceedings of ACM e-Energy
+  '18*, 599-603, <https://doi.org/10.1145/3208903.3210278>.
+
+It is the only data set here with a meter on every machine *and* on the main terminal, which is
+what the machine view (T066) and the big-load finder study (T065) need. It is one plant in one
+country over three months.
+
+### Download and verify
+
+```bash
+cd backend
+uv run python -m wattwise.data.hipe fetch          # one week, 109 MB
+uv run python -m wattwise.data.hipe fetch --full   # also the three months, 1.33 GB (30.6 GB unpacked)
+uv run python -m wattwise.data.hipe verify
+```
+
+- **Checks:** Zenodo publishes each file's size and MD5. Both are checked, and the SHA-256 of a
+  download that matched them is pinned in the module, so a file is used only if all three agree.
+- **Provenance:** recorded in [`data/manifests/hipe.json`](../data/manifests/hipe.json).
+- **Obtained:** both archives on 2026-11-11.
+
+### Preparation
+
+```bash
+uv run python -m wattwise.data.hipe prepare --archive full   # about 6 minutes
+```
+
+- **What is read:** each meter's CSV is streamed out of the archive. Only the timestamp, the
+  total active, reactive and apparent power, and the two energy counters are parsed, one meter at
+  a time.
+- **Grid:** the meters sample about every 5.5 seconds (4.9 s for the two-phase meters), not on a
+  clock. A 5-second grid would leave about 9 % of its bins empty, so the finest regular grid is
+  **10 seconds**. Coarser grids (1 minute, 15 minutes, 1 hour) average the 10-second bins and
+  keep the share present (`coverage`). **Nothing is filled in.**
+- **Output** (git-ignored, in `data/processed/hipe/full/`): `power_10s.parquet` (64 MB),
+  `power_1min.parquet`, `power_15min.parquet`, `power_1h.parquet`, plus `summary.json` and
+  `quality.md`.
+
+### What the data shows
+
+- **Coverage:** 99.97 to 99.98 % of 10-second bins are present for every meter except
+  VacuumOven (99.01 %). VacuumOven has one 21-hour gap; every other meter's longest gap is about
+  8.5 minutes.
+- **The ten machines are small parts of the plant.** Over the 787,349 ten-second bins where all
+  eleven meters have a value:
+  - the main terminal used 30,537 kWh;
+  - the ten machines together used 1,239 kWh, **4.1 %**;
+  - the rest, plant load with no meter of its own, averages 13.4 kW (median 11.7 kW, 5th to
+    95th percentile 5.1 to 29.1 kW) and is never below zero.
+
+  The largest machine shares are under 1 % each. Several machines still draw large peaks
+  (ChipPress up to 28 kW, the ovens and the washing machine up to 11 kW, against a mean plant
+  load of 14 kW), so they are visible as events even though their energy is small.
+- **Energy counters:** the meters' own whole-kWh counters are 16-bit.
+  - The main terminal's rolled over from 65,535 to 0 on 2017-10-14. Counted correctly, it
+    agrees with the integrated power to within 0.04 % (30,852 against 30,839 kWh).
+  - For HighTemperatureOven (34 against 247 kWh) and PickAndPlaceUnit (47 against 23 kWh), the
+    counters and the integrated power differ by more than a factor of 1.5; `quality.md` marks
+    them. ChipSaw differs too (5 against 51 kWh), but its counter moved too little to judge.
+    The cause is unknown, so results for these three machines carry that uncertainty.
+
+### Licence and use
+
+- **Licence:** CC BY 4.0, so redistribution is allowed with attribution.
+- **This repository still commits no HIPE data, raw or derived** (the project rule against
+  committing processed datasets). Committing a small derived hourly table for the public demo
+  needs the owner's approval (T064, T066).
 
 ## Synthetic sample
 
